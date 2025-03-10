@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/grafana/grafanactl/cmd/config"
-	"github.com/grafana/grafanactl/internal/testutils"
+	"github.com/grafana/grafanactl/cmd/testutils"
 )
 
 func Test_CurrentContextCommand(t *testing.T) {
