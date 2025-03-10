@@ -15,7 +15,7 @@ import (
 //	│
 //	│ could not read './cmd/config/testdata/config.yamls'
 //	│
-//	├─ Parent error:
+//	├─ Details:
 //	│
 //	│ open ./cmd/config/testdata/config.yamls: no such file or directory
 //	│

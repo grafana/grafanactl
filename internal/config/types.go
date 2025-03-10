@@ -50,9 +50,9 @@ func Minify(config Config) (Config, error) {
 	}
 
 	minified.Contexts = make(map[string]*Context, 1)
-	for _, ctx := range config.Contexts {
-		if ctx.Name == minified.CurrentContext {
-			minified.Contexts[ctx.Name] = ctx
+	for name, ctx := range config.Contexts {
+		if name == minified.CurrentContext {
+			minified.Contexts[name] = ctx
 		}
 	}
 

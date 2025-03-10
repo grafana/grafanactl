@@ -1,0 +1,6 @@
+contexts:
+  local:
+    grafana:
+      server: http://localhost:3000/
+      token: local_token
+current-context: local
