@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/grafana/grafanactl/cmd/io"
@@ -110,8 +112,9 @@ func viewCmd(configOpts *Options) *cobra.Command {
 	opts := &viewOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "view",
-		Short: "Display the current configuration settings",
+		Use:     "view",
+		Short:   "Display the current configuration settings",
+		Example: fmt.Sprintf("%s config view", path.Base(os.Args[0])),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
@@ -150,8 +153,9 @@ func viewCmd(configOpts *Options) *cobra.Command {
 
 func currentContextCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "current-context",
-		Short: "Display the current context name",
+		Use:     "current-context",
+		Short:   "Display the current context name",
+		Example: fmt.Sprintf("%s config current-context", path.Base(os.Args[0])),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
@@ -169,10 +173,11 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 
 func useContextCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "use-context CONTEXT_NAME",
-		Short: "Set the current context",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		Use:     "use-context CONTEXT_NAME",
+		Short:   "Set the current context",
+		Example: fmt.Sprintf("%s config use-context dev-instance", path.Base(os.Args[0])),
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
 				return err
@@ -194,9 +199,10 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 
 func setCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set PROPERTY_NAME PROPERTY_VALUE",
-		Short: "Set an individual value in a configuration file",
-		Args:  cobra.ExactArgs(2),
+		Use:     "set PROPERTY_NAME PROPERTY_VALUE",
+		Short:   "Set an individual value in a configuration file",
+		Example: fmt.Sprintf("%s config set contexts.dev-instance.grafana.server https://grafana-dev.example", path.Base(os.Args[0])),
+		Args:    cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
@@ -216,9 +222,10 @@ func setCmd(configOpts *Options) *cobra.Command {
 
 func unsetCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "unset PROPERTY_NAME",
-		Short: "Unset an individual value in a configuration file",
-		Args:  cobra.ExactArgs(1),
+		Use:     "unset PROPERTY_NAME",
+		Short:   "Unset an individual value in a configuration file",
+		Example: fmt.Sprintf("%s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify", path.Base(os.Args[0])),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
