@@ -51,6 +51,10 @@ func (opts *Options) LoadConfig() (config.Config, error) {
 	// The current context is being overridden by a flag
 	if opts.Context != "" {
 		overrides = append(overrides, func(cfg *config.Config) error {
+			if !cfg.HasContext(opts.Context) {
+				return config.ContextNotFound(opts.Context)
+			}
+
 			cfg.CurrentContext = opts.Context
 			return nil
 		})
@@ -113,7 +117,7 @@ func viewCmd(configOpts *Options) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "view",
-		Short:   "Display the current configuration settings",
+		Short:   "Display the current configuration",
 		Example: fmt.Sprintf("%s config view", path.Base(os.Args[0])),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
@@ -183,9 +187,8 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 				return err
 			}
 
-			_, found := cfg.Contexts[args[0]]
-			if !found {
-				return fmt.Errorf("no context found with name %q", args[0])
+			if !cfg.HasContext(args[0]) {
+				return config.ContextNotFound(args[0])
 			}
 
 			cfg.CurrentContext = args[0]
@@ -205,7 +208,7 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 func setCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "set PROPERTY_NAME PROPERTY_VALUE",
-		Short:   "Set an individual value in a configuration file",
+		Short:   "Set an single value in a configuration file",
 		Example: fmt.Sprintf("%s config set contexts.dev-instance.grafana.server https://grafana-dev.example", path.Base(os.Args[0])),
 		Args:    cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -228,7 +231,7 @@ func setCmd(configOpts *Options) *cobra.Command {
 func unsetCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "unset PROPERTY_NAME",
-		Short:   "Unset an individual value in a configuration file",
+		Short:   "Unset an single value in a configuration file",
 		Example: fmt.Sprintf("%s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify", path.Base(os.Args[0])),
 		Args:    cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {

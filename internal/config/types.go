@@ -13,6 +13,10 @@ type Config struct {
 	CurrentContext string `json:"current-context" yaml:"current-context"`
 }
 
+func (config Config) HasContext(name string) bool {
+	return config.Contexts[name] != nil
+}
+
 // Context holds the information required to connect to a remote Grafana instance.
 type Context struct {
 	Name string `json:"-" yaml:"-"`
