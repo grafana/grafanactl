@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/goccy/go-yaml"
 )
 
 // DetailedError is used to describe errors in a human-friendly way.
@@ -71,8 +72,12 @@ func (e DetailedError) Error() string {
 	}
 
 	if e.Parent != nil {
-		buffer.WriteString(fmt.Sprintf("│\n├─ %s\n│\n", blue("Parent error:")))
-		lines := strings.Split(e.Parent.Error(), "\n")
+		buffer.WriteString(fmt.Sprintf("│\n├─ %s\n│\n", blue("Details:")))
+
+		// Will pretty-print YAML-related errors and leave the other ones as-is.
+		formattedErr := yaml.FormatError(e.Parent, !color.NoColor, true)
+
+		lines := strings.Split(formattedErr, "\n")
 		for _, line := range lines {
 			buffer.WriteString("│ " + line + "\n")
 		}

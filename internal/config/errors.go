@@ -21,3 +21,11 @@ func ContextNotFound(name string) error {
 		},
 	}
 }
+
+func InvalidConfiguration(file string, parent error) error {
+	return fail.DetailedError{
+		Summary: "Invalid configuration",
+		Details: fmt.Sprintf("Invalid configuration found in '%s'.", file),
+		Parent:  parent,
+	}
+}

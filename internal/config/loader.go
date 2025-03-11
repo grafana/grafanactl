@@ -58,7 +58,7 @@ func Load(source Source, overrides ...Override) (Config, error) {
 	}
 
 	if err := yaml.UnmarshalWithOptions(contents, &config, yaml.DisallowUnknownField()); err != nil {
-		return config, handleReadError(err)
+		return config, InvalidConfiguration(filename, err)
 	}
 
 	for name, ctx := range config.Contexts {
