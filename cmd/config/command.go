@@ -190,7 +190,12 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 
 			cfg.CurrentContext = args[0]
 
-			return config.Write(configOpts.configSource(), cfg)
+			if err := config.Write(configOpts.configSource(), cfg); err != nil {
+				return err
+			}
+
+			io.Success(cmd.OutOrStdout(), "Context set to \"%s\"", cfg.CurrentContext)
+			return nil
 		},
 	}
 
