@@ -13,6 +13,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
+//nolint:gochecknoglobals
+var binaryName = path.Base(os.Args[0])
+
 type Options struct {
 	ConfigFile string
 	Context    string
@@ -118,7 +121,7 @@ func viewCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "view",
 		Short:   "Display the current configuration",
-		Example: fmt.Sprintf("%s config view", path.Base(os.Args[0])),
+		Example: "\n\t" + binaryName + " config view",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
@@ -160,7 +163,7 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 		Use:     "current-context",
 		Short:   "Display the current context name",
 		Long:    "Display the current context name.",
-		Example: fmt.Sprintf("%s config current-context", path.Base(os.Args[0])),
+		Example: "\n\t" + binaryName + " config current-context",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
@@ -182,7 +185,7 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 		Aliases: []string{"use"},
 		Short:   "Set the current context",
 		Long:    "Set the current context and updates the configuration file.",
-		Example: fmt.Sprintf("%s config use-context dev-instance", path.Base(os.Args[0])),
+		Example: "\n\t" + binaryName + " config use-context dev-instance",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
@@ -222,7 +225,7 @@ PROPERTY_VALUE is the new value to set.`,
 	%[1]s config set contexts.dev-instance.grafana.server https://grafana-dev.example
 
 	# Disable the validation of the server's SSL certificate in the "dev-instance" context
-	%[1]s config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`, path.Base(os.Args[0])),
+	%[1]s config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`, binaryName),
 		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
@@ -253,7 +256,7 @@ PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either 
 	%[1]s config unset contexts.foo
 
 	# Unset the "insecure-skip-tls-verify" flag in the "dev-instance" context
-	%[1]s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`, path.Base(os.Args[0])),
+	%[1]s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`, binaryName),
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()

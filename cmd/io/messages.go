@@ -11,5 +11,5 @@ func Success(stdout io.Writer, message string, args ...any) {
 	green := color.New(color.FgGreen).SprintFunc()
 	msg := fmt.Sprintf(message, args...)
 
-	fmt.Fprintf(stdout, green("✓ ")+msg+"\n")
+	fmt.Fprintln(stdout, green("✓ ")+msg)
 }
