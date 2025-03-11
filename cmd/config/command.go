@@ -159,6 +159,7 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "current-context",
 		Short:   "Display the current context name",
+		Long:    "Display the current context name.",
 		Example: fmt.Sprintf("%s config current-context", path.Base(os.Args[0])),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := configOpts.LoadConfig()
@@ -178,7 +179,9 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 func useContextCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "use-context CONTEXT_NAME",
+		Aliases: []string{"use"},
 		Short:   "Set the current context",
+		Long:    "Set the current context and updates the configuration file.",
 		Example: fmt.Sprintf("%s config use-context dev-instance", path.Base(os.Args[0])),
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -207,10 +210,20 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 
 func setCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "set PROPERTY_NAME PROPERTY_VALUE",
-		Short:   "Set an single value in a configuration file",
-		Example: fmt.Sprintf("%s config set contexts.dev-instance.grafana.server https://grafana-dev.example", path.Base(os.Args[0])),
-		Args:    cobra.ExactArgs(2),
+		Use:   "set PROPERTY_NAME PROPERTY_VALUE",
+		Short: "Set an single value in a configuration file",
+		Long: `Set an single value in a configuration file
+
+PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either represent a field or a map entry.
+
+PROPERTY_VALUE is the new value to set.`,
+		Example: fmt.Sprintf(`
+	# Set the "server" field on the "dev-instance" context to "https://grafana-dev.example"
+	%[1]s config set contexts.dev-instance.grafana.server https://grafana-dev.example
+
+	# Disable the validation of the server's SSL certificate in the "dev-instance" context
+	%[1]s config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`, path.Base(os.Args[0])),
+		Args: cobra.ExactArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
@@ -230,10 +243,18 @@ func setCmd(configOpts *Options) *cobra.Command {
 
 func unsetCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "unset PROPERTY_NAME",
-		Short:   "Unset an single value in a configuration file",
-		Example: fmt.Sprintf("%s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify", path.Base(os.Args[0])),
-		Args:    cobra.ExactArgs(1),
+		Use:   "unset PROPERTY_NAME",
+		Short: "Unset an single value in a configuration file",
+		Long: `Unset an single value in a configuration file.
+
+PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either represent a field or a map entry.`,
+		Example: fmt.Sprintf(`
+	# Unset the "foo" context
+	%[1]s config unset contexts.foo
+
+	# Unset the "insecure-skip-tls-verify" flag in the "dev-instance" context
+	%[1]s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`, path.Base(os.Args[0])),
+		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
