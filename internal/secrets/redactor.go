@@ -35,10 +35,8 @@ func redactSecrets(curr reflect.Value, redact bool) error {
 		return nil
 
 	case reflect.String:
-		if redact {
-			if !actualCurrValue.IsZero() {
-				actualCurrValue.SetString(redacted)
-			}
+		if redact && !actualCurrValue.IsZero() {
+			actualCurrValue.SetString(redacted)
 		}
 		return nil
 
@@ -62,8 +60,9 @@ func redactSecrets(curr reflect.Value, redact bool) error {
 			currFieldValue := actualCurrValue.Field(fieldIndex)
 			currFieldType := actualCurrValue.Type().Field(fieldIndex)
 			policyTag := currFieldType.Tag.Get(dataPolicyTag)
-			currFieldTypeYamlName := strings.Split(policyTag, ",")[0]
-			if currFieldTypeYamlName != "" {
+			policy := strings.Split(policyTag, ",")[0]
+
+			if policy == "secret" {
 				err := redactSecrets(currFieldValue, true)
 				if err != nil {
 					return err
