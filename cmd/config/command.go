@@ -80,18 +80,18 @@ func Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "View or manipulate configuration settings",
-		Long: `View or manipulate configuration settings.
+		Long: fmt.Sprintf(`View or manipulate configuration settings.
 
 The configuration file to load is chosen as follows:
 
 	1. If the --config flag is set, then that file will be loaded. No other location will be considered.
-	2. If the $XDG_CONFIG_HOME environment variable is set, then it will be used: $XDG_CONFIG_HOME/grafana/config.yaml
-	   Example: /home/user/.config/grafana/config.yaml
-	3. If the $HOME environment variable is set, then it will be used: $HOME/.config/grafana/config.yaml
-	   Example: /home/user/.config/grafana/config.yaml
-	4. If the $XDG_CONFIG_DIRS environment variable is set, then it will be used: $XDG_CONFIG_DIRS/grafana/config.yaml
-	   Example: /etc/xdg/grafana/config.yaml
-`,
+	2. If the $XDG_CONFIG_HOME environment variable is set, then it will be used: $XDG_CONFIG_HOME/%[1]s/%[2]s
+	   Example: /home/user/.config/%[1]s/%[2]s
+	3. If the $HOME environment variable is set, then it will be used: $HOME/.config/%[1]s/%[2]s
+	   Example: /home/user/.config/%[1]s/%[2]s
+	4. If the $XDG_CONFIG_DIRS environment variable is set, then it will be used: $XDG_CONFIG_DIRS/%[1]s/%[2]s
+	   Example: /etc/xdg/%[1]s/%[2]s
+`, config.StandardConfigFolder, config.StandardConfigFileName),
 	}
 
 	configOpts.BindFlags(cmd.PersistentFlags())

@@ -5,13 +5,18 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
 	"github.com/grafana/grafanactl/internal/fail"
 )
 
-const configFilePermissions = 0o600
+const (
+	configFilePermissions  = 0o600
+	StandardConfigFolder   = "grafanactl"
+	StandardConfigFileName = "config.yaml"
+)
 
 type Override func(cfg *Config) error
 
@@ -25,7 +30,7 @@ func ExplicitConfigFile(path string) Source {
 
 func StandardLocation() Source {
 	return func() (string, error) {
-		file, err := xdg.ConfigFile("grafana/config.yaml")
+		file, err := xdg.ConfigFile(filepath.Join(StandardConfigFolder, StandardConfigFileName))
 		if err != nil {
 			return "", err
 		}
