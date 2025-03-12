@@ -78,15 +78,16 @@ func (testCase CommandTestCase) Run(t *testing.T) {
 	}
 }
 
-func WithTempFile(t *testing.T, content string, with func(*testing.T, string)) {
+func CreateTempFile(t *testing.T, content string) (string, func()) {
 	t.Helper()
 
-	file, err := os.CreateTemp("", "grafanactl_tests_")
-	require.NoError(t, err)
-	defer os.Remove(file.Name())
-
-	_, err = file.Write([]byte(content))
+	file, err := os.CreateTemp(t.TempDir(), "grafanactl_tests_")
 	require.NoError(t, err)
 
-	with(t, file.Name())
+	_, err = file.WriteString(content)
+	require.NoError(t, err)
+
+	return file.Name(), func() {
+		_ = os.Remove(file.Name())
+	}
 }

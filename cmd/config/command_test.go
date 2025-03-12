@@ -26,37 +26,38 @@ contexts:
   old: {}
   new: {}`
 
-	testutils.WithTempFile(t, cfg, func(t *testing.T, configFile string) {
-		initialConfigTest := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"current-context", "--config", configFile},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-				testutils.CommandOutputContains("old"),
-			},
-		}
-		initialConfigTest.Run(t)
+	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
+	defer tmpCleanup()
 
-		changeConfigTest := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"use-context", "--config", configFile, "new"},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-				testutils.CommandOutputContains("Context set to \"new\""),
-			},
-		}
-		changeConfigTest.Run(t)
+	initialConfigTest := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"current-context", "--config", configFile},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains("old"),
+		},
+	}
+	initialConfigTest.Run(t)
 
-		newConfigTest := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"current-context", "--config", configFile},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-				testutils.CommandOutputContains("new"),
-			},
-		}
-		newConfigTest.Run(t)
-	})
+	changeConfigTest := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"use-context", "--config", configFile, "new"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains("Context set to \"new\""),
+		},
+	}
+	changeConfigTest.Run(t)
+
+	newConfigTest := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"current-context", "--config", configFile},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains("new"),
+		},
+	}
+	newConfigTest.Run(t)
 }
 
 func Test_UseContextCommand_withUnknownContext(t *testing.T) {
@@ -205,30 +206,31 @@ func Test_ViewCommand_failsWithUnknownContext(t *testing.T) {
 func Test_SetCommand(t *testing.T) {
 	cfg := `current-context: dev`
 
-	testutils.WithTempFile(t, cfg, func(t *testing.T, configFile string) {
-		changeConfigTest := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"set", "--config", configFile, "contexts.dev.grafana.server", "https://grafana-dev.example"},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-			},
-		}
-		changeConfigTest.Run(t)
+	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
+	defer tmpCleanup()
 
-		viewCmd := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"view", "--config", configFile, "--minify"},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-				testutils.CommandOutputContains(`contexts:
+	changeConfigTest := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"set", "--config", configFile, "contexts.dev.grafana.server", "https://grafana-dev.example"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+		},
+	}
+	changeConfigTest.Run(t)
+
+	viewCmd := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--config", configFile, "--minify"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains(`contexts:
   dev:
     grafana:
       server: https://grafana-dev.example
 current-context: dev`),
-			},
-		}
-		viewCmd.Run(t)
-	})
+		},
+	}
+	viewCmd.Run(t)
 }
 
 func Test_UnsetCommand(t *testing.T) {
@@ -239,28 +241,29 @@ func Test_UnsetCommand(t *testing.T) {
       user: remove-me-please
 current-context: dev`
 
-	testutils.WithTempFile(t, cfg, func(t *testing.T, configFile string) {
-		changeConfigTest := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"unset", "--config", configFile, "contexts.dev.grafana.user"},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-			},
-		}
-		changeConfigTest.Run(t)
+	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
+	defer tmpCleanup()
 
-		viewCmd := testutils.CommandTestCase{
-			Cmd:     config.Command(),
-			Command: []string{"view", "--config", configFile, "--minify"},
-			Assertions: []testutils.CommandAssertion{
-				testutils.CommandSuccess(),
-				testutils.CommandOutputContains(`contexts:
+	changeConfigTest := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"unset", "--config", configFile, "contexts.dev.grafana.user"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+		},
+	}
+	changeConfigTest.Run(t)
+
+	viewCmd := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--config", configFile, "--minify"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains(`contexts:
   dev:
     grafana:
       server: https://grafana-dev.example
 current-context: dev`),
-			},
-		}
-		viewCmd.Run(t)
-	})
+		},
+	}
+	viewCmd.Run(t)
 }
