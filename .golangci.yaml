@@ -1,50 +1,29 @@
 linters:
   enable-all: true
   disable:
-    - exhaustruct
-    - wrapcheck
-    - nolintlint
-    - wastedassign
-    - varnamelen
-    - forcetypeassert
-    - err113
-    - ireturn
-    - funlen
-    - forbidigo
-    - godot
-    - godox
     - cyclop
-    - prealloc
-    - dupl
-    - lll
-    - goconst
     - depguard
+    - err113
     - exhaustive
-    - wsl
-    - unparam
-    - gomoddirectives
-    - gofumpt
-    - nestif
-    - paralleltest
-    - testpackage
+    - exhaustruct
+    - funlen
     - gocognit
-    - tagliatelle
-    - nlreturn
-    - gocyclo
-    # added from 1.60.3
-    - revive
-    - govet
-    - intrange
+    - godox
+    - lll
     - mnd
-    - perfsprint
-    - musttag
+    - nlreturn
+    - paralleltest
+    - tagalign
+    - tagliatelle
+    - wrapcheck
+    - wsl
 
 linters-settings:
   errcheck:
-    exclude-functions: 
-     - fmt:.*
+    exclude-functions:
+      - fmt:.*
 
 run:
   modules-download-mode: vendor
   timeout: 3m
-  go: '1.23'
+  go: '1.24'
