@@ -3,6 +3,7 @@ package testutils
 import (
 	"bytes"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -75,4 +76,17 @@ func (testCase CommandTestCase) Run(t *testing.T) {
 	for _, assertion := range testCase.Assertions {
 		assertion(t, result)
 	}
+}
+
+func WithTempFile(t *testing.T, content string, with func(*testing.T, string)) {
+	t.Helper()
+
+	file, err := os.CreateTemp("", "grafanactl_tests_")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	_, err = file.Write([]byte(content))
+	require.NoError(t, err)
+
+	with(t, file.Name())
 }
