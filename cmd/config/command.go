@@ -10,7 +10,8 @@ func Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Apply a YAML dashboard",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
+			//nolint:forbidigo
 			fmt.Println("config subcommand")
 		},
 	}
