@@ -26,8 +26,7 @@ contexts:
   old: {}
   new: {}`
 
-	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
-	defer tmpCleanup()
+	configFile := testutils.CreateTempFile(t, cfg)
 
 	initialConfigTest := testutils.CommandTestCase{
 		Cmd:     config.Command(),
@@ -206,8 +205,7 @@ func Test_ViewCommand_failsWithUnknownContext(t *testing.T) {
 func Test_SetCommand(t *testing.T) {
 	cfg := `current-context: dev`
 
-	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
-	defer tmpCleanup()
+	configFile := testutils.CreateTempFile(t, cfg)
 
 	changeConfigTest := testutils.CommandTestCase{
 		Cmd:     config.Command(),
@@ -241,8 +239,7 @@ func Test_UnsetCommand(t *testing.T) {
       user: remove-me-please
 current-context: dev`
 
-	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
-	defer tmpCleanup()
+	configFile := testutils.CreateTempFile(t, cfg)
 
 	changeConfigTest := testutils.CommandTestCase{
 		Cmd:     config.Command(),

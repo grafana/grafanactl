@@ -99,8 +99,7 @@ func TestLoad_withInvalidYaml(t *testing.T) {
 	cfg := `current-context: local
 this-field-is-invalid: []`
 
-	configFile, tmpCleanup := testutils.CreateTempFile(t, cfg)
-	defer tmpCleanup()
+	configFile := testutils.CreateTempFile(t, cfg)
 
 	_, err := config.Load(config.ExplicitConfigFile(configFile))
 	req.Error(err)

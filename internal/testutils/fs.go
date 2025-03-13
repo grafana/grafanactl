@@ -7,7 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func CreateTempFile(t *testing.T, content string) (string, func()) {
+// CreateTempFile creates a temporary file with the given content.
+// The file will be automatically removed when the test that created it is
+// complete.
+func CreateTempFile(t *testing.T, content string) string {
 	t.Helper()
 
 	file, err := os.CreateTemp(t.TempDir(), "grafanactl_tests_")
@@ -16,7 +19,9 @@ func CreateTempFile(t *testing.T, content string) (string, func()) {
 	_, err = file.WriteString(content)
 	require.NoError(t, err)
 
-	return file.Name(), func() {
+	t.Cleanup(func() {
 		_ = os.Remove(file.Name())
-	}
+	})
+
+	return file.Name()
 }
