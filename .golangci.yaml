@@ -9,6 +9,7 @@ linters:
     - funlen
     - gocognit
     - godox
+    - gofumpt
     - lll
     - mnd
     - nlreturn
