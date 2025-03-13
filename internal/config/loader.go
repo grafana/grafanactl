@@ -108,7 +108,6 @@ func handleReadError(err error) error {
 			Suggestions: []string{
 				"Check for typos in the command's arguments",
 			},
-			DocsLink: "https://grafana.github.io/en/latest/configuration/configuration.html",
 		}
 	}
 
