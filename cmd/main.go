@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/grafana/grafanactl/cmd/config"
+	"github.com/grafana/grafanactl/cmd/resources"
 	"github.com/grafana/grafanactl/internal/fail"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(config.Command())
+	rootCmd.AddCommand(resources.Command())
 
 	rootCmd.PersistentFlags().BoolVar(&noColors, "no-color", noColors, "Disable color output")
 
