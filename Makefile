@@ -35,6 +35,15 @@ tests: check-binaries ## Runs the tests.
 .PHONY: deps
 deps: check-binaries ## Installs the dependencies.
 	$(RUN_DEVBOX) go mod vendor
+	$(RUN_DEVBOX) pip install -qq -r requirements.txt
+
+.PHONY: docs
+docs: check-binaries ## Generates the documentation.
+	$(RUN_DEVBOX) mkdocs build -f mkdocs.yml -d ./build/documentation
+
+.PHONY: serve-docs
+serve-docs: check-binaries ## Serves the documentation and watches for changes.
+	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml 
 
 .PHONY: check-binaries
 check-binaries: ## Check that the required binaries are present.

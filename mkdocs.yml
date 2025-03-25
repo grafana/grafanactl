@@ -1,0 +1,51 @@
+site_name: grafanactl
+site_author: 'Grafana Labs'
+
+repo_name: "grafana/grafanactl"
+repo_url: "https://github.com/grafana/grafanactl"
+
+plugins: []
+
+markdown_extensions:
+  - admonition
+  - pymdownx.magiclink
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - toc:
+      permalink: 🔗
+
+theme:
+  name: "material"
+  features:
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.top
+    - navigation.prune
+    - search.highlight
+
+  logo: "assets/logo.svg"
+
+  palette:
+    - accent: "deep orange"
+      media: "(prefers-color-scheme: light)"
+      primary: "black"
+      scheme: "default"
+      toggle:
+        icon: "material/weather-night"
+        name: "Switch to dark mode"
+    - accent: "deep orange"
+      media: "(prefers-color-scheme: dark)"
+      primary: "black"
+      scheme: "slate"
+      toggle:
+        icon: "material/weather-sunny"
+        name: "Switch to light mode"
+
+extra_css:
+  - "assets/custom.css"
