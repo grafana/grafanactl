@@ -3,10 +3,12 @@
   "packages": [
     "go@1.24",
     "golangci-lint@1.64",
-    "goreleaser@2.4"
+    "goreleaser@2.4",
+    "python312@3.12"
   ],
   "shell": {
     "init_hook": [
+      "echo 'Entering Python venv' && . $VENV_DIR/bin/activate",
       "echo 'Installing dependencies...' && make deps"
     ]
   }
