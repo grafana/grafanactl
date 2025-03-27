@@ -56,6 +56,11 @@ deps: check-binaries ## Installs the dependencies.
 docs: check-binaries ## Generates the documentation.
 	$(RUN_DEVBOX) mkdocs build -f mkdocs.yml -d ./build/documentation
 
+.PHONY: cli-reference
+cli-reference: check-binaries ## Generates a reference for the CLI.
+	@rm -rf ./docs/reference/cli
+	$(RUN_DEVBOX) go run scripts/cmd-reference/*.go "./docs/reference/cli"
+
 .PHONY: serve-docs
 serve-docs: check-binaries ## Serves the documentation and watches for changes.
 	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml 
