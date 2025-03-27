@@ -1,2 +1,4 @@
 /.devbox
 /build
+/bin
+/vendor

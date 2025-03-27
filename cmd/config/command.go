@@ -40,11 +40,10 @@ func (opts *Options) LoadConfig() (config.Config, error) {
 			}
 
 			if !grafanaCfg.IsEmpty() {
-				cfg.Contexts["default"] = &config.Context{
-					Name:    "default",
+				cfg.SetContext(config.DefaultContextName, true, config.Context{
+					Name:    config.DefaultContextName,
 					Grafana: &grafanaCfg,
-				}
-				cfg.CurrentContext = "default"
+				})
 			}
 
 			return nil
