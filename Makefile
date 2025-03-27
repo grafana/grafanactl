@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 # Within devbox
 ifneq "$(DEVBOX_CONFIG_DIR)" ""
     RUN_DEVBOX:=
@@ -59,7 +61,15 @@ docs: check-binaries ## Generates the documentation.
 .PHONY: cli-reference
 cli-reference: check-binaries ## Generates a reference for the CLI.
 	@rm -rf ./docs/reference/cli
-	$(RUN_DEVBOX) go run scripts/cmd-reference/*.go "./docs/reference/cli"
+	@$(RUN_DEVBOX) go run scripts/cmd-reference/*.go "./docs/reference/cli"
+
+.PHONY: cli-reference-drift
+cli-reference-drift: cli-reference ## Checks for drift in the generated CLI reference.
+	@if ! git diff --exit-code --quiet HEAD ./docs/reference/cli/ ; then \
+		echo "Drift detected in the generated CLI reference."; \
+		echo 'Run `make cli-reference` and commit the modified files.'; \
+		exit 1; \
+ 	fi
 
 .PHONY: serve-docs
 serve-docs: check-binaries ## Serves the documentation and watches for changes.

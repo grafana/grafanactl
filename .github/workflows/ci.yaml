@@ -73,5 +73,8 @@ jobs:
           enable-cache: 'true'
           devbox-version: ${{ env.DEVBOX_VERSION }}
 
+      - name: Check for drift in the generated CLI reference
+        run: make cli-reference-drift
+
       - name: Build documentation
         run: make docs
