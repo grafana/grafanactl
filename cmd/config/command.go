@@ -83,13 +83,13 @@ func Command() *cobra.Command {
 
 The configuration file to load is chosen as follows:
 
-	1. If the --config flag is set, then that file will be loaded. No other location will be considered.
-	2. If the $XDG_CONFIG_HOME environment variable is set, then it will be used: $XDG_CONFIG_HOME/%[1]s/%[2]s
-	   Example: /home/user/.config/%[1]s/%[2]s
-	3. If the $HOME environment variable is set, then it will be used: $HOME/.config/%[1]s/%[2]s
-	   Example: /home/user/.config/%[1]s/%[2]s
-	4. If the $XDG_CONFIG_DIRS environment variable is set, then it will be used: $XDG_CONFIG_DIRS/%[1]s/%[2]s
-	   Example: /etc/xdg/%[1]s/%[2]s
+1. If the --config flag is set, then that file will be loaded. No other location will be considered.
+2. If the $XDG_CONFIG_HOME environment variable is set, then it will be used: $XDG_CONFIG_HOME/%[1]s/%[2]s
+   Example: /home/user/.config/%[1]s/%[2]s
+3. If the $HOME environment variable is set, then it will be used: $HOME/.config/%[1]s/%[2]s
+   Example: /home/user/.config/%[1]s/%[2]s
+4. If the $XDG_CONFIG_DIRS environment variable is set, then it will be used: $XDG_CONFIG_DIRS/%[1]s/%[2]s
+   Example: /etc/xdg/%[1]s/%[2]s
 `, config.StandardConfigFolder, config.StandardConfigFileName),
 	}
 
