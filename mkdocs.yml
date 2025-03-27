@@ -4,7 +4,8 @@ site_author: 'Grafana Labs'
 repo_name: "grafana/grafanactl"
 repo_url: "https://github.com/grafana/grafanactl"
 
-plugins: []
+plugins:
+  - search
 
 markdown_extensions:
   - admonition
