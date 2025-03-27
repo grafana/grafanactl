@@ -25,14 +25,14 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: all
-all: lint test build ## Lints, tests, and builds the project.
+all: lint tests build ## Lints, tests, and builds the project.
 
 .PHONY: lint
 lint: check-binaries ## Lints the code base.
 	$(RUN_DEVBOX) golangci-lint run -c .golangci.yaml
 
-.PHONY: test
-test: check-binaries ## Runs the test.
+.PHONY: tests
+tests: check-binaries ## Runs the tests.
 	$(RUN_DEVBOX) go test -v ./...
 
 .PHONY: build
