@@ -3,6 +3,8 @@ package testutils
 import (
 	"bytes"
 	"io"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -48,6 +50,7 @@ type CommandTestCase struct {
 	Assertions []CommandAssertion
 
 	Stdin io.Reader
+	Env   map[string]string
 }
 
 func (testCase CommandTestCase) Run(t *testing.T) {
@@ -66,7 +69,10 @@ func (testCase CommandTestCase) Run(t *testing.T) {
 	testCase.Cmd.SetOut(stdout)
 	testCase.Cmd.SetArgs(testCase.Command)
 
+	env := testCase.SetEnv()
 	err := testCase.Cmd.Execute()
+	testCase.RestoreEnv(env)
+
 	result := CommandResult{
 		Err:    err,
 		Stdout: stdout.String(),
@@ -74,5 +80,33 @@ func (testCase CommandTestCase) Run(t *testing.T) {
 
 	for _, assertion := range testCase.Assertions {
 		assertion(t, result)
+	}
+}
+
+func (testCase CommandTestCase) SetEnv() map[string]string {
+	env := os.Environ()
+	os.Clearenv()
+
+	res := make(map[string]string, len(env))
+	for _, e := range env {
+		parts := strings.SplitN(e, "=", 2)
+		if len(parts) != 2 {
+			panic("invalid env KV pair: " + e)
+		}
+		res[parts[0]] = parts[1]
+	}
+
+	for k, v := range testCase.Env {
+		os.Setenv(k, v)
+	}
+
+	return res
+}
+
+func (testCase CommandTestCase) RestoreEnv(env map[string]string) {
+	os.Clearenv()
+
+	for k, v := range env {
+		os.Setenv(k, v)
 	}
 }

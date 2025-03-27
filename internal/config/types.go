@@ -4,6 +4,11 @@ import (
 	"errors"
 )
 
+const (
+	// DefaultContextName is the name of the default context.
+	DefaultContextName = "default"
+)
+
 // Config holds the information needed to connect to remote Grafana instances.
 type Config struct {
 	// Contexts is a map of context configurations, indexed by name.
@@ -13,8 +18,22 @@ type Config struct {
 	CurrentContext string `json:"current-context" yaml:"current-context"`
 }
 
-func (config Config) HasContext(name string) bool {
+func (config *Config) HasContext(name string) bool {
 	return config.Contexts[name] != nil
+}
+
+// SetContext adds a new context to the Grafana config.
+// If a context with the same name already exists, it is overwritten.
+func (config *Config) SetContext(name string, makeCurrent bool, context Context) {
+	if config.Contexts == nil {
+		config.Contexts = make(map[string]*Context)
+	}
+
+	config.Contexts[name] = &context
+
+	if makeCurrent {
+		config.CurrentContext = name
+	}
 }
 
 // Context holds the information required to connect to a remote Grafana instance.

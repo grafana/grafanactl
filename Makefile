@@ -24,6 +24,9 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: all
+all: lint tests build ## Lints, tests, and builds the project.
+
 .PHONY: lint
 lint: check-binaries ## Lints the code base.
 	$(RUN_DEVBOX) golangci-lint run -c .golangci.yaml
@@ -31,6 +34,18 @@ lint: check-binaries ## Lints the code base.
 .PHONY: tests
 tests: check-binaries ## Runs the tests.
 	$(RUN_DEVBOX) go test -v ./...
+
+.PHONY: build
+build: check-binaries ## Builds the binary into the `./bin/grafanactl`.
+	$(RUN_DEVBOX) go build -o bin/grafanactl ./cmd
+
+.PHONY: install
+install: build ## Installs the binary into `$GOPATH/bin`.
+ifndef GOPATH
+	@echo "GOPATH is not defined"
+	exit 1
+endif
+	@cp "bin/grafanactl" "${GOPATH}/bin/grafanactl"
 
 .PHONY: deps
 deps: check-binaries ## Installs the dependencies.
@@ -44,6 +59,12 @@ docs: check-binaries ## Generates the documentation.
 .PHONY: serve-docs
 serve-docs: check-binaries ## Serves the documentation and watches for changes.
 	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml 
+
+.PHONY: clean
+clean: ## Cleans the project.
+	rm -rf bin
+	rm -rf vendor
+	rm -rf .devbox
 
 .PHONY: check-binaries
 check-binaries: ## Check that the required binaries are present.
