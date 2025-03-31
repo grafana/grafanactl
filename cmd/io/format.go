@@ -51,15 +51,8 @@ func (opts *Options) Validate() error {
 // We have to return an interface here.
 //
 //nolint:ireturn
-func (opts *Options) Codec() (format.Codec, error) {
-	codec := opts.codecFor(opts.OutputFormat)
-	if codec == nil {
-		return nil, fmt.Errorf(
-			"unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedCodecs(), ", "),
-		)
-	}
-
-	return codec, nil
+func (opts *Options) Codec() format.Codec {
+	return opts.codecFor(opts.OutputFormat)
 }
 
 // We have to return an interface here.

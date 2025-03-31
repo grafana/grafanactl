@@ -107,10 +107,7 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
+			codec := opts.IO.Codec()
 
 			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
 				// Avoid printing a list of results if a single resource is being pulled,
