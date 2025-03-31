@@ -3,11 +3,10 @@ package resources
 import (
 	"context"
 
+	"github.com/grafana/grafanactl/internal/config"
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/grafana/grafanactl/internal/config"
 )
 
 // Puller is a command that pulls resources from Grafana.
@@ -43,11 +42,11 @@ func (p *Puller) PullAll(ctx context.Context) ([]unstructured.Unstructured, erro
 		return nil, err
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
+	errg, ctx := errgroup.WithContext(ctx)
 	cmdRes := make([][]unstructured.Unstructured, len(resources))
 
 	for i, r := range resources {
-		g.Go(func() error {
+		errg.Go(func() error {
 			res, err := p.client.List(ctx, r, metav1.ListOptions{})
 			if err == nil {
 				cmdRes[i] = res.Items
@@ -57,7 +56,7 @@ func (p *Puller) PullAll(ctx context.Context) ([]unstructured.Unstructured, erro
 		})
 	}
 
-	if err := g.Wait(); err != nil {
+	if err := errg.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -69,44 +68,44 @@ func (p *Puller) PullAll(ctx context.Context) ([]unstructured.Unstructured, erro
 	return res, nil
 }
 
-func (p *Puller) Pull(ctx context.Context, cmd PullerCommand) ([]unstructured.Unstructured, error) {
-	cmds, err := ParsePullCommands(cmd.Commands)
+func (p *Puller) Pull(ctx context.Context, command PullerCommand) ([]unstructured.Unstructured, error) {
+	cmds, err := ParsePullCommands(command.Commands)
 	if err != nil {
 		return nil, err
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
+	errg, ctx := errgroup.WithContext(ctx)
 	cmdRes := make([][]unstructured.Unstructured, len(cmds))
 
-	for i, c := range cmds {
-		g.Go(func() error {
-			switch c.Kind {
+	for idx, cmd := range cmds {
+		errg.Go(func() error {
+			switch cmd.Kind {
 			case PullCommandTypeAll:
-				res, err := p.client.List(ctx, c.GVK, metav1.ListOptions{})
+				res, err := p.client.List(ctx, cmd.GVK, metav1.ListOptions{})
 				if err != nil {
-					if !cmd.ContinueOnError {
+					if !command.ContinueOnError {
 						return err
 					}
 				} else {
-					cmdRes[i] = res.Items
+					cmdRes[idx] = res.Items
 				}
 			case PullCommandTypeMultiple:
-				res, err := p.client.GetMultiple(ctx, c.GVK, c.UIDs, metav1.ListOptions{})
+				res, err := p.client.GetMultiple(ctx, cmd.GVK, cmd.UIDs, metav1.ListOptions{})
 				if err != nil {
-					if !cmd.ContinueOnError {
+					if !command.ContinueOnError {
 						return err
 					}
 				} else {
-					cmdRes[i] = res
+					cmdRes[idx] = res
 				}
 			case PullCommandTypeSingle:
-				res, err := p.client.Get(ctx, c.GVK, c.UIDs[0], metav1.GetOptions{})
+				res, err := p.client.Get(ctx, cmd.GVK, cmd.UIDs[0], metav1.GetOptions{})
 				if err != nil {
-					if !cmd.ContinueOnError {
+					if !command.ContinueOnError {
 						return err
 					}
 				} else {
-					cmdRes[i] = []unstructured.Unstructured{*res}
+					cmdRes[idx] = []unstructured.Unstructured{*res}
 				}
 			}
 
@@ -114,7 +113,7 @@ func (p *Puller) Pull(ctx context.Context, cmd PullerCommand) ([]unstructured.Un
 		})
 	}
 
-	if err := g.Wait(); err != nil {
+	if err := errg.Wait(); err != nil {
 		return nil, err
 	}
 

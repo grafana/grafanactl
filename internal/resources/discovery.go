@@ -128,15 +128,15 @@ func (r *DiscoveryRegistry) Discover(context.Context) error {
 	}
 
 	for _, pref := range preferred {
-		gv := strings.Split(pref.GroupVersion, "/")
-		if len(gv) != 2 {
+		groupVersion := strings.Split(pref.GroupVersion, "/")
+		if len(groupVersion) != 2 {
 			return fmt.Errorf("invalid group version: %s", pref.GroupVersion)
 		}
 
 		// APIResources can contain empty values for group and version,
 		// which indicate that the group & version values should be taken from the APIResourceList.
-		group := gv[0]
-		version := gv[1]
+		group := groupVersion[0]
+		version := groupVersion[1]
 
 		for _, res := range pref.APIResources {
 			// Check if the resource has a specified version,
@@ -196,22 +196,20 @@ type LookupOptions struct {
 }
 
 // LookupGVR looks up a GVR for a given DynamicGroupVersionKind.
-//
-// TODO: add tests
 func LookupGVR(gvk DynamicGroupVersionKind, opts LookupOptions) (schema.GroupVersionResource, error) {
 	var res schema.GroupVersionResource
 
 	// If the group was specified, it takes precedence,
 	// because there can be multiple kinds with the same name in different groups.
 	// This is a less ambiguous lookup path.
-	if gvk.Group != "" {
-		for _, g := range opts.Groups {
-			if gvk.Group == g.Short || gvk.Group == g.Long {
-				res.Group = g.Long
+	if gvk.Group != "" { //nolint:nestif
+		for _, group := range opts.Groups {
+			if gvk.Group == group.Short || gvk.Group == group.Long {
+				res.Group = group.Long
 
 				// If the version was specified, we need to make sure it's supported.
 				if gvk.Version != "" {
-					if !slices.Contains(g.Versions, gvk.Version) {
+					if !slices.Contains(group.Versions, gvk.Version) {
 						return schema.GroupVersionResource{}, fmt.Errorf(
 							"the server does not support version '%s' of API group '%s'",
 							gvk.Version, gvk.Group,

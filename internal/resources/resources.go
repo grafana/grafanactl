@@ -1,10 +1,14 @@
 package resources
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
+// PullCommandKind is the kind of pull command.
+// It identifies whether the command needs to list all resources of a type,
+// get a single resource by UID, or get multiple resources by UID.
 type PullCommandKind int
 
 const (
@@ -14,16 +18,22 @@ const (
 	PullCommandTypeSingle
 )
 
-type PullCommand struct {
-	Kind PullCommandKind
-	GVK  DynamicGroupVersionKind
-	UIDs []string
-}
-
+// DynamicGroupVersionKind is a group, version, and kind,
+// which can be used to identify a resource.
+// Not all fields are required to be set.
+// It is expected that anything that accepts a DynamicGroupVersionKind
+// will handle the discovery of the resource based on the fields that are present.
 type DynamicGroupVersionKind struct {
 	Group   string
 	Version string
 	Kind    string
+}
+
+// PullCommand is a command to pull a resource from Grafana.
+type PullCommand struct {
+	Kind PullCommandKind
+	GVK  DynamicGroupVersionKind
+	UIDs []string
 }
 
 func (gvk DynamicGroupVersionKind) String() string {
@@ -49,7 +59,7 @@ func ParsePullCommand(cmd string, dst *PullCommand) error {
 	parts := strings.Split(cmd, "/")
 
 	if len(parts) == 0 {
-		return fmt.Errorf("missing resource type")
+		return errors.New("missing resource type")
 	}
 
 	// grafanactl resources pull dashboards
@@ -63,11 +73,9 @@ func ParsePullCommand(cmd string, dst *PullCommand) error {
 		dst.GVK = gvk
 	}
 
-	// grafanactl resources pull dashboards/foo
-	// grafanactl resources pull dashboards/foo,bar
-	if len(parts) == 2 {
+	if len(parts) == 2 { //nolint:nestif
 		if parts[1] == "" {
-			return fmt.Errorf("missing resource UID(s)")
+			return errors.New("missing resource UID(s)")
 		}
 
 		gvk, err := ParseGVK(parts[0])
@@ -94,25 +102,20 @@ func ParsePullCommand(cmd string, dst *PullCommand) error {
 
 func parseUIDs(uids string) ([]string, error) {
 	if uids == "" {
-		return nil, fmt.Errorf("missing resource UID(s)")
+		return nil, errors.New("missing resource UID(s)")
 	}
 
 	res := strings.Split(uids, ",")
 	for _, uid := range res {
 		if uid == "" {
-			return nil, fmt.Errorf("missing resource UID")
+			return nil, errors.New("missing resource UID")
 		}
 	}
 
 	return res, nil
 }
 
-// ParseGVK parses a GVK string into a schema.GroupVersionKind.
-//
-// The format is one of the following:
-// kind.version.group
-// kind.group
-// kind
+// ParseGVK parses a GVK string into a DynamicGroupVersionKind.
 func ParseGVK(gvk string) (DynamicGroupVersionKind, error) {
 	parts := strings.SplitN(gvk, ".", 3)
 
@@ -120,11 +123,11 @@ func ParseGVK(gvk string) (DynamicGroupVersionKind, error) {
 	switch len(parts) {
 	case 2:
 		if len(parts[0]) == 0 {
-			return DynamicGroupVersionKind{}, fmt.Errorf("must specify kind")
+			return DynamicGroupVersionKind{}, errors.New("must specify kind")
 		}
 
 		if len(parts[1]) == 0 {
-			return DynamicGroupVersionKind{}, fmt.Errorf("must specify group")
+			return DynamicGroupVersionKind{}, errors.New("must specify group")
 		}
 
 		res = DynamicGroupVersionKind{
@@ -134,15 +137,15 @@ func ParseGVK(gvk string) (DynamicGroupVersionKind, error) {
 		}
 	case 3:
 		if len(parts[0]) == 0 {
-			return DynamicGroupVersionKind{}, fmt.Errorf("must specify kind")
+			return DynamicGroupVersionKind{}, errors.New("must specify kind")
 		}
 
 		if len(parts[1]) == 0 {
-			return DynamicGroupVersionKind{}, fmt.Errorf("must specify version")
+			return DynamicGroupVersionKind{}, errors.New("must specify version")
 		}
 
 		if len(parts[2]) == 0 {
-			return DynamicGroupVersionKind{}, fmt.Errorf("must specify group")
+			return DynamicGroupVersionKind{}, errors.New("must specify group")
 		}
 
 		res = DynamicGroupVersionKind{
@@ -160,5 +163,3 @@ func ParseGVK(gvk string) (DynamicGroupVersionKind, error) {
 
 	return res, nil
 }
-
-// TODO: move this to a separate file

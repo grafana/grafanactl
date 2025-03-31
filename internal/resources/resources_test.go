@@ -3,9 +3,8 @@ package resources_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParsePullCommands(t *testing.T) {

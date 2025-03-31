@@ -6,14 +6,13 @@ import (
 	"path"
 	"text/tabwriter"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/fail"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 //nolint:gochecknoglobals
@@ -45,7 +44,7 @@ type listOpts struct {
 	// none so far
 }
 
-func (opts *listOpts) BindFlags(flags *pflag.FlagSet) {
+func (opts *listOpts) BindFlags(*pflag.FlagSet) {
 	// none so far
 }
 
@@ -60,7 +59,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Example: fmt.Sprintf(`
   %[1]s resources list
 `, binaryName),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := configOpts.LoadConfig()
 			if err != nil {
 				return err
@@ -118,13 +117,13 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			// TODO: add formatters (yaml, json, etc.) / outputters (stdout, file, filetree, etc.)
-			tw := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-			fmt.Fprintf(tw, "GROUP\tVERSION\tKIND\n")
+			out := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
+			fmt.Fprintf(out, "GROUP\tVERSION\tKIND\n")
 			for _, r := range res {
-				fmt.Fprintf(tw, "%s\t%s\t%s\n", r.Group, r.Version, r.Kind)
+				fmt.Fprintf(out, "%s\t%s\t%s\n", r.Group, r.Version, r.Kind)
 			}
 
-			return tw.Flush()
+			return out.Flush()
 		},
 	}
 
@@ -244,14 +243,14 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			// TODO: add formatters (yaml, json, etc.) / outputters (stdout, file, filetree, etc.)
-			tw := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-			fmt.Fprintf(tw, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\n")
+			out := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
+			fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\n")
 			for _, r := range res {
 				gvk := r.GroupVersionKind()
-				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName())
+				fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName())
 			}
 
-			return tw.Flush()
+			return out.Flush()
 		},
 	}
 
