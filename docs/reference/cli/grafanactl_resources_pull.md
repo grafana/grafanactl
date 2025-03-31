@@ -4,20 +4,54 @@ Pull resources from Grafana
 
 ### Synopsis
 
-Pull resources from Grafana.
-
-TODO: more information.
-
+Pull resources from Grafana using a specific format. See examples below for more details.
 
 ```
-grafanactl resources pull RESOURCES_PATH [flags]
+grafanactl resources pull RESOURCES_PATHS [flags]
 ```
 
 ### Examples
 
 ```
 
-	main resources pull
+  Everything:
+
+  main resources pull
+
+  All instances for a given kind(s):
+
+  main resources pull dashboards
+  main resources pull dashboards folders
+
+  Single resource kind, one or more resource instances:
+
+  main resources pull dashboards/foo
+  main resources pull dashboards/foo,bar
+
+  Single resource kind, long kind format:
+
+  main resources pull dashboard.dashboards/foo
+  main resources pull dashboard.dashboards/foo,bar
+
+  Single resource kind, long kind format with version:
+
+  main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo
+  main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo,bar
+
+  Multiple resource kinds, one or more resource instances:
+
+  main resources pull dashboards/foo folders/qux
+  main resources pull dashboards/foo,bar folders/qux,quux
+
+  Multiple resource kinds, long kind format:
+
+  main resources pull dashboard.dashboards/foo folder.folders/qux
+  main resources pull dashboard.dashboards/foo,bar folder.folders/qux,quux
+
+  Multiple resource kinds, long kind format with version:
+
+  main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
+
 ```
 
 ### Options
@@ -25,7 +59,6 @@ grafanactl resources pull RESOURCES_PATH [flags]
 ```
       --continue-on-error   Continue pulling resources even if an error occurs
   -h, --help                help for pull
-      --kind stringArray    Resource kinds to pull. If omitted, all supported kinds will be pulled
 ```
 
 ### Options inherited from parent commands
