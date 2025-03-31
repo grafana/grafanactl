@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 )
 
 const (
@@ -20,6 +21,17 @@ type Config struct {
 
 func (config *Config) HasContext(name string) bool {
 	return config.Contexts[name] != nil
+}
+
+// GetCurrentContext returns the current context.
+// If the current context is not set, it returns an error.
+func (config *Config) GetCurrentContext() (*Context, error) {
+	ctx, ok := config.Contexts[config.CurrentContext]
+	if !ok {
+		return nil, fmt.Errorf("context %s not found", config.CurrentContext)
+	}
+
+	return ctx, nil
 }
 
 // SetContext adds a new context to the Grafana config.
@@ -49,6 +61,11 @@ type GrafanaConfig struct {
 
 	User  string `env:"GRAFANA_USER" json:"user,omitempty" yaml:"user,omitempty"`
 	Token string `datapolicy:"secret" env:"GRAFANA_TOKEN" json:"token,omitempty" yaml:"token,omitempty"`
+
+	// TODO add stack ID and org ID
+	// with the validation that only one of them is set
+	// For cloud we require the stack ID
+	// For onprem we require the org ID (or it can be omitted and we'll default to orgID 1)
 
 	// InsecureSkipTLSVerify disables the validation of the server's SSL certificate.
 	// Enabling this will make your HTTPS connections insecure.

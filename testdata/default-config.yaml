@@ -1,0 +1,7 @@
+current-context: "default"
+contexts:
+  default:
+    grafana:
+      server: "https://localhost:3000"
+      insecure-skip-tls-verify: true
+      token: ""
