@@ -6,6 +6,7 @@ import (
 	"io"
 	"maps"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -19,16 +20,13 @@ type Options struct {
 }
 
 func (opts *Options) BindFlags(flags *pflag.FlagSet) {
-	allowedFormats := slices.Collect(maps.Keys(opts.formatters()))
-
-	flags.StringVarP(&opts.OutputFormat, "output", "o", "yaml", "Output format. One of: "+strings.Join(allowedFormats, ", "))
+	flags.StringVarP(&opts.OutputFormat, "output", "o", "yaml", "Output format. One of: "+strings.Join(opts.allowedFormats(), ", "))
 }
 
 func (opts *Options) Validate() error {
 	_, ok := opts.formatters()[opts.OutputFormat]
 	if !ok {
-		allowedFormats := slices.Collect(maps.Keys(opts.formatters()))
-		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(allowedFormats, ", "))
+		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedFormats(), ", "))
 	}
 
 	return nil
@@ -37,8 +35,7 @@ func (opts *Options) Validate() error {
 func (opts *Options) Format(input any, out io.Writer) error {
 	formatterFunc, ok := opts.formatters()[opts.OutputFormat]
 	if !ok {
-		allowedFormats := slices.Collect(maps.Keys(opts.formatters()))
-		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(allowedFormats, ", "))
+		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedFormats(), ", "))
 	}
 
 	formatted, err := formatterFunc(input)
@@ -56,6 +53,16 @@ func (opts *Options) formatters() map[string]formatter {
 		"yaml": formatYAML,
 		"json": formatJSON,
 	}
+}
+
+func (opts *Options) allowedFormats() []string {
+	allowedFormats := slices.Collect(maps.Keys(opts.formatters()))
+
+	// the allowed formats are stored in a map: let's sort them to make the
+	// return value of this function deterministic
+	sort.Strings(allowedFormats)
+
+	return allowedFormats
 }
 
 func formatYAML(input any) ([]byte, error) {
