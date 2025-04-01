@@ -71,6 +71,19 @@ cli-reference-drift: cli-reference ## Checks for drift in the generated CLI refe
 		exit 1; \
  	fi
 
+.PHONY: config-reference
+config-reference: check-binaries ## Generates a reference for the configuration file.
+	@rm -rf ./docs/reference/configuration
+	@$(RUN_DEVBOX) go run scripts/config-reference/*.go "./docs/reference/configuration"
+
+.PHONY: config-reference-drift
+config-reference-drift: config-reference ## Checks for drift in the generated config file reference.
+	@if ! git diff --exit-code --quiet HEAD ./docs/reference/configuration/ ; then \
+		echo "Drift detected in the generated config reference."; \
+		echo 'Run `make config-reference` and commit the modified files.'; \
+		exit 1; \
+ 	fi
+
 .PHONY: serve-docs
 serve-docs: check-binaries ## Serves the documentation and watches for changes.
 	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml 
