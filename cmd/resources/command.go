@@ -233,7 +233,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			if perr != nil {
 				return fail.DetailedError{
-					Parent:  err,
+					Parent:  perr,
 					Summary: "Could not pull resource(s) from the API",
 					Details: "One or more resources could not be pulled from the API",
 					Suggestions: []string{
