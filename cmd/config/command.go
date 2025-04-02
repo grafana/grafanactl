@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/fatih/color"
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
+	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/secrets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -124,6 +127,7 @@ The configuration file to load is chosen as follows:
 
 	configOpts.BindFlags(cmd.PersistentFlags())
 
+	cmd.AddCommand(checkCmd(configOpts))
 	cmd.AddCommand(currentContextCmd(configOpts))
 	cmd.AddCommand(setCmd(configOpts))
 	cmd.AddCommand(unsetCmd(configOpts))
@@ -214,6 +218,75 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 			}
 
 			cmd.Println(cfg.CurrentContext)
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func checkCmd(configOpts *Options) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "check",
+		Args:    cobra.NoArgs,
+		Short:   "Check the current configuration for issues",
+		Long:    "Check the current configuration for issues.",
+		Example: "\n\t" + binaryName + " config check",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			stdout := cmd.OutOrStdout()
+
+			io.Success(stdout, "Configuration file: "+io.Green(cfg.Source))
+
+			if cfg.CurrentContext == "" {
+				io.Error(stdout, "Current context: "+io.Red("<undefined>"))
+			} else if cfg.HasContext(cfg.CurrentContext); err != nil {
+				io.Error(stdout, "Current context: "+io.Red(config.ContextNotFound(cfg.CurrentContext).Error()))
+			} else {
+				io.Success(stdout, "Current context: "+io.Green(cfg.CurrentContext))
+			}
+
+			cmd.Println()
+
+			for _, gCtx := range cfg.Contexts {
+				title := fmt.Sprintf("Context: %s", color.New(color.Bold).Sprintf(gCtx.Name))
+
+				cmd.Println(io.Yellow(title))
+				cmd.Println(io.Yellow(strings.Repeat("=", len(title))))
+
+				if err := gCtx.Validate(); err != nil {
+					io.Error(stdout, "Configuration: "+io.Red(err.Error()))
+					io.Warning(stdout, "Connectivity: "+io.Yellow("skipped")+"\n")
+					continue
+				} else {
+					io.Success(stdout, "Configuration: "+io.Green("valid"))
+				}
+
+				rest, err := config.NewNamespacedRESTConfig(*gCtx)
+				if err != nil {
+					io.Error(stdout, "Connectivity: "+io.Red(err.Error())+"\n")
+					continue
+				}
+
+				reg, err := resources.NewDefaultDiscoveryRegistry(rest)
+				if err != nil {
+					io.Error(stdout, "Connectivity: "+io.Red(err.Error())+"\n")
+					continue
+				}
+
+				_, err = reg.Resources(cmd.Context(), false)
+				if err != nil {
+					io.Error(stdout, "Connectivity: "+io.Red(err.Error())+"\n")
+					continue
+				}
+
+				io.Success(stdout, "Connectivity: "+io.Green("online")+"\n")
+			}
 
 			return nil
 		},

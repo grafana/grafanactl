@@ -9,15 +9,28 @@ import (
 
 //nolint:gochecknoglobals
 var (
-	Green = color.New(color.FgGreen).SprintfFunc()
-	Blue  = color.New(color.FgBlue).SprintfFunc()
+	Green  = color.New(color.FgGreen).SprintfFunc()
+	Blue   = color.New(color.FgBlue).SprintfFunc()
+	Red    = color.New(color.FgRed).SprintfFunc()
+	Yellow = color.New(color.FgYellow).SprintfFunc()
 )
 
 func Success(stdout io.Writer, message string, args ...any) {
-	green := color.New(color.FgGreen).SprintFunc()
 	msg := fmt.Sprintf(message, args...)
 
-	fmt.Fprintln(stdout, green("✓ ")+msg)
+	fmt.Fprintln(stdout, Green("✔ ")+msg)
+}
+
+func Warning(stdout io.Writer, message string, args ...any) {
+	msg := fmt.Sprintf(message, args...)
+
+	fmt.Fprintln(stdout, Yellow("⚠ ")+msg)
+}
+
+func Error(stdout io.Writer, message string, args ...any) {
+	msg := fmt.Sprintf(message, args...)
+
+	fmt.Fprintln(stdout, Red("✘ ")+msg)
 }
 
 func Info(stdout io.Writer, message string, args ...any) {
