@@ -65,20 +65,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			cfgCtx, err := cfg.GetCurrentContext()
-			if err != nil {
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not get config for the context",
-					Details: "The config provided does not have an active context set",
-					Suggestions: []string{
-						"Make sure that you are passing in a valid config",
-						"Make sure that you are using a context that exists in the config",
-					},
-				}
-			}
-
-			rest, err := config.NewNamespacedRESTConfig(*cfgCtx)
+			rest, err := config.NewNamespacedRESTConfig(*cfg.GetCurrentContext())
 			if err != nil {
 				return fail.DetailedError{
 					Parent:  err,
@@ -194,20 +181,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			cfgCtx, err := cfg.GetCurrentContext()
-			if err != nil {
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not get config for the context",
-					Details: "The config provided does not have an active context set",
-					Suggestions: []string{
-						"Make sure that you are passing in a valid config",
-						"Make sure that you are using a context that exists in the config",
-					},
-				}
-			}
-
-			pull, err := resources.NewPuller(*cfgCtx)
+			pull, err := resources.NewPuller(*cfg.GetCurrentContext())
 			if err != nil {
 				return fail.DetailedError{
 					Parent:  err,
