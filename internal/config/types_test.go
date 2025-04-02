@@ -27,7 +27,7 @@ func TestGrafanaConfig_IsEmpty(t *testing.T) {
 	req := require.New(t)
 
 	req.True(config.GrafanaConfig{}.IsEmpty())
-	req.False(config.GrafanaConfig{InsecureSkipTLSVerify: true}.IsEmpty())
+	req.False(config.GrafanaConfig{TLS: &config.TLS{Insecure: true}}.IsEmpty())
 	req.False(config.GrafanaConfig{Server: "value"}.IsEmpty())
 }
 

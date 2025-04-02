@@ -105,6 +105,17 @@ func updateValue(input reflect.Value, path []string, value string, unset bool) e
 		}
 
 		actualInput.SetString(value)
+	case reflect.Slice:
+		if len(path) != 0 {
+			return fmt.Errorf("more steps after slice: %s", strings.Join(path, "."))
+		}
+
+		if unset {
+			actualInput.SetBytes(nil)
+			return nil
+		}
+
+		actualInput.SetBytes([]byte(value))
 	case reflect.Bool:
 		if len(path) != 0 {
 			return fmt.Errorf("more steps after bool: %s", strings.Join(path, "."))
