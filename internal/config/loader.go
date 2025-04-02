@@ -54,16 +54,16 @@ func Load(source Source, overrides ...Override) (Config, error) {
 
 	filename, err := source()
 	if err != nil {
-		return config, handleReadError(err)
+		return config, handleReadError(filename, nil, err)
 	}
 
 	contents, err := os.ReadFile(filename)
 	if err != nil {
-		return config, handleReadError(err)
+		return config, handleReadError(filename, contents, err)
 	}
 
 	if err := yaml.UnmarshalWithOptions(contents, &config, yaml.DisallowUnknownField()); err != nil {
-		return config, InvalidConfiguration(filename, err)
+		return config, UnmarshalError(filename, err)
 	}
 
 	for name, ctx := range config.Contexts {
@@ -72,7 +72,7 @@ func Load(source Source, overrides ...Override) (Config, error) {
 
 	for _, override := range overrides {
 		if err := override(&config); err != nil {
-			return config, err
+			return config, handleReadError(filename, contents, err)
 		}
 	}
 
@@ -93,7 +93,7 @@ func Write(source Source, cfg Config) error {
 	return handleWriteError(os.WriteFile(filename, marshaled, configFilePermissions))
 }
 
-func handleReadError(err error) error {
+func handleReadError(filename string, contents []byte, err error) error {
 	if err == nil {
 		return nil
 	}
@@ -121,6 +121,24 @@ func handleReadError(err error) error {
 				fmt.Sprintf("On Linux/macOS: chmod %o %s", configFilePermissions, pathErr.Path),
 			},
 		}
+	}
+
+	validationError := ValidationError{}
+	if errors.As(err, &validationError) {
+		path, err := yaml.PathString(validationError.Path)
+		if err != nil {
+			return err
+		}
+
+		annotatedSource, err := path.AnnotateSource(contents, true)
+		if err != nil {
+			return err
+		}
+
+		detailedErr := InvalidConfiguration(filename, validationError.Error(), string(annotatedSource))
+		detailedErr.Suggestions = append(detailedErr.Suggestions, validationError.Suggestions...)
+
+		return detailedErr
 	}
 
 	return err

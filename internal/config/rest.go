@@ -1,6 +1,8 @@
 package config
 
 import (
+	"errors"
+
 	"github.com/grafana/authlib/claims"
 	"k8s.io/client-go/rest"
 )
@@ -54,34 +56,25 @@ func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
 	// 	rcfg.CAData = tlsClientConfig.CAData
 	// }
 
-	// TODO: add auth parsing
-	// userInfo, orgID, apiKey, err := parseAuth(cfg)
-	// if err != nil {
-	// 	return err
-	// }
-	// switch {
-	// case apiKey != "":
-	// 	if orgID > 1 {
-	// 		return fmt.Errorf("org_id is only supported with basic auth. API keys are already org-scoped")
-	// 	}
-	// 	rcfg.BearerToken = apiKey
-	// case userInfo != nil:
-	// 	rcfg.Username = userInfo.Username()
-	// 	if p, ok := userInfo.Password(); ok {
-	// 		rcfg.Password = p
-	// 	}
-	// }
-	rcfg.BearerToken = cfg.Grafana.Token
+	// Authentication
+	switch {
+	case cfg.Grafana.APIToken != "":
+		if cfg.Grafana.OrgID != 0 {
+			return NamespacedRESTConfig{}, errors.New("org_id is only supported with basic auth. API keys are already org-scoped")
+		}
+		rcfg.BearerToken = cfg.Grafana.APIToken
+	case cfg.Grafana.User != "":
+		rcfg.Username = cfg.Grafana.User
+		rcfg.Password = cfg.Grafana.Password
+	}
 
-	// TODO: add proper namespace parsing once we have orgID / stackID
-	// 	ns = claims.OrgNamespaceFormatter(cfg.Grafana.OrgID)
-	// switch {
-	// case cfg.Grafana.OrgID > 0:
-	// 	ns = claims.OrgNamespaceFormatter(cfg.Grafana.OrgID)
-	// case cfg.Grafana.StackID > 0:
-	// 	ns = claims.CloudNamespaceFormatter(cfg.Grafana.StackID)
-	// }
+	// Namespace
 	namespace := claims.OrgNamespaceFormatter(1)
+	if cfg.Grafana.OrgID != 0 {
+		namespace = claims.OrgNamespaceFormatter(cfg.Grafana.OrgID)
+	} else if cfg.Grafana.StackID != 0 {
+		namespace = claims.CloudNamespaceFormatter(cfg.Grafana.StackID)
+	}
 
 	return NamespacedRESTConfig{
 		Config:    rcfg,
