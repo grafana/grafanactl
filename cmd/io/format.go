@@ -1,6 +1,7 @@
 package io
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -59,7 +60,16 @@ func (opts *Options) formatters() map[string]formatter {
 }
 
 func formatYAML(input any) ([]byte, error) {
-	return yaml.MarshalWithOptions(input, yaml.Indent(2))
+	return yaml.MarshalWithOptions(
+		input,
+		yaml.Indent(2),
+		yaml.CustomMarshaler[[]byte](func(data []byte) ([]byte, error) {
+			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+			base64.StdEncoding.Encode(dst, data)
+
+			return dst, nil
+		}),
+	)
 }
 
 func formatJSON(input any) ([]byte, error) {

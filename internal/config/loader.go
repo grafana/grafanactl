@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -62,7 +63,18 @@ func Load(source Source, overrides ...Override) (Config, error) {
 		return config, handleReadError(filename, contents, err)
 	}
 
-	if err := yaml.UnmarshalWithOptions(contents, &config, yaml.DisallowUnknownField()); err != nil {
+	err = yaml.UnmarshalWithOptions(contents, &config, yaml.Strict(), yaml.CustomUnmarshaler[[]byte](func(dest *[]byte, raw []byte) error {
+		dst := make([]byte, base64.StdEncoding.DecodedLen(len(raw)))
+		_, err := base64.StdEncoding.Decode(dst, raw)
+		if err != nil {
+			return err
+		}
+
+		*dest = dst
+
+		return nil
+	}))
+	if err != nil {
 		return config, UnmarshalError(filename, err)
 	}
 
@@ -85,7 +97,12 @@ func Write(source Source, cfg Config) error {
 		return handleWriteError(err)
 	}
 
-	marshaled, err := yaml.MarshalWithOptions(cfg, yaml.Indent(2))
+	marshaled, err := yaml.MarshalWithOptions(cfg, yaml.Indent(2), yaml.CustomMarshaler[[]byte](func(data []byte) ([]byte, error) {
+		dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+		base64.StdEncoding.Encode(dst, data)
+
+		return dst, nil
+	}))
 	if err != nil {
 		return handleWriteError(err)
 	}

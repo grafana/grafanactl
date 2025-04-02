@@ -19,48 +19,36 @@ func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
 	rcfg := rest.Config{
 		// TODO add user agent
 		// UserAgent: cfg.UserAgent.ValueString(),
-		Host:    cfg.Grafana.Server,
-		APIPath: "/apis",
-		TLSClientConfig: rest.TLSClientConfig{
-			// always true for now because we don't have TLS config parsing yet
-			// k8s requires TLS or InsecureSkipTLSVerify=true
-			Insecure: true,
-		},
+		Host:            cfg.Grafana.Server,
+		APIPath:         "/apis",
+		TLSClientConfig: rest.TLSClientConfig{},
 		// TODO: make configurable
 		QPS:   50,
 		Burst: 100,
 	}
 
-	// TODO: add TLS config
-	// tlsClientConfig, err := parseTLSconfig(cfg)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // Kubernetes really is wonderful, huh.
-	// // tl;dr it has it's own TLSClientConfig,
-	// // and it's not compatible with the one from the "crypto/tls" package.
-	// rcfg.TLSClientConfig = rest.TLSClientConfig{
-	// 	Insecure: tlsClientConfig.InsecureSkipVerify,
-	// }
-
-	// if len(tlsClientConfig.CertData) > 0 {
-	// 	rcfg.CertData = tlsClientConfig.CertData
-	// }
-
-	// if len(tlsClientConfig.KeyData) > 0 {
-	// 	rcfg.KeyData = tlsClientConfig.KeyData
-	// }
-
-	// if len(tlsClientConfig.CAData) > 0 {
-	// 	rcfg.CAData = tlsClientConfig.CAData
-	// }
+	if cfg.Grafana.TLS != nil {
+		// Kubernetes really is wonderful, huh.
+		// tl;dr it has its own TLSClientConfig,
+		// and it's not compatible with the one from the "crypto/tls" package.
+		rcfg.TLSClientConfig = rest.TLSClientConfig{
+			Insecure:   cfg.Grafana.TLS.Insecure,
+			ServerName: cfg.Grafana.TLS.ServerName,
+			CertFile:   cfg.Grafana.TLS.CertFile,
+			KeyFile:    cfg.Grafana.TLS.KeyFile,
+			CAFile:     cfg.Grafana.TLS.CAFile,
+			CertData:   cfg.Grafana.TLS.CertData,
+			KeyData:    cfg.Grafana.TLS.KeyData,
+			CAData:     cfg.Grafana.TLS.CAData,
+			NextProtos: cfg.Grafana.TLS.NextProtos,
+		}
+	}
 
 	// Authentication
 	switch {
 	case cfg.Grafana.APIToken != "":
 		if cfg.Grafana.OrgID != 0 {
-			return NamespacedRESTConfig{}, errors.New("org_id is only supported with basic auth. API keys are already org-scoped")
+			return NamespacedRESTConfig{}, errors.New("org ID is only supported with basic auth. API keys are already org-scoped")
 		}
 		rcfg.BearerToken = cfg.Grafana.APIToken
 	case cfg.Grafana.User != "":

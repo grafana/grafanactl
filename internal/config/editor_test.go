@@ -57,12 +57,25 @@ func Test_SetValue(t *testing.T) {
 		{
 			name:  "boolean in new context",
 			input: config.Config{},
-			path:  "contexts.new.grafana.insecure-skip-tls-verify",
+			path:  "contexts.new.grafana.tls.insecure-skip-verify",
 			value: "true",
 			expectedOutput: config.Config{
 				Contexts: map[string]*config.Context{
 					"new": {
-						Grafana: &config.GrafanaConfig{InsecureSkipTLSVerify: true},
+						Grafana: &config.GrafanaConfig{TLS: &config.TLS{Insecure: true}},
+					},
+				},
+			},
+		},
+		{
+			name:  "bytes in new context",
+			input: config.Config{},
+			path:  "contexts.new.grafana.tls.cert-data",
+			value: "foo bar baz",
+			expectedOutput: config.Config{
+				Contexts: map[string]*config.Context{
+					"new": {
+						Grafana: &config.GrafanaConfig{TLS: &config.TLS{CertData: []byte("foo bar baz")}},
 					},
 				},
 			},
@@ -146,15 +159,15 @@ func Test_UnsetValue(t *testing.T) {
 			input: config.Config{
 				Contexts: map[string]*config.Context{
 					"existing": {
-						Grafana: &config.GrafanaConfig{InsecureSkipTLSVerify: true},
+						Grafana: &config.GrafanaConfig{TLS: &config.TLS{Insecure: true}},
 					},
 				},
 			},
-			path: "contexts.existing.grafana.insecure-skip-tls-verify",
+			path: "contexts.existing.grafana.tls.insecure-skip-verify",
 			expectedOutput: config.Config{
 				Contexts: map[string]*config.Context{
 					"existing": {
-						Grafana: &config.GrafanaConfig{InsecureSkipTLSVerify: false},
+						Grafana: &config.GrafanaConfig{TLS: &config.TLS{Insecure: false}},
 					},
 				},
 			},
