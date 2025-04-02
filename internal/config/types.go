@@ -84,11 +84,11 @@ type GrafanaConfig struct {
 	// already org-scoped.
 	// Default: 1
 	// Optional.
-	OrgID int64 `env:"GRAFANA_ORG_ID" json:"org_id,omitempty" yaml:"org_id,omitempty"`
+	OrgID int64 `env:"GRAFANA_ORG_ID" json:"org-id,omitempty" yaml:"org-id,omitempty"`
 
 	// StackID specifies the Grafana Cloud stack targeted by this config.
 	// Note: required when targeting a Grafana Cloud instance.
-	StackID int64 `env:"GRAFANA_STACK_ID" json:"stack_id,omitempty" yaml:"stack_id,omitempty"`
+	StackID int64 `env:"GRAFANA_STACK_ID" json:"stack-id,omitempty" yaml:"stack-id,omitempty"`
 
 	// InsecureSkipTLSVerify disables the validation of the server's SSL certificate.
 	// Enabling this will make your HTTPS connections insecure.
@@ -110,10 +110,10 @@ func (grafana GrafanaConfig) Validate(contextName string) error {
 	if grafana.APIToken != "" {
 		if grafana.OrgID != 0 {
 			return ValidationError{
-				Path:    fmt.Sprintf("$.contexts.'%s'.grafana.org_id", contextName),
-				Message: "org_id is only supported with basic auth. API keys are already org-scoped",
+				Path:    fmt.Sprintf("$.contexts.'%s'.grafana.org-id", contextName),
+				Message: "org-id is only supported with basic auth. API keys are already org-scoped",
 				Suggestions: []string{
-					"Remove the `org_id` setting",
+					"Remove the `org-id` setting",
 				},
 			}
 		}
