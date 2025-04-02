@@ -14,6 +14,9 @@ const (
 
 // Config holds the information needed to connect to remote Grafana instances.
 type Config struct {
+	// Source contains the path to the config file parsed to populate this struct.
+	Source string `json:"-" yaml:"-"`
+
 	// Contexts is a map of context configurations, indexed by name.
 	Contexts map[string]*Context `json:"contexts" yaml:"contexts"`
 

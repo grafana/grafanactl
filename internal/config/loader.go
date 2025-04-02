@@ -62,6 +62,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 	}
 
 	logging.FromContext(ctx).Debug("Loading config", slog.String("filename", filename))
+	config.Source = filename
 
 	contents, err := os.ReadFile(filename)
 	if err != nil {
