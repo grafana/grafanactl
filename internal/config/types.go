@@ -136,13 +136,6 @@ type TLS struct {
 	// server is used.
 	ServerName string `json:"server-name,omitempty" yaml:"server-name,omitempty"`
 
-	// Server requires TLS client certificate authentication
-	CertFile string `json:"cert-file,omitempty" yaml:"cert-file,omitempty"`
-	// Server requires TLS client certificate authentication
-	KeyFile string `json:"key-file,omitempty" yaml:"key-file,omitempty"`
-	// Trusted root certificates for server
-	CAFile string `json:"ca-file,omitempty" yaml:"ca-file,omitempty"`
-
 	// CertData holds PEM-encoded bytes (typically read from a client certificate file).
 	// CertData takes precedence over CertFile
 	// Note: this value is base64-encoded in the config file and will be
