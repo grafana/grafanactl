@@ -34,9 +34,6 @@ func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
 		rcfg.TLSClientConfig = rest.TLSClientConfig{
 			Insecure:   cfg.Grafana.TLS.Insecure,
 			ServerName: cfg.Grafana.TLS.ServerName,
-			CertFile:   cfg.Grafana.TLS.CertFile,
-			KeyFile:    cfg.Grafana.TLS.KeyFile,
-			CAFile:     cfg.Grafana.TLS.CAFile,
 			CertData:   cfg.Grafana.TLS.CertData,
 			KeyData:    cfg.Grafana.TLS.KeyData,
 			CAData:     cfg.Grafana.TLS.CAData,
