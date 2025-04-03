@@ -44,9 +44,6 @@ func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
 	// Authentication
 	switch {
 	case cfg.Grafana.APIToken != "":
-		if cfg.Grafana.OrgID != 0 {
-			return NamespacedRESTConfig{}, errors.New("org ID is only supported with basic auth. API keys are already org-scoped")
-		}
 		rcfg.BearerToken = cfg.Grafana.APIToken
 	case cfg.Grafana.User != "":
 		rcfg.Username = cfg.Grafana.User
@@ -54,11 +51,14 @@ func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
 	}
 
 	// Namespace
-	namespace := claims.OrgNamespaceFormatter(1)
-	if cfg.Grafana.OrgID != 0 {
+	var namespace string
+	switch {
+	case cfg.Grafana.OrgID != 0:
 		namespace = claims.OrgNamespaceFormatter(cfg.Grafana.OrgID)
-	} else if cfg.Grafana.StackID != 0 {
+	case cfg.Grafana.StackID != 0:
 		namespace = claims.CloudNamespaceFormatter(cfg.Grafana.StackID)
+	default:
+		return NamespacedRESTConfig{}, errors.New("please specify Grafana Org ID (for on-prem Grafana) or Grafana Cloud Stack ID (for Grafana Cloud)")
 	}
 
 	return NamespacedRESTConfig{
