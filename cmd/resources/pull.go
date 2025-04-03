@@ -117,8 +117,9 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			var (
-				res  []*unstructured.Unstructured
-				perr error
+				res              *unstructured.UnstructuredList
+				singlePullTarget bool
+				perr             error
 			)
 			if len(args) == 0 {
 				res, perr = pull.PullAll(cmd.Context())
@@ -138,6 +139,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 					return err
 				}
 
+				singlePullTarget = cmds.HasSingleTarget()
 				res, perr = pull.Pull(cmd.Context(), resources.PullerRequest{
 					Commands:        cmds,
 					ContinueOnError: opts.ContinueOnError,
@@ -155,6 +157,11 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				}
 			}
 
+			// Avoid printing a list of results if a single resource is being pulled
+			if len(res.Items) != 0 && singlePullTarget && opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
+				return opts.IO.Format(res.Items[0], cmd.OutOrStdout())
+			}
+
 			return opts.IO.Format(res, cmd.OutOrStdout())
 		},
 	}
@@ -166,11 +173,11 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 func formatResourcesAsText(output io.Writer, input any) error {
 	//nolint:forcetypeassert
-	items := input.([]*unstructured.Unstructured)
+	items := input.(*unstructured.UnstructuredList)
 
 	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
 	fmt.Fprintf(out, "KIND\tNAME\tAGE\n")
-	for _, r := range items {
+	for _, r := range items.Items {
 		gvk := r.GroupVersionKind()
 		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
 
@@ -182,11 +189,11 @@ func formatResourcesAsText(output io.Writer, input any) error {
 
 func formatResourcesAsWideText(output io.Writer, input any) error {
 	//nolint:forcetypeassert
-	items := input.([]*unstructured.Unstructured)
+	items := input.(*unstructured.UnstructuredList)
 
 	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
 	fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\tAGE\n")
-	for _, r := range items {
+	for _, r := range items.Items {
 		gvk := r.GroupVersionKind()
 		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
 
