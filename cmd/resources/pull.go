@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"text/tabwriter"
+	"time"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
@@ -13,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/duration"
 )
 
 type pullOpts struct {
@@ -22,28 +24,14 @@ type pullOpts struct {
 	Destination     string
 }
 
-func (opts *pullOpts) setup() {
-	opts.IO.RegisterCustomFormat("text", func(output io.Writer, input any) error {
-		//nolint:forcetypeassert
-		items := input.([]*unstructured.Unstructured)
+func (opts *pullOpts) setup(flags *pflag.FlagSet) {
+	// Setup some additional formatting options
+	opts.IO.RegisterCustomFormat("text", formatResourcesAsText)
+	opts.IO.RegisterCustomFormat("wide", formatResourcesAsWideText)
 
-		out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-		fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\n")
-		for _, r := range items {
-			gvk := r.GroupVersionKind()
-			fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName())
-		}
-
-		if err := out.Flush(); err != nil {
-			return err
-		}
-
-		return nil
-	})
 	opts.IO.DefaultFormat("text")
-}
 
-func (opts *pullOpts) BindFlags(flags *pflag.FlagSet) {
+	// Bind all the flags
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
@@ -60,7 +48,6 @@ func (opts *pullOpts) Validate() error {
 
 func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pullOpts{}
-	opts.setup()
 
 	cmd := &cobra.Command{
 		Use:   "pull RESOURCES_PATHS",
@@ -172,7 +159,39 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		},
 	}
 
-	opts.BindFlags(cmd.Flags())
+	opts.setup(cmd.Flags())
 
 	return cmd
+}
+
+func formatResourcesAsText(output io.Writer, input any) error {
+	//nolint:forcetypeassert
+	items := input.([]*unstructured.Unstructured)
+
+	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
+	fmt.Fprintf(out, "KIND\tNAME\tAGE\n")
+	for _, r := range items {
+		gvk := r.GroupVersionKind()
+		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
+
+		fmt.Fprintf(out, "%s\t%s\t%s\n", gvk.Kind, r.GetName(), age)
+	}
+
+	return out.Flush()
+}
+
+func formatResourcesAsWideText(output io.Writer, input any) error {
+	//nolint:forcetypeassert
+	items := input.([]*unstructured.Unstructured)
+
+	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
+	fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\tAGE\n")
+	for _, r := range items {
+		gvk := r.GroupVersionKind()
+		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
+
+		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%st%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName(), age)
+	}
+
+	return out.Flush()
 }
