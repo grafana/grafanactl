@@ -12,7 +12,6 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 //nolint:gochecknoglobals
@@ -108,120 +107,6 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			fmt.Fprintf(out, "GROUP\tVERSION\tKIND\n")
 			for _, r := range res {
 				fmt.Fprintf(out, "%s\t%s\t%s\n", r.Group, r.Version, r.Kind)
-			}
-
-			return out.Flush()
-		},
-	}
-
-	opts.BindFlags(cmd.Flags())
-
-	return cmd
-}
-
-type pullOpts struct {
-	ContinueOnError bool
-	Kinds           []string
-}
-
-func (opts *pullOpts) BindFlags(flags *pflag.FlagSet) {
-	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
-}
-
-func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
-	opts := &pullOpts{}
-
-	cmd := &cobra.Command{
-		Use:   "pull RESOURCES_PATHS",
-		Args:  cobra.ArbitraryArgs,
-		Short: "Pull resources from Grafana",
-		Long:  "Pull resources from Grafana using a specific format. See examples below for more details.",
-		Example: fmt.Sprintf(`
-  Everything:
-
-  %[1]s resources pull
-
-  All instances for a given kind(s):
-
-  %[1]s resources pull dashboards
-  %[1]s resources pull dashboards folders
-
-  Single resource kind, one or more resource instances:
-
-  %[1]s resources pull dashboards/foo
-  %[1]s resources pull dashboards/foo,bar
-
-  Single resource kind, long kind format:
-
-  %[1]s resources pull dashboard.dashboards/foo
-  %[1]s resources pull dashboard.dashboards/foo,bar
-
-  Single resource kind, long kind format with version:
-
-  %[1]s resources pull dashboards.v1alpha1.dashboard.grafana.app/foo
-  %[1]s resources pull dashboards.v1alpha1.dashboard.grafana.app/foo,bar
-
-  Multiple resource kinds, one or more resource instances:
-
-  %[1]s resources pull dashboards/foo folders/qux
-  %[1]s resources pull dashboards/foo,bar folders/qux,quux
-
-  Multiple resource kinds, long kind format:
-
-  %[1]s resources pull dashboard.dashboards/foo folder.folders/qux
-  %[1]s resources pull dashboard.dashboards/foo,bar folder.folders/qux,quux
-
-  Multiple resource kinds, long kind format with version:
-
-  %[1]s resources pull dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
-`, binaryName),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.LoadConfig()
-			if err != nil {
-				return err
-			}
-
-			pull, err := resources.NewPuller(*cfg.GetCurrentContext())
-			if err != nil {
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not parse pull command(s)",
-					Details: "One or more of the provided resource paths are invalid",
-					Suggestions: []string{
-						"Make sure that your are passing in valid resource paths",
-					},
-				}
-			}
-
-			var (
-				res  []unstructured.Unstructured
-				perr error
-			)
-			if len(args) == 0 {
-				res, perr = pull.PullAll(cmd.Context())
-			} else {
-				res, perr = pull.Pull(cmd.Context(), resources.PullerCommand{
-					Commands: args,
-				})
-			}
-
-			if perr != nil {
-				return fail.DetailedError{
-					Parent:  perr,
-					Summary: "Could not pull resource(s) from the API",
-					Details: "One or more resources could not be pulled from the API",
-					Suggestions: []string{
-						"Make sure that your are passing in valid resource paths",
-					},
-				}
-			}
-
-			// TODO: add formatters (yaml, json, etc.) / outputters (stdout, file, filetree, etc.)
-			out := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-			fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\n")
-			for _, r := range res {
-				gvk := r.GroupVersionKind()
-				fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName())
 			}
 
 			return out.Flush()
