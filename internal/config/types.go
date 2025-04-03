@@ -80,14 +80,13 @@ type GrafanaConfig struct {
 	APIToken string `datapolicy:"secret" env:"GRAFANA_TOKEN" json:"token,omitempty" yaml:"token,omitempty"`
 
 	// OrgID specifies the organization targeted by this config.
-	// Note: only used when relying on basic authentication as API keys are
-	// already org-scoped.
-	// Default: 1
-	// Optional.
+	// Note: required when targeting an on-prem Grafana instance.
+	// See StackID for Grafana Cloud instances.
 	OrgID int64 `env:"GRAFANA_ORG_ID" json:"org-id,omitempty" yaml:"org-id,omitempty"`
 
 	// StackID specifies the Grafana Cloud stack targeted by this config.
 	// Note: required when targeting a Grafana Cloud instance.
+	// See OrgID for on-prem Grafana instances.
 	StackID int64 `env:"GRAFANA_STACK_ID" json:"stack-id,omitempty" yaml:"stack-id,omitempty"`
 
 	// TLS contains TLS-related configuration settings.
@@ -105,16 +104,14 @@ func (grafana GrafanaConfig) Validate(contextName string) error {
 		}
 	}
 
-	// Auth: API Token
-	if grafana.APIToken != "" {
-		if grafana.OrgID != 0 {
-			return ValidationError{
-				Path:    fmt.Sprintf("$.contexts.'%s'.grafana.org-id", contextName),
-				Message: "org-id is only supported with basic auth. API keys are already org-scoped",
-				Suggestions: []string{
-					"Remove the `org-id` setting",
-				},
-			}
+	if grafana.OrgID == 0 && grafana.StackID == 0 {
+		return ValidationError{
+			Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
+			Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
+			Suggestions: []string{
+				"specify the Grafana Org ID for on-prem Grafana",
+				"specify the Grafana Cloud Stack ID for Grafana Cloud",
+			},
 		}
 	}
 
