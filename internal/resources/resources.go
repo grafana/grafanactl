@@ -34,6 +34,16 @@ func (gvk DynamicGroupVersionKind) String() string {
 	return fmt.Sprintf("%s.%s.%s", gvk.Kind, gvk.Version, gvk.Group)
 }
 
+type PullCommands []PullCommand
+
+func (commands PullCommands) HasSingleTarget() bool {
+	if len(commands) != 1 {
+		return false
+	}
+
+	return commands[0].Kind == PullCommandTypeSingle
+}
+
 // PullCommand is a command to pull a resource from Grafana.
 type PullCommand struct {
 	Kind PullCommandKind
@@ -51,7 +61,7 @@ func (e InvalidCommandError) Error() string {
 }
 
 // ParsePullCommands parses a list of pull commands.
-func ParsePullCommands(cmds []string) ([]PullCommand, error) {
+func ParsePullCommands(cmds []string) (PullCommands, error) {
 	res := make([]PullCommand, len(cmds))
 
 	for i, cmd := range cmds {

@@ -36,22 +36,24 @@ type PullerRequest struct {
 }
 
 // PullAll pulls all resources from Grafana.
-func (p *Puller) PullAll(ctx context.Context) ([]*unstructured.Unstructured, error) {
+func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, error) {
 	resources, err := p.client.Resources(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	errg, ctx := errgroup.WithContext(ctx)
-	cmdRes := make([][]*unstructured.Unstructured, len(resources))
+	cmdRes := make([][]unstructured.Unstructured, len(resources))
 
 	for i, r := range resources {
 		errg.Go(func() error {
 			res, err := p.client.List(ctx, r, metav1.ListOptions{})
 			if err == nil {
-				cmdRes[i] = toPointersList(res.Items)
+				cmdRes[i] = res.Items
 			}
 
+			// TODO: honor "continue on error" flag + report error
+			// return err
 			return nil
 		})
 	}
@@ -60,17 +62,20 @@ func (p *Puller) PullAll(ctx context.Context) ([]*unstructured.Unstructured, err
 		return nil, err
 	}
 
-	res := make([]*unstructured.Unstructured, 0, len(resources))
+	results := &unstructured.UnstructuredList{}
+	results.NewEmptyInstance()
+	results.SetKind("List")
+
 	for _, r := range cmdRes {
-		res = append(res, r...)
+		results.Items = append(results.Items, r...)
 	}
 
-	return res, nil
+	return results, nil
 }
 
-func (p *Puller) Pull(ctx context.Context, request PullerRequest) ([]*unstructured.Unstructured, error) {
+func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured.UnstructuredList, error) {
 	errg, ctx := errgroup.WithContext(ctx)
-	cmdRes := make([][]*unstructured.Unstructured, len(request.Commands))
+	cmdRes := make([][]unstructured.Unstructured, len(request.Commands))
 
 	for idx, cmd := range request.Commands {
 		errg.Go(func() error {
@@ -81,8 +86,9 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) ([]*unstructur
 					if !request.ContinueOnError {
 						return err
 					}
+					// TODO: log error
 				} else {
-					cmdRes[idx] = toPointersList(res.Items)
+					cmdRes[idx] = res.Items
 				}
 			case PullCommandTypeMultiple:
 				res, err := p.client.GetMultiple(ctx, cmd.GVK, cmd.UIDs, metav1.ListOptions{})
@@ -90,8 +96,9 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) ([]*unstructur
 					if !request.ContinueOnError {
 						return err
 					}
+					// TODO: log error
 				} else {
-					cmdRes[idx] = toPointersList(res)
+					cmdRes[idx] = res
 				}
 			case PullCommandTypeSingle:
 				res, err := p.client.Get(ctx, cmd.GVK, cmd.UIDs[0], metav1.GetOptions{})
@@ -99,8 +106,9 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) ([]*unstructur
 					if !request.ContinueOnError {
 						return err
 					}
+					// TODO: log error
 				} else {
-					cmdRes[idx] = []*unstructured.Unstructured{res}
+					cmdRes[idx] = []unstructured.Unstructured{*res}
 				}
 			}
 
@@ -112,20 +120,12 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) ([]*unstructur
 		return nil, err
 	}
 
-	res := make([]*unstructured.Unstructured, 0, len(request.Commands))
+	results := &unstructured.UnstructuredList{}
+	results.SetKind("List")
+
 	for _, r := range cmdRes {
-		res = append(res, r...)
+		results.Items = append(results.Items, r...)
 	}
 
-	return res, nil
-}
-
-func toPointersList[T any](inputs []T) []*T {
-	res := make([]*T, len(inputs))
-
-	for i := range inputs {
-		res[i] = &inputs[i]
-	}
-
-	return res
+	return results, nil
 }
