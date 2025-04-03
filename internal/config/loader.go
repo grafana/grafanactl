@@ -97,12 +97,17 @@ func Write(source Source, cfg Config) error {
 		return handleWriteError(err)
 	}
 
-	marshaled, err := yaml.MarshalWithOptions(cfg, yaml.Indent(2), yaml.CustomMarshaler[[]byte](func(data []byte) ([]byte, error) {
-		dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
-		base64.StdEncoding.Encode(dst, data)
+	marshaled, err := yaml.MarshalWithOptions(
+		cfg,
+		yaml.Indent(2),
+		yaml.IndentSequence(true),
+		yaml.CustomMarshaler[[]byte](func(data []byte) ([]byte, error) {
+			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+			base64.StdEncoding.Encode(dst, data)
 
-		return dst, nil
-	}))
+			return dst, nil
+		}),
+	)
 	if err != nil {
 		return handleWriteError(err)
 	}

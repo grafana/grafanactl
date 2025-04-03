@@ -29,6 +29,11 @@ type DynamicGroupVersionKind struct {
 	Kind    string
 }
 
+func (gvk DynamicGroupVersionKind) String() string {
+	// TODO: handle empty version and group
+	return fmt.Sprintf("%s.%s.%s", gvk.Kind, gvk.Version, gvk.Group)
+}
+
 // PullCommand is a command to pull a resource from Grafana.
 type PullCommand struct {
 	Kind PullCommandKind
@@ -36,9 +41,13 @@ type PullCommand struct {
 	UIDs []string
 }
 
-func (gvk DynamicGroupVersionKind) String() string {
-	// TODO: handle empty version and group
-	return fmt.Sprintf("%s.%s.%s", gvk.Kind, gvk.Version, gvk.Group)
+type InvalidCommandError struct {
+	Command string
+	Err     string
+}
+
+func (e InvalidCommandError) Error() string {
+	return fmt.Sprintf("invalid command '%s': %s", e.Command, e.Err)
 }
 
 // ParsePullCommands parses a list of pull commands.
@@ -47,7 +56,7 @@ func ParsePullCommands(cmds []string) ([]PullCommand, error) {
 
 	for i, cmd := range cmds {
 		if err := ParsePullCommand(cmd, &res[i]); err != nil {
-			return nil, fmt.Errorf("failed to parse pull command `%s`: %w", cmd, err)
+			return nil, err
 		}
 	}
 
@@ -59,14 +68,14 @@ func ParsePullCommand(cmd string, dst *PullCommand) error {
 	parts := strings.Split(cmd, "/")
 
 	if len(parts) == 0 {
-		return errors.New("missing resource type")
+		return InvalidCommandError{Command: cmd, Err: "missing resource type"}
 	}
 
 	// grafanactl resources pull dashboards
 	if len(parts) == 1 {
 		gvk, err := ParseGVK(parts[0])
 		if err != nil {
-			return err
+			return InvalidCommandError{Command: cmd, Err: err.Error()}
 		}
 
 		dst.Kind = PullCommandTypeAll
@@ -75,17 +84,17 @@ func ParsePullCommand(cmd string, dst *PullCommand) error {
 
 	if len(parts) == 2 { //nolint:nestif
 		if parts[1] == "" {
-			return errors.New("missing resource UID(s)")
+			return InvalidCommandError{Command: cmd, Err: "missing resource UID(s)"}
 		}
 
 		gvk, err := ParseGVK(parts[0])
 		if err != nil {
-			return err
+			return InvalidCommandError{Command: cmd, Err: err.Error()}
 		}
 
 		uids, err := parseUIDs(parts[1])
 		if err != nil {
-			return err
+			return InvalidCommandError{Command: cmd, Err: err.Error()}
 		}
 
 		dst.GVK = gvk
@@ -96,6 +105,9 @@ func ParsePullCommand(cmd string, dst *PullCommand) error {
 			dst.Kind = PullCommandTypeSingle
 		}
 	}
+
+	// TODO: what if len(parts) > 2?
+	// Shouldn't there be an error if there are more parts than expected?
 
 	return nil
 }
