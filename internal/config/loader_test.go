@@ -15,7 +15,7 @@ import (
 func TestLoad_explicitFile(t *testing.T) {
 	req := require.New(t)
 
-	cfg, err := config.Load(config.ExplicitConfigFile("./testdata/config.yaml"))
+	cfg, err := config.Load(testutils.NullLogger(), config.ExplicitConfigFile("./testdata/config.yaml"))
 	req.NoError(err)
 
 	req.Equal("local", cfg.CurrentContext)
@@ -27,7 +27,7 @@ func TestLoad_explicitFile(t *testing.T) {
 func TestLoad_explicitFile_notFound(t *testing.T) {
 	req := require.New(t)
 
-	_, err := config.Load(config.ExplicitConfigFile("./testdata/does-not-exist.yaml"))
+	_, err := config.Load(testutils.NullLogger(), config.ExplicitConfigFile("./testdata/does-not-exist.yaml"))
 	req.Error(err)
 	req.ErrorAs(err, &fail.DetailedError{}, "a detailed error is returned")
 	req.ErrorContains(err, "File not found")
@@ -43,7 +43,7 @@ func TestLoad_standardLocation_noExistingConfig(t *testing.T) {
 	// make sure the xdg library uses the new-fake env var we just set
 	xdg.Reload()
 
-	cfg, err := config.Load(config.StandardLocation())
+	cfg, err := config.Load(testutils.NullLogger(), config.StandardLocation())
 	req.NoError(err)
 
 	// An empty configuration is returned
@@ -72,7 +72,7 @@ func TestLoad_standardLocation_withExistingConfig(t *testing.T) {
 	// make sure the xdg library uses the new-fake env var we just set
 	xdg.Reload()
 
-	cfg, err := config.Load(config.StandardLocation())
+	cfg, err := config.Load(testutils.NullLogger(), config.StandardLocation())
 	req.NoError(err)
 
 	req.Equal("local", cfg.CurrentContext)
@@ -82,7 +82,7 @@ func TestLoad_standardLocation_withExistingConfig(t *testing.T) {
 func TestLoad_withOverride(t *testing.T) {
 	req := require.New(t)
 
-	cfg, err := config.Load(config.ExplicitConfigFile("./testdata/config.yaml"), func(cfg *config.Config) error {
+	cfg, err := config.Load(testutils.NullLogger(), config.ExplicitConfigFile("./testdata/config.yaml"), func(cfg *config.Config) error {
 		cfg.CurrentContext = "overridden"
 		return nil
 	})
@@ -101,7 +101,7 @@ this-field-is-invalid: []`
 
 	configFile := testutils.CreateTempFile(t, cfg)
 
-	_, err := config.Load(config.ExplicitConfigFile(configFile))
+	_, err := config.Load(testutils.NullLogger(), config.ExplicitConfigFile(configFile))
 	req.Error(err)
 	req.ErrorAs(err, &fail.DetailedError{}, "a detailed error is returned")
 	req.ErrorContains(err, "Invalid configuration")
@@ -117,7 +117,7 @@ func TestWrite(t *testing.T) {
 		CurrentContext: "local",
 	}
 
-	err := config.Write(config.ExplicitConfigFile(configFile), cfg)
+	err := config.Write(testutils.NullLogger(), config.ExplicitConfigFile(configFile), cfg)
 	req.NoError(err)
 
 	req.FileExists(configFile)

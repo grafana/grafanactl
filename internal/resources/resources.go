@@ -51,6 +51,15 @@ type PullCommand struct {
 	UIDs []string
 }
 
+func (command PullCommand) String() string {
+	cmd := command.GVK.String()
+	if len(command.UIDs) > 0 {
+		cmd += "/" + strings.Join(command.UIDs, ",")
+	}
+
+	return cmd
+}
+
 type InvalidCommandError struct {
 	Command string
 	Err     string
