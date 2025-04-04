@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"text/tabwriter"
 	"time"
 
@@ -46,7 +47,7 @@ func (opts *pullOpts) Validate() error {
 	return nil
 }
 
-func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func pullCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pullOpts{}
 
 	cmd := &cobra.Command{
@@ -98,12 +99,12 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			cfg, err := configOpts.LoadConfig()
+			cfg, err := configOpts.LoadConfig(logger)
 			if err != nil {
 				return err
 			}
 
-			pull, err := resources.NewPuller(*cfg.GetCurrentContext())
+			pull, err := resources.NewPuller(logger, *cfg.GetCurrentContext())
 			if err != nil {
 				// TODO: is this error actually related to what `resources.NewPuller()` does?
 				return fail.DetailedError{

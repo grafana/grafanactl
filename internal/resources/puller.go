@@ -2,8 +2,10 @@ package resources
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/grafana/grafanactl/internal/config"
+	"github.com/grafana/grafanactl/internal/logs"
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -11,11 +13,12 @@ import (
 
 // Puller is a command that pulls resources from Grafana.
 type Puller struct {
+	logger *slog.Logger
 	client *NamespacedDynamicClient
 }
 
 // NewPuller creates a new Puller.
-func NewPuller(cfg config.Context) (*Puller, error) {
+func NewPuller(logger *slog.Logger, cfg config.Context) (*Puller, error) {
 	rcfg, err := config.NewNamespacedRESTConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -26,7 +29,10 @@ func NewPuller(cfg config.Context) (*Puller, error) {
 		return nil, err
 	}
 
-	return &Puller{client: client}, nil
+	return &Puller{
+		logger: logger,
+		client: client,
+	}, nil
 }
 
 // PullerRequest describes a list of "pull" commands to get resources from Grafana.
@@ -37,6 +43,8 @@ type PullerRequest struct {
 
 // PullAll pulls all resources from Grafana.
 func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, error) {
+	p.logger.Debug("Pulling all resources")
+
 	resources, err := p.client.Resources(ctx)
 	if err != nil {
 		return nil, err
@@ -52,8 +60,12 @@ func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, e
 				cmdRes[i] = res.Items
 			}
 
-			// TODO: honor "continue on error" flag + report error
+			// TODO: honor "continue on error" flag
 			// return err
+			if err != nil {
+				p.logger.Warn("Could not pull resources", logs.Err(err), slog.String("kind", r.String()))
+			}
+
 			return nil
 		})
 	}
@@ -74,6 +86,8 @@ func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, e
 }
 
 func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured.UnstructuredList, error) {
+	p.logger.Debug("Pulling resources")
+
 	errg, ctx := errgroup.WithContext(ctx)
 	cmdRes := make([][]unstructured.Unstructured, len(request.Commands))
 
@@ -86,7 +100,8 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured
 					if !request.ContinueOnError {
 						return err
 					}
-					// TODO: log error
+
+					p.logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
 				} else {
 					cmdRes[idx] = res.Items
 				}
@@ -96,7 +111,8 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured
 					if !request.ContinueOnError {
 						return err
 					}
-					// TODO: log error
+
+					p.logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
 				} else {
 					cmdRes[idx] = res
 				}
@@ -106,7 +122,8 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured
 					if !request.ContinueOnError {
 						return err
 					}
-					// TODO: log error
+
+					p.logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", cmd.String()))
 				} else {
 					cmdRes[idx] = []unstructured.Unstructured{*res}
 				}
