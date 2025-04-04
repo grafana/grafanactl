@@ -16,6 +16,7 @@ linters:
     - paralleltest
     - tagalign
     - tagliatelle
+    - varnamelen
     - wrapcheck
     - wsl
 

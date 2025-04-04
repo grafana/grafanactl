@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -50,13 +51,15 @@ func StandardLocation() Source {
 	}
 }
 
-func Load(source Source, overrides ...Override) (Config, error) {
+func Load(logger *slog.Logger, source Source, overrides ...Override) (Config, error) {
 	config := Config{}
 
 	filename, err := source()
 	if err != nil {
 		return config, handleReadError(filename, nil, err)
 	}
+
+	logger.Debug("Loading config", slog.String("filename", filename))
 
 	contents, err := os.ReadFile(filename)
 	if err != nil {
@@ -91,11 +94,13 @@ func Load(source Source, overrides ...Override) (Config, error) {
 	return config, nil
 }
 
-func Write(source Source, cfg Config) error {
+func Write(logger *slog.Logger, source Source, cfg Config) error {
 	filename, err := source()
 	if err != nil {
 		return handleWriteError(err)
 	}
+
+	logger.Debug("Writing config", slog.String("filename", filename))
 
 	marshaled, err := yaml.MarshalWithOptions(
 		cfg,

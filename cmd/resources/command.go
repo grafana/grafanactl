@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"text/tabwriter"
@@ -17,7 +18,7 @@ import (
 //nolint:gochecknoglobals
 var binaryName = path.Base(os.Args[0])
 
-func Command() *cobra.Command {
+func Command(logger *slog.Logger) *cobra.Command {
 	configOpts := &cmdconfig.Options{}
 
 	cmd := &cobra.Command{
@@ -31,10 +32,10 @@ TODO: more information.
 
 	configOpts.BindFlags(cmd.PersistentFlags())
 
-	cmd.AddCommand(listCmd(configOpts))
-	cmd.AddCommand(pullCmd(configOpts))
-	cmd.AddCommand(pushCmd(configOpts))
-	cmd.AddCommand(serveCmd(configOpts))
+	cmd.AddCommand(listCmd(logger, configOpts))
+	cmd.AddCommand(pullCmd(logger, configOpts))
+	cmd.AddCommand(pushCmd(logger, configOpts))
+	cmd.AddCommand(serveCmd(logger, configOpts))
 
 	return cmd
 }
@@ -47,7 +48,7 @@ func (opts *listOpts) BindFlags(*pflag.FlagSet) {
 	// none so far
 }
 
-func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func listCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &listOpts{}
 
 	cmd := &cobra.Command{
@@ -59,7 +60,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
   %[1]s resources list
 `, binaryName),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.LoadConfig()
+			cfg, err := configOpts.LoadConfig(logger)
 			if err != nil {
 				return err
 			}
@@ -128,7 +129,7 @@ func (opts *pushOpts) BindFlags(flags *pflag.FlagSet) {
 	flags.StringArrayVar(&opts.Kinds, "kind", opts.Kinds, "Resource kinds to push. If omitted, all supported kinds will be pulled")
 }
 
-func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func pushCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pushOpts{}
 
 	cmd := &cobra.Command{
@@ -142,7 +143,7 @@ TODO: more information.
 `,
 		Example: "\n\t" + binaryName + " resources push",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.LoadConfig()
+			cfg, err := configOpts.LoadConfig(logger)
 			if err != nil {
 				return err
 			}
@@ -170,7 +171,7 @@ func (opts *serveOpts) BindFlags(flags *pflag.FlagSet) {
 	flags.IntVar(&opts.Port, "port", 8080, "Port on which the server will listen")
 }
 
-func serveCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func serveCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &serveOpts{}
 
 	cmd := &cobra.Command{
@@ -182,7 +183,7 @@ TODO: more information.
 `,
 		Example: "\n\t" + binaryName + " serve",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.LoadConfig()
+			cfg, err := configOpts.LoadConfig(logger)
 			if err != nil {
 				return err
 			}

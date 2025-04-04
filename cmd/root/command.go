@@ -1,17 +1,26 @@
 package root
 
 import (
+	"log/slog"
 	"os"
 	"path"
 
 	"github.com/fatih/color"
 	"github.com/grafana/grafanactl/cmd/config"
 	"github.com/grafana/grafanactl/cmd/resources"
+	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/spf13/cobra"
 )
 
 func Command(version string) *cobra.Command {
 	noColors := false
+	verbosity := 0
+
+	logLevel := new(slog.LevelVar)
+	logLevel.Set(slog.LevelWarn)
+	logger := slog.New(logs.NewHandler(os.Stderr, &logs.Options{
+		Level: logLevel,
+	}))
 
 	rootCmd := &cobra.Command{
 		Use:           path.Base(os.Args[0]),
@@ -22,16 +31,25 @@ func Command(version string) *cobra.Command {
 			if noColors {
 				color.NoColor = true // globally disables colorized output
 			}
+
+			// Multiplying the number of occurrences of the `-v` flag by 4 (gap between log levels in slog)
+			// allows us to increase the logger's verbosity.
+			logLevel.Set(logLevel.Level() - slog.Level(min(verbosity, 3)*4))
 		},
 		Annotations: map[string]string{
 			cobra.CommandDisplayNameAnnotation: "grafanactl",
 		},
 	}
 
-	rootCmd.AddCommand(config.Command())
-	rootCmd.AddCommand(resources.Command())
+	rootCmd.SetOut(os.Stdout)
+	rootCmd.SetErr(os.Stderr)
+	rootCmd.SetIn(os.Stdin)
+
+	rootCmd.AddCommand(config.Command(logger))
+	rootCmd.AddCommand(resources.Command(logger))
 
 	rootCmd.PersistentFlags().BoolVar(&noColors, "no-color", noColors, "Disable color output")
+	rootCmd.PersistentFlags().CountVarP(&verbosity, "verbose", "v", "Verbose mode. Multiple -v options increase the verbosity (maximum: 3).")
 
 	return rootCmd
 }
