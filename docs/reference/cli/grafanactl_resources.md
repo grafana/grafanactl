@@ -20,7 +20,8 @@ TODO: more information.
 ### Options inherited from parent commands
 
 ```
-      --no-color   Disable color output
+      --no-color        Disable color output
+  -v, --verbose count   Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
 ```
 
 ### SEE ALSO
