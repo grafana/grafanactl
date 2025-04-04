@@ -28,6 +28,7 @@ grafanactl config view [flags]
       --config string    Path to the configuration file to use
       --context string   Name of the context to use
       --no-color         Disable color output
+  -v, --verbose count    Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
 ```
 
 ### SEE ALSO
