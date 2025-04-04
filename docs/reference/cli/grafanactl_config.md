@@ -28,7 +28,8 @@ The configuration file to load is chosen as follows:
 ### Options inherited from parent commands
 
 ```
-      --no-color   Disable color output
+      --no-color        Disable color output
+  -v, --verbose count   Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
 ```
 
 ### SEE ALSO

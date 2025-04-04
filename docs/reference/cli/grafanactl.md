@@ -5,8 +5,9 @@
 ### Options
 
 ```
-  -h, --help       help for grafanactl
-      --no-color   Disable color output
+  -h, --help            help for grafanactl
+      --no-color        Disable color output
+  -v, --verbose count   Verbose mode. Multiple -v options increase the verbosity (maximum: 3).
 ```
 
 ### SEE ALSO
