@@ -22,7 +22,7 @@ type pullOpts struct {
 	IO cmdio.Options
 
 	ContinueOnError bool
-	Destination     string
+	Directory       string
 }
 
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
@@ -36,12 +36,16 @@ func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
-	flags.StringVarP(&opts.Destination, "directory", "d", "", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
+	flags.StringVarP(&opts.Directory, "directory", "d", "", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
 }
 
 func (opts *pullOpts) Validate() error {
 	if err := opts.IO.Validate(); err != nil {
 		return err
+	}
+
+	if opts.Directory != "" && (opts.IO.OutputFormat == "text" || opts.IO.OutputFormat == "wide") {
+		return errors.New("--directory and --output=text|wide are mutually exclusive")
 	}
 
 	return nil
@@ -158,12 +162,24 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 				}
 			}
 
-			// Avoid printing a list of results if a single resource is being pulled
-			if len(res.Items) != 0 && singlePullTarget && opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
-				return opts.IO.Format(res.Items[0], cmd.OutOrStdout())
+			if opts.Directory != "" {
+				writer := resources.FSWriter{
+					Logger:          logger,
+					Directory:       opts.Directory,
+					Namer:           resources.GroupResourcesByKind(opts.IO.OutputFormat),
+					Formatter:       opts.IO.Format,
+					ContinueOnError: opts.ContinueOnError,
+				}
+
+				return writer.Write(res)
 			}
 
-			return opts.IO.Format(res, cmd.OutOrStdout())
+			// Avoid printing a list of results if a single resource is being pulled
+			if len(res.Items) != 0 && singlePullTarget && opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
+				return opts.IO.Format(cmd.OutOrStdout(), res.Items[0])
+			}
+
+			return opts.IO.Format(cmd.OutOrStdout(), res)
 		},
 	}
 

@@ -1,8 +1,6 @@
 package io
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
@@ -10,22 +8,20 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/goccy/go-yaml"
+	"github.com/grafana/grafanactl/internal/format"
 	"github.com/spf13/pflag"
 )
-
-type formatter func(output io.Writer, data any) error
 
 type Options struct {
 	OutputFormat string
 
-	customFormats map[string]formatter
+	customFormats map[string]format.Formatter
 	defaultFormat string
 }
 
-func (opts *Options) RegisterCustomFormat(name string, formatFunc formatter) {
+func (opts *Options) RegisterCustomFormat(name string, formatFunc format.Formatter) {
 	if opts.customFormats == nil {
-		opts.customFormats = make(map[string]formatter)
+		opts.customFormats = make(map[string]format.Formatter)
 	}
 
 	opts.customFormats[name] = formatFunc
@@ -53,7 +49,7 @@ func (opts *Options) Validate() error {
 	return nil
 }
 
-func (opts *Options) Format(input any, out io.Writer) error {
+func (opts *Options) Format(out io.Writer, input any) error {
 	formatterFunc := opts.formatterFor(opts.OutputFormat)
 	if formatterFunc == nil {
 		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedFormats(), ", "))
@@ -62,7 +58,7 @@ func (opts *Options) Format(input any, out io.Writer) error {
 	return formatterFunc(out, input)
 }
 
-func (opts *Options) formatterFor(format string) formatter {
+func (opts *Options) formatterFor(format string) format.Formatter {
 	if opts.customFormats != nil && opts.customFormats[format] != nil {
 		return opts.customFormats[format]
 	}
@@ -70,17 +66,17 @@ func (opts *Options) formatterFor(format string) formatter {
 	return opts.builtinFormatters()[format]
 }
 
-func (opts *Options) builtinFormatters() map[string]formatter {
-	return map[string]formatter{
-		"yaml": formatYAML,
-		"json": formatJSON,
+func (opts *Options) builtinFormatters() map[string]format.Formatter {
+	return map[string]format.Formatter{
+		"yaml": format.YAML,
+		"json": format.JSON,
 	}
 }
 
 func (opts *Options) allowedFormats() []string {
 	allowedFormats := slices.Collect(maps.Keys(opts.builtinFormatters()))
-	for format := range opts.customFormats {
-		allowedFormats = append(allowedFormats, format)
+	for name := range opts.customFormats {
+		allowedFormats = append(allowedFormats, name)
 	}
 
 	// the allowed formats are stored in a map: let's sort them to make the
@@ -88,28 +84,4 @@ func (opts *Options) allowedFormats() []string {
 	sort.Strings(allowedFormats)
 
 	return allowedFormats
-}
-
-func formatYAML(output io.Writer, input any) error {
-	encoder := yaml.NewEncoder(
-		output,
-		yaml.Indent(2),
-		yaml.IndentSequence(true),
-		yaml.UseJSONMarshaler(),
-		yaml.CustomMarshaler[[]byte](func(data []byte) ([]byte, error) {
-			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
-			base64.StdEncoding.Encode(dst, data)
-
-			return dst, nil
-		}),
-	)
-
-	return encoder.Encode(input)
-}
-
-func formatJSON(output io.Writer, input any) error {
-	encoder := json.NewEncoder(output)
-	encoder.SetIndent("", "  ")
-
-	return encoder.Encode(input)
 }
