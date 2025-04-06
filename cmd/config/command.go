@@ -177,7 +177,7 @@ func viewCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 				}
 			}
 
-			if err := opts.IO.Format(cfg, cmd.OutOrStdout()); err != nil {
+			if err := opts.IO.Format(cmd.OutOrStdout(), cfg); err != nil {
 				return err
 			}
 
