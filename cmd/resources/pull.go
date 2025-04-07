@@ -3,9 +3,6 @@ package resources
 import (
 	"errors"
 	"fmt"
-	"io"
-	"text/tabwriter"
-	"time"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
@@ -15,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/duration"
 )
 
 type pullOpts struct {
@@ -26,17 +22,11 @@ type pullOpts struct {
 }
 
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
-	// Setup some additional formatting options
-	opts.IO.RegisterCustomFormat("text", formatResourcesAsText)
-	opts.IO.RegisterCustomFormat("wide", formatResourcesAsWideText)
-
-	opts.IO.DefaultFormat("text")
-
 	// Bind all the flags
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
-	flags.StringVarP(&opts.Directory, "directory", "d", "", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
+	flags.StringVarP(&opts.Directory, "directory", "d", "./resources", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
 }
 
 func (opts *pullOpts) Validate() error {
@@ -44,8 +34,8 @@ func (opts *pullOpts) Validate() error {
 		return err
 	}
 
-	if opts.Directory != "" && (opts.IO.OutputFormat == "text" || opts.IO.OutputFormat == "wide") {
-		return errors.New("--directory and --output=text|wide are mutually exclusive")
+	if opts.Directory == "" {
+		return errors.New("--directory is required")
 	}
 
 	return nil
@@ -122,9 +112,8 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 			}
 
 			var (
-				res              *unstructured.UnstructuredList
-				singlePullTarget bool
-				perr             error
+				res  *unstructured.UnstructuredList
+				perr error
 			)
 			if len(args) == 0 {
 				res, perr = pull.PullAll(cmd.Context())
@@ -144,7 +133,6 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 					return err
 				}
 
-				singlePullTarget = cmds.HasSingleTarget()
 				res, perr = pull.Pull(cmd.Context(), resources.PullerRequest{
 					Commands:        cmds,
 					ContinueOnError: opts.ContinueOnError,
@@ -162,60 +150,19 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 				}
 			}
 
-			if opts.Directory != "" {
-				writer := resources.FSWriter{
-					Logger:          logger,
-					Directory:       opts.Directory,
-					Namer:           resources.GroupResourcesByKind(opts.IO.OutputFormat),
-					Formatter:       opts.IO.Format,
-					ContinueOnError: opts.ContinueOnError,
-				}
-
-				return writer.Write(res)
+			writer := resources.FSWriter{
+				Logger:          logger,
+				Directory:       opts.Directory,
+				Namer:           resources.GroupResourcesByKind(opts.IO.OutputFormat),
+				Formatter:       opts.IO.Format,
+				ContinueOnError: opts.ContinueOnError,
 			}
 
-			// Avoid printing a list of results if a single resource is being pulled
-			if len(res.Items) != 0 && singlePullTarget && opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
-				return opts.IO.Format(cmd.OutOrStdout(), res.Items[0])
-			}
-
-			return opts.IO.Format(cmd.OutOrStdout(), res)
+			return writer.Write(res)
 		},
 	}
 
 	opts.setup(cmd.Flags())
 
 	return cmd
-}
-
-func formatResourcesAsText(output io.Writer, input any) error {
-	//nolint:forcetypeassert
-	items := input.(*unstructured.UnstructuredList)
-
-	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-	fmt.Fprintf(out, "KIND\tNAME\tAGE\n")
-	for _, r := range items.Items {
-		gvk := r.GroupVersionKind()
-		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-		fmt.Fprintf(out, "%s\t%s\t%s\n", gvk.Kind, r.GetName(), age)
-	}
-
-	return out.Flush()
-}
-
-func formatResourcesAsWideText(output io.Writer, input any) error {
-	//nolint:forcetypeassert
-	items := input.(*unstructured.UnstructuredList)
-
-	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-	fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\tAGE\n")
-	for _, r := range items.Items {
-		gvk := r.GroupVersionKind()
-		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%st%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName(), age)
-	}
-
-	return out.Flush()
 }

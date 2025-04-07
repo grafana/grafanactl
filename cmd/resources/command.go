@@ -32,6 +32,7 @@ TODO: more information.
 
 	configOpts.BindFlags(cmd.PersistentFlags())
 
+	cmd.AddCommand(getCmd(logger, configOpts))
 	cmd.AddCommand(listCmd(logger, configOpts))
 	cmd.AddCommand(pullCmd(logger, configOpts))
 	cmd.AddCommand(pushCmd(logger, configOpts))
