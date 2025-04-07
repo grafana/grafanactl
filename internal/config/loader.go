@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -52,7 +53,7 @@ func StandardLocation() Source {
 	}
 }
 
-func Load(logger logging.Logger, source Source, overrides ...Override) (Config, error) {
+func Load(ctx context.Context, source Source, overrides ...Override) (Config, error) {
 	config := Config{}
 
 	filename, err := source()
@@ -60,7 +61,7 @@ func Load(logger logging.Logger, source Source, overrides ...Override) (Config, 
 		return config, handleReadError(filename, nil, err)
 	}
 
-	logger.Debug("Loading config", slog.String("filename", filename))
+	logging.FromContext(ctx).Debug("Loading config", slog.String("filename", filename))
 
 	contents, err := os.ReadFile(filename)
 	if err != nil {
@@ -95,13 +96,13 @@ func Load(logger logging.Logger, source Source, overrides ...Override) (Config, 
 	return config, nil
 }
 
-func Write(logger logging.Logger, source Source, cfg Config) error {
+func Write(ctx context.Context, source Source, cfg Config) error {
 	filename, err := source()
 	if err != nil {
 		return handleWriteError(err)
 	}
 
-	logger.Debug("Writing config", slog.String("filename", filename))
+	logging.FromContext(ctx).Debug("Writing config", slog.String("filename", filename))
 
 	marshaled, err := yaml.MarshalWithOptions(
 		cfg,

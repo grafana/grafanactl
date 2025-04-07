@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -29,7 +30,6 @@ func GroupResourcesByKind(extension string) FileNamer {
 }
 
 type FSWriter struct {
-	Logger logging.Logger
 	// Directory on the filesystem where resources should be written.
 	Directory string
 	// Namer is a function mapping a resource to a path on the filesystem
@@ -40,16 +40,16 @@ type FSWriter struct {
 	Namer FileNamer
 	// Formatter is the function used to marshal a given resource to the
 	// desired output format.
-	Formatter       format.Formatter
-	ContinueOnError bool
+	Formatter   format.Formatter
+	StopOnError bool
 }
 
-func (writer *FSWriter) Write(resources *unstructured.UnstructuredList) error {
-	if resources == nil || len(resources.Items) == 0 {
+func (writer *FSWriter) Write(ctx context.Context, resources unstructured.UnstructuredList) error {
+	if len(resources.Items) == 0 {
 		return nil
 	}
 
-	logger := writer.Logger.With(slog.String("directory", writer.Directory))
+	logger := logging.FromContext(ctx).With(slog.String("directory", writer.Directory))
 	logger.Debug("Writing resources", slog.Int("resources", len(resources.Items)))
 
 	// Create the directory if it doesn't exist
@@ -58,12 +58,12 @@ func (writer *FSWriter) Write(resources *unstructured.UnstructuredList) error {
 	}
 
 	for _, resource := range resources.Items {
-		err := writer.writeSingle(resource)
-		if err != nil && writer.ContinueOnError {
+		if err := writer.writeSingle(resource); err != nil {
+			if writer.StopOnError {
+				return err
+			}
+
 			logger.Warn("could not write resource: skipping", slog.String("kind", resource.GetKind()), logs.Err(err))
-			continue
-		} else if err != nil && !writer.ContinueOnError {
-			return err
 		}
 	}
 

@@ -1,10 +1,10 @@
 ## grafanactl resources get
 
-Display one or many resources
+Get resources from Grafana
 
 ### Synopsis
 
-Display one or many resources from Grafana. Resources can be filters using a specific format. See examples below for more details.
+Get resources from Grafana using a specific format. See examples below for more details.
 
 ```
 grafanactl resources get RESOURCES_PATHS [flags]
@@ -16,7 +16,7 @@ grafanactl resources get RESOURCES_PATHS [flags]
 
   Everything:
 
-  main resources get
+  main resources get dashboards/foo
 
   All instances for a given kind(s):
 
@@ -58,7 +58,8 @@ grafanactl resources get RESOURCES_PATHS [flags]
 
 ```
   -h, --help            help for get
-  -o, --output string   Output format. One of: json, text, yaml (default "text")
+  -o, --output string   Output format. One of: json, text, wide, yaml (default "text")
+      --stop-on-error   Stop pulling resources when an error occurs
 ```
 
 ### Options inherited from parent commands

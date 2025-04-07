@@ -1,12 +1,12 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/secrets"
@@ -33,7 +33,7 @@ func (opts *Options) BindFlags(flags *pflag.FlagSet) {
 // and returns it without validation.
 // This function should only be used by config-related commands, to allow the
 // user to iterate on the configuration until it becomes valid.
-func (opts *Options) loadConfigTolerant(logger logging.Logger, extraOverrides ...config.Override) (config.Config, error) {
+func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...config.Override) (config.Config, error) {
 	overrides := append([]config.Override{
 		// If Grafana-related env variables are set, use them to configure the
 		// current context and Grafana config.
@@ -67,12 +67,12 @@ func (opts *Options) loadConfigTolerant(logger logging.Logger, extraOverrides ..
 		})
 	}
 
-	return config.Load(logger, opts.configSource(), overrides...)
+	return config.Load(ctx, opts.configSource(), overrides...)
 }
 
 // LoadConfig loads the configuration file (default, or explicitly set via flags)
 // and validates it.
-func (opts *Options) LoadConfig(logger logging.Logger) (config.Config, error) {
+func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 	validator := func(cfg *config.Config) error {
 		// Ensure that the current context actually exists.
 		if !cfg.HasContext(cfg.CurrentContext) {
@@ -82,7 +82,7 @@ func (opts *Options) LoadConfig(logger logging.Logger) (config.Config, error) {
 		return cfg.GetCurrentContext().Validate()
 	}
 
-	return opts.loadConfigTolerant(logger, validator)
+	return opts.loadConfigTolerant(ctx, validator)
 }
 
 func (opts *Options) configSource() config.Source {
@@ -93,7 +93,7 @@ func (opts *Options) configSource() config.Source {
 	return config.StandardLocation()
 }
 
-func Command(logger logging.Logger) *cobra.Command {
+func Command() *cobra.Command {
 	configOpts := &Options{}
 
 	cmd := &cobra.Command{
@@ -115,11 +115,11 @@ The configuration file to load is chosen as follows:
 
 	configOpts.BindFlags(cmd.PersistentFlags())
 
-	cmd.AddCommand(currentContextCmd(logger, configOpts))
-	cmd.AddCommand(setCmd(logger, configOpts))
-	cmd.AddCommand(unsetCmd(logger, configOpts))
-	cmd.AddCommand(useContextCmd(logger, configOpts))
-	cmd.AddCommand(viewCmd(logger, configOpts))
+	cmd.AddCommand(currentContextCmd(configOpts))
+	cmd.AddCommand(setCmd(configOpts))
+	cmd.AddCommand(unsetCmd(configOpts))
+	cmd.AddCommand(useContextCmd(configOpts))
+	cmd.AddCommand(viewCmd(configOpts))
 
 	return cmd
 }
@@ -146,7 +146,7 @@ func (opts *viewOpts) Validate() error {
 	return nil
 }
 
-func viewCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
+func viewCmd(configOpts *Options) *cobra.Command {
 	opts := &viewOpts{}
 
 	cmd := &cobra.Command{
@@ -159,7 +159,7 @@ func viewCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 				return err
 			}
 
-			cfg, err := configOpts.loadConfigTolerant(logger)
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -190,7 +190,7 @@ func viewCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	return cmd
 }
 
-func currentContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
+func currentContextCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "current-context",
 		Args:    cobra.NoArgs,
@@ -198,7 +198,7 @@ func currentContextCmd(logger logging.Logger, configOpts *Options) *cobra.Comman
 		Long:    "Display the current context name.",
 		Example: "\n\t" + binaryName + " config current-context",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.loadConfigTolerant(logger)
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -212,7 +212,7 @@ func currentContextCmd(logger logging.Logger, configOpts *Options) *cobra.Comman
 	return cmd
 }
 
-func useContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
+func useContextCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "use-context CONTEXT_NAME",
 		Args:    cobra.ExactArgs(1),
@@ -221,7 +221,7 @@ func useContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 		Long:    "Set the current context and updates the configuration file.",
 		Example: "\n\t" + binaryName + " config use-context dev-instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.loadConfigTolerant(logger)
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func useContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 
 			cfg.CurrentContext = args[0]
 
-			if err := config.Write(logger, configOpts.configSource(), cfg); err != nil {
+			if err := config.Write(cmd.Context(), configOpts.configSource(), cfg); err != nil {
 				return err
 			}
 
@@ -244,7 +244,7 @@ func useContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	return cmd
 }
 
-func setCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
+func setCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set PROPERTY_NAME PROPERTY_VALUE",
 		Args:  cobra.ExactArgs(2),
@@ -260,8 +260,8 @@ PROPERTY_VALUE is the new value to set.`,
 
 	# Disable the validation of the server's SSL certificate in the "dev-instance" context
 	%[1]s config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`, binaryName),
-		RunE: func(_ *cobra.Command, args []string) error {
-			cfg, err := configOpts.loadConfigTolerant(logger)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -270,14 +270,14 @@ PROPERTY_VALUE is the new value to set.`,
 				return err
 			}
 
-			return config.Write(logger, configOpts.configSource(), cfg)
+			return config.Write(cmd.Context(), configOpts.configSource(), cfg)
 		},
 	}
 
 	return cmd
 }
 
-func unsetCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
+func unsetCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset PROPERTY_NAME",
 		Args:  cobra.ExactArgs(1),
@@ -291,8 +291,8 @@ PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either 
 
 	# Unset the "insecure-skip-tls-verify" flag in the "dev-instance" context
 	%[1]s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`, binaryName),
-		RunE: func(_ *cobra.Command, args []string) error {
-			cfg, err := configOpts.loadConfigTolerant(logger)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -301,7 +301,7 @@ PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either 
 				return err
 			}
 
-			return config.Write(logger, configOpts.configSource(), cfg)
+			return config.Write(cmd.Context(), configOpts.configSource(), cfg)
 		},
 	}
 

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/stretchr/testify/require"
@@ -17,7 +16,6 @@ func TestFSWriter_Write(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := resources.FSWriter{
-		Logger:    &logging.NoOpLogger{},
 		Directory: outputDir,
 		Formatter: format.YAML,
 		Namer: func(resource unstructured.Unstructured) (string, error) {
@@ -25,7 +23,7 @@ func TestFSWriter_Write(t *testing.T) {
 		},
 	}
 
-	err := writer.Write(testResources())
+	err := writer.Write(t.Context(), *testResources())
 	req.NoError(err)
 
 	req.FileExists(filepath.Join(outputDir, "folder-uid.yaml"))
@@ -37,10 +35,9 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := resources.FSWriter{
-		Logger:          &logging.NoOpLogger{},
-		Directory:       outputDir,
-		Formatter:       format.YAML,
-		ContinueOnError: true,
+		Directory:   outputDir,
+		Formatter:   format.YAML,
+		StopOnError: false,
 		Namer: func(resource unstructured.Unstructured) (string, error) {
 			if resource.GetKind() == "Folder" {
 				return "", errors.New("woops, folders are causing some trouble :(")
@@ -49,7 +46,7 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 		},
 	}
 
-	err := writer.Write(testResources())
+	err := writer.Write(t.Context(), *testResources())
 	req.NoError(err)
 
 	req.NoFileExists(filepath.Join(outputDir, "folder-uid.yaml"), "not created because of an error somewhere")
@@ -61,13 +58,12 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := resources.FSWriter{
-		Logger:    &logging.NoOpLogger{},
 		Directory: outputDir,
 		Formatter: format.JSON,
 		Namer:     resources.GroupResourcesByKind("json"),
 	}
 
-	err := writer.Write(testResources())
+	err := writer.Write(t.Context(), *testResources())
 	req.NoError(err)
 
 	req.FileExists(filepath.Join(outputDir, "Folder", "folder-uid.json"))
@@ -82,7 +78,6 @@ func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {
 	}
 
 	writer := resources.FSWriter{
-		Logger:    &logging.NoOpLogger{},
 		Directory: outputDir,
 		Formatter: format.YAML,
 		Namer: func(resource unstructured.Unstructured) (string, error) {
@@ -90,7 +85,7 @@ func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {
 		},
 	}
 
-	err := writer.Write(input)
+	err := writer.Write(t.Context(), *input)
 	req.NoError(err)
 
 	req.NoDirExists(outputDir)
