@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/fatih/color"
+	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/cmd/config"
 	"github.com/grafana/grafanactl/cmd/resources"
 	"github.com/grafana/grafanactl/internal/logs"
@@ -18,7 +19,7 @@ func Command(version string) *cobra.Command {
 
 	logLevel := new(slog.LevelVar)
 	logLevel.Set(slog.LevelWarn)
-	logger := slog.New(logs.NewHandler(os.Stderr, &logs.Options{
+	logger := logging.NewSLogLogger(logs.NewHandler(os.Stderr, &logs.Options{
 		Level: logLevel,
 	}))
 

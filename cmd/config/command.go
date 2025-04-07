@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/secrets"
@@ -33,7 +33,7 @@ func (opts *Options) BindFlags(flags *pflag.FlagSet) {
 // and returns it without validation.
 // This function should only be used by config-related commands, to allow the
 // user to iterate on the configuration until it becomes valid.
-func (opts *Options) loadConfigTolerant(logger *slog.Logger, extraOverrides ...config.Override) (config.Config, error) {
+func (opts *Options) loadConfigTolerant(logger logging.Logger, extraOverrides ...config.Override) (config.Config, error) {
 	overrides := append([]config.Override{
 		// If Grafana-related env variables are set, use them to configure the
 		// current context and Grafana config.
@@ -72,7 +72,7 @@ func (opts *Options) loadConfigTolerant(logger *slog.Logger, extraOverrides ...c
 
 // LoadConfig loads the configuration file (default, or explicitly set via flags)
 // and validates it.
-func (opts *Options) LoadConfig(logger *slog.Logger) (config.Config, error) {
+func (opts *Options) LoadConfig(logger logging.Logger) (config.Config, error) {
 	validator := func(cfg *config.Config) error {
 		// Ensure that the current context actually exists.
 		if !cfg.HasContext(cfg.CurrentContext) {
@@ -93,7 +93,7 @@ func (opts *Options) configSource() config.Source {
 	return config.StandardLocation()
 }
 
-func Command(logger *slog.Logger) *cobra.Command {
+func Command(logger logging.Logger) *cobra.Command {
 	configOpts := &Options{}
 
 	cmd := &cobra.Command{
@@ -146,7 +146,7 @@ func (opts *viewOpts) Validate() error {
 	return nil
 }
 
-func viewCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
+func viewCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	opts := &viewOpts{}
 
 	cmd := &cobra.Command{
@@ -190,7 +190,7 @@ func viewCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
 	return cmd
 }
 
-func currentContextCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
+func currentContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "current-context",
 		Args:    cobra.NoArgs,
@@ -212,7 +212,7 @@ func currentContextCmd(logger *slog.Logger, configOpts *Options) *cobra.Command 
 	return cmd
 }
 
-func useContextCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
+func useContextCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "use-context CONTEXT_NAME",
 		Args:    cobra.ExactArgs(1),
@@ -244,7 +244,7 @@ func useContextCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
 	return cmd
 }
 
-func setCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
+func setCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set PROPERTY_NAME PROPERTY_VALUE",
 		Args:  cobra.ExactArgs(2),
@@ -277,7 +277,7 @@ PROPERTY_VALUE is the new value to set.`,
 	return cmd
 }
 
-func unsetCmd(logger *slog.Logger, configOpts *Options) *cobra.Command {
+func unsetCmd(logger logging.Logger, configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset PROPERTY_NAME",
 		Args:  cobra.ExactArgs(1),

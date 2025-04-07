@@ -3,13 +3,14 @@ package config_test
 import (
 	"testing"
 
+	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/cmd/config"
 	"github.com/grafana/grafanactl/internal/testutils"
 )
 
 func Test_CurrentContextCommand(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"current-context", "--config", "testdata/config.yaml"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -29,7 +30,7 @@ contexts:
 	configFile := testutils.CreateTempFile(t, cfg)
 
 	initialConfigTest := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"current-context", "--config", configFile},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -39,7 +40,7 @@ contexts:
 	initialConfigTest.Run(t)
 
 	changeConfigTest := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"use-context", "--config", configFile, "new"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -49,7 +50,7 @@ contexts:
 	changeConfigTest.Run(t)
 
 	newConfigTest := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"current-context", "--config", configFile},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -61,7 +62,7 @@ contexts:
 
 func Test_UseContextCommand_withUnknownContext(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"use-context", "--config", "testdata/config.yaml", "unknown-context"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandErrorContains("Context \"unknown-context\" does not exist"),
@@ -72,7 +73,7 @@ func Test_UseContextCommand_withUnknownContext(t *testing.T) {
 
 func Test_ViewCommand(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "testdata/config.yaml"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -94,7 +95,7 @@ current-context: local`),
 
 func Test_ViewCommand_raw(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "testdata/config.yaml", "--raw"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -116,7 +117,7 @@ current-context: local`),
 
 func Test_ViewCommand_minify(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "testdata/config.yaml", "--minify"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -134,7 +135,7 @@ current-context: local`),
 
 func Test_ViewCommand_minify_explicitContext(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "testdata/config.yaml", "--minify", "--context", "prod"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -152,7 +153,7 @@ current-context: prod`),
 
 func Test_ViewCommand_outputJson(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "testdata/config.yaml", "-o", "json"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -181,7 +182,7 @@ func Test_ViewCommand_outputJson(t *testing.T) {
 
 func Test_ViewCommand_failsWithNonExistentConfigFile(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "does-not-exist.yaml"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandErrorContains("no such file or directory"),
@@ -193,7 +194,7 @@ func Test_ViewCommand_failsWithNonExistentConfigFile(t *testing.T) {
 
 func Test_ViewCommand_failsWithUnknownContext(t *testing.T) {
 	testCase := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", "testdata/config.yaml", "--context", "unknown-context"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandErrorContains("Context \"unknown-context\" does not exist"),
@@ -208,7 +209,7 @@ func Test_SetCommand(t *testing.T) {
 	configFile := testutils.CreateTempFile(t, cfg)
 
 	changeConfigTest := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"set", "--config", configFile, "contexts.dev.grafana.server", "https://grafana-dev.example"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -217,7 +218,7 @@ func Test_SetCommand(t *testing.T) {
 	changeConfigTest.Run(t)
 
 	viewCmd := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", configFile, "--minify"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -242,7 +243,7 @@ current-context: dev`
 	configFile := testutils.CreateTempFile(t, cfg)
 
 	changeConfigTest := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"unset", "--config", configFile, "contexts.dev.grafana.user"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
@@ -251,7 +252,7 @@ current-context: dev`
 	changeConfigTest.Run(t)
 
 	viewCmd := testutils.CommandTestCase{
-		Cmd:     config.Command(testutils.NullLogger()),
+		Cmd:     config.Command(&logging.NoOpLogger{}),
 		Command: []string{"view", "--config", configFile, "--minify"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),

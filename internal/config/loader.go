@@ -11,6 +11,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
+	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/fail"
 )
 
@@ -51,7 +52,7 @@ func StandardLocation() Source {
 	}
 }
 
-func Load(logger *slog.Logger, source Source, overrides ...Override) (Config, error) {
+func Load(logger logging.Logger, source Source, overrides ...Override) (Config, error) {
 	config := Config{}
 
 	filename, err := source()
@@ -94,7 +95,7 @@ func Load(logger *slog.Logger, source Source, overrides ...Override) (Config, er
 	return config, nil
 }
 
-func Write(logger *slog.Logger, source Source, cfg Config) error {
+func Write(logger logging.Logger, source Source, cfg Config) error {
 	filename, err := source()
 	if err != nil {
 		return handleWriteError(err)
