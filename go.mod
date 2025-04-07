@@ -6,13 +6,13 @@ require (
 	github.com/adrg/xdg v0.5.3
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/fatih/color v1.18.0
-	github.com/goccy/go-yaml v1.17.0
+	github.com/goccy/go-yaml v1.17.1
 	github.com/grafana/authlib/claims v0.0.0-20250120084028-e3328c576437
 	github.com/grafana/grafana-app-sdk/logging v0.35.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.13.0
 	k8s.io/apimachinery v0.32.3
 	k8s.io/cli-runtime v0.32.3
 	k8s.io/client-go v0.32.3
