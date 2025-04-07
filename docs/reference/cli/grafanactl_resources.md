@@ -27,6 +27,7 @@ TODO: more information.
 ### SEE ALSO
 
 * [grafanactl](grafanactl.md)	 - 
+* [grafanactl resources get](grafanactl_resources_get.md)	 - Display one or many resources
 * [grafanactl resources list](grafanactl_resources_list.md)	 - List available Grafana API resources
 * [grafanactl resources pull](grafanactl_resources_pull.md)	 - Pull resources from Grafana
 * [grafanactl resources push](grafanactl_resources_push.md)	 - Push resources to Grafana

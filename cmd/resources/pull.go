@@ -3,9 +3,6 @@ package resources
 import (
 	"errors"
 	"fmt"
-	"io"
-	"strings"
-	"time"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
@@ -14,12 +11,7 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/duration"
-	"k8s.io/cli-runtime/pkg/printers"
 )
 
 type pullOpts struct {
@@ -30,16 +22,11 @@ type pullOpts struct {
 }
 
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
-	// Setup some additional formatting options
-	opts.IO.RegisterCustomFormat("text", formatResourcesAsText)
-
-	opts.IO.DefaultFormat("text")
-
 	// Bind all the flags
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
-	flags.StringVarP(&opts.Directory, "directory", "d", "", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
+	flags.StringVarP(&opts.Directory, "directory", "d", "./resources", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
 }
 
 func (opts *pullOpts) Validate() error {
@@ -47,8 +34,8 @@ func (opts *pullOpts) Validate() error {
 		return err
 	}
 
-	if opts.Directory != "" && opts.IO.OutputFormat == "text" {
-		return errors.New("--directory and --output=text are mutually exclusive")
+	if opts.Directory == "" {
+		return errors.New("--directory is required")
 	}
 
 	return nil
@@ -125,9 +112,8 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 			}
 
 			var (
-				res              *unstructured.UnstructuredList
-				singlePullTarget bool
-				perr             error
+				res  *unstructured.UnstructuredList
+				perr error
 			)
 			if len(args) == 0 {
 				res, perr = pull.PullAll(cmd.Context())
@@ -147,7 +133,6 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 					return err
 				}
 
-				singlePullTarget = cmds.HasSingleTarget()
 				res, perr = pull.Pull(cmd.Context(), resources.PullerRequest{
 					Commands:        cmds,
 					ContinueOnError: opts.ContinueOnError,
@@ -165,73 +150,19 @@ func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Comman
 				}
 			}
 
-			if opts.Directory != "" {
-				writer := resources.FSWriter{
-					Logger:          logger,
-					Directory:       opts.Directory,
-					Namer:           resources.GroupResourcesByKind(opts.IO.OutputFormat),
-					Formatter:       opts.IO.Format,
-					ContinueOnError: opts.ContinueOnError,
-				}
-
-				return writer.Write(res)
+			writer := resources.FSWriter{
+				Logger:          logger,
+				Directory:       opts.Directory,
+				Namer:           resources.GroupResourcesByKind(opts.IO.OutputFormat),
+				Formatter:       opts.IO.Format,
+				ContinueOnError: opts.ContinueOnError,
 			}
 
-			// Avoid printing a list of results if a single resource is being pulled
-			if len(res.Items) != 0 && singlePullTarget && opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
-				return opts.IO.Format(cmd.OutOrStdout(), res.Items[0])
-			}
-
-			return opts.IO.Format(cmd.OutOrStdout(), res)
+			return writer.Write(res)
 		},
 	}
 
 	opts.setup(cmd.Flags())
 
 	return cmd
-}
-
-func formatResourcesAsText(output io.Writer, input any) error {
-	//nolint:forcetypeassert
-	items := input.(*unstructured.UnstructuredList)
-
-	table := &metav1.Table{
-		ColumnDefinitions: []metav1.TableColumnDefinition{
-			{Name: "KIND", Type: "string"},
-			{Name: "NAMESPACE", Type: "string"},
-			{Name: "NAME", Type: "string"},
-			{Name: "AGE", Type: "string"},
-		},
-	}
-
-	for _, r := range items.Items {
-		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-		table.Rows = append(table.Rows, metav1.TableRow{
-			Cells: []interface{}{
-				formatKind(r.GroupVersionKind()),
-				r.GetNamespace(),
-				r.GetName(),
-				age,
-			},
-			Object: runtime.RawExtension{
-				Object: &r,
-			},
-		})
-	}
-
-	printer := printers.NewTablePrinter(printers.PrintOptions{
-		Wide:       true,
-		ShowLabels: true,
-		SortBy:     "name",
-	})
-
-	return printer.PrintObj(table, output)
-}
-
-// TODO: we need to change the format of data the puller returns,
-// to include the API metadata for each resource.
-func formatKind(gvk schema.GroupVersionKind) string {
-	plural := strings.ToLower(gvk.Kind) + "s"
-	return fmt.Sprintf("%s.%s.%s", plural, gvk.Version, gvk.Group)
 }

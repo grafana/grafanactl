@@ -58,9 +58,9 @@ grafanactl resources pull RESOURCES_PATHS [flags]
 
 ```
       --continue-on-error   Continue pulling resources even if an error occurs
-  -d, --directory string    Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout
+  -d, --directory string    Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout (default "./resources")
   -h, --help                help for pull
-  -o, --output string       Output format. One of: json, text, yaml (default "text")
+  -o, --output string       Output format. One of: json, yaml (default "yaml")
 ```
 
 ### Options inherited from parent commands
