@@ -2,11 +2,11 @@ package resources
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path"
 	"text/tabwriter"
 
+	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/fail"
@@ -18,7 +18,7 @@ import (
 //nolint:gochecknoglobals
 var binaryName = path.Base(os.Args[0])
 
-func Command(logger *slog.Logger) *cobra.Command {
+func Command(logger logging.Logger) *cobra.Command {
 	configOpts := &cmdconfig.Options{}
 
 	cmd := &cobra.Command{
@@ -48,7 +48,7 @@ func (opts *listOpts) BindFlags(*pflag.FlagSet) {
 	// none so far
 }
 
-func listCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
+func listCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &listOpts{}
 
 	cmd := &cobra.Command{
@@ -129,7 +129,7 @@ func (opts *pushOpts) BindFlags(flags *pflag.FlagSet) {
 	flags.StringArrayVar(&opts.Kinds, "kind", opts.Kinds, "Resource kinds to push. If omitted, all supported kinds will be pulled")
 }
 
-func pushCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
+func pushCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pushOpts{}
 
 	cmd := &cobra.Command{
@@ -171,7 +171,7 @@ func (opts *serveOpts) BindFlags(flags *pflag.FlagSet) {
 	flags.IntVar(&opts.Port, "port", 8080, "Port on which the server will listen")
 }
 
-func serveCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
+func serveCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &serveOpts{}
 
 	cmd := &cobra.Command{

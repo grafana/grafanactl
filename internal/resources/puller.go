@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/logs"
 	"golang.org/x/sync/errgroup"
@@ -13,12 +14,12 @@ import (
 
 // Puller is a command that pulls resources from Grafana.
 type Puller struct {
-	logger *slog.Logger
+	logger logging.Logger
 	client *NamespacedDynamicClient
 }
 
 // NewPuller creates a new Puller.
-func NewPuller(logger *slog.Logger, cfg config.Context) (*Puller, error) {
+func NewPuller(logger logging.Logger, cfg config.Context) (*Puller, error) {
 	rcfg, err := config.NewNamespacedRESTConfig(cfg)
 	if err != nil {
 		return nil, err

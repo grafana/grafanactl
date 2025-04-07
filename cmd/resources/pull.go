@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"text/tabwriter"
 	"time"
 
+	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/fail"
@@ -47,7 +47,7 @@ func (opts *pullOpts) Validate() error {
 	return nil
 }
 
-func pullCmd(logger *slog.Logger, configOpts *cmdconfig.Options) *cobra.Command {
+func pullCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pullOpts{}
 
 	cmd := &cobra.Command{
