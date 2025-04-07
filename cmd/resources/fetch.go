@@ -12,8 +12,8 @@ import (
 )
 
 type fetchOpts struct {
-	Config          config.Config
-	ContinueOnError bool
+	Config      config.Config
+	StopOnError bool
 }
 
 type fetchResult struct {
@@ -65,8 +65,8 @@ func fetchResources(
 
 		singlePullTarget = cmds.HasSingleTarget()
 		res, perr = pull.Pull(ctx, resources.PullerRequest{
-			Commands:        cmds,
-			ContinueOnError: opts.ContinueOnError,
+			Commands:    cmds,
+			StopOnError: opts.StopOnError,
 		})
 	}
 

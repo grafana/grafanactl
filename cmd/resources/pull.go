@@ -12,17 +12,16 @@ import (
 )
 
 type pullOpts struct {
-	IO cmdio.Options
-
-	ContinueOnError bool
-	Directory       string
+	IO          cmdio.Options
+	StopOnError bool
+	Directory   string
 }
 
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	// Bind all the flags
 	opts.IO.BindFlags(flags)
 
-	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
+	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
 	flags.StringVarP(&opts.Directory, "directory", "d", "./resources", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
 }
 
@@ -98,18 +97,18 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			res, err := fetchResources(cmd.Context(), fetchOpts{
-				Config:          cfg,
-				ContinueOnError: opts.ContinueOnError,
+				Config:      cfg,
+				StopOnError: opts.StopOnError,
 			}, args)
 			if err != nil {
 				return err
 			}
 
 			writer := resources.FSWriter{
-				Directory:       opts.Directory,
-				Namer:           resources.GroupResourcesByKind(opts.IO.OutputFormat),
-				Formatter:       opts.IO.Format,
-				ContinueOnError: opts.ContinueOnError,
+				Directory:   opts.Directory,
+				Namer:       resources.GroupResourcesByKind(opts.IO.OutputFormat),
+				Formatter:   opts.IO.Format,
+				StopOnError: opts.StopOnError,
 			}
 
 			return writer.Write(ctx, res.Resources)

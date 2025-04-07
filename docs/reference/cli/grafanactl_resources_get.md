@@ -57,9 +57,9 @@ grafanactl resources get RESOURCES_PATHS [flags]
 ### Options
 
 ```
-      --continue-on-error   Continue pulling resources even if an error occurs
-  -h, --help                help for get
-  -o, --output string       Output format. One of: json, text, wide, yaml (default "text")
+  -h, --help            help for get
+  -o, --output string   Output format. One of: json, text, wide, yaml (default "text")
+      --stop-on-error   Stop pulling resources when an error occurs
 ```
 
 ### Options inherited from parent commands

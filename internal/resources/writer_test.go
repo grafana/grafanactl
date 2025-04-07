@@ -35,9 +35,9 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := resources.FSWriter{
-		Directory:       outputDir,
-		Formatter:       format.YAML,
-		ContinueOnError: true,
+		Directory:   outputDir,
+		Formatter:   format.YAML,
+		StopOnError: false,
 		Namer: func(resource unstructured.Unstructured) (string, error) {
 			if resource.GetKind() == "Folder" {
 				return "", errors.New("woops, folders are causing some trouble :(")

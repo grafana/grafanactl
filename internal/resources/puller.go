@@ -38,6 +38,7 @@ func NewPuller(cfg config.Context) (*Puller, error) {
 type PullerRequest struct {
 	Commands        []PullCommand
 	ContinueOnError bool
+	StopOnError     bool
 }
 
 // PullAll pulls all resources from Grafana.
@@ -98,10 +99,9 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured
 			case PullCommandTypeAll:
 				res, err := p.client.List(ctx, cmd.GVK, metav1.ListOptions{})
 				if err != nil {
-					if !request.ContinueOnError {
+					if request.StopOnError {
 						return err
 					}
-
 					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
 				} else {
 					cmdRes[idx] = res.Items
@@ -109,10 +109,9 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured
 			case PullCommandTypeMultiple:
 				res, err := p.client.GetMultiple(ctx, cmd.GVK, cmd.UIDs, metav1.ListOptions{})
 				if err != nil {
-					if !request.ContinueOnError {
+					if request.StopOnError {
 						return err
 					}
-
 					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
 				} else {
 					cmdRes[idx] = res
@@ -120,16 +119,14 @@ func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured
 			case PullCommandTypeSingle:
 				res, err := p.client.Get(ctx, cmd.GVK, cmd.UIDs[0], metav1.GetOptions{})
 				if err != nil {
-					if !request.ContinueOnError {
+					if request.StopOnError {
 						return err
 					}
-
 					logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", cmd.String()))
 				} else {
 					cmdRes[idx] = []unstructured.Unstructured{*res}
 				}
 			}
-
 			return nil
 		})
 	}

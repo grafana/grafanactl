@@ -19,13 +19,13 @@ import (
 )
 
 type getOpts struct {
-	IO              cmdio.Options
-	ContinueOnError bool
+	IO          cmdio.Options
+	StopOnError bool
 }
 
 func (opts *getOpts) setup(flags *pflag.FlagSet) {
 	// Setup some additional formatting options
-	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
+	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
 	opts.IO.RegisterCustomFormat("text", tableFormatter(false))
 	opts.IO.RegisterCustomFormat("wide", tableFormatter(true))
 	opts.IO.DefaultFormat("text")
@@ -96,8 +96,8 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			res, err := fetchResources(cmd.Context(), fetchOpts{
-				Config:          cfg,
-				ContinueOnError: opts.ContinueOnError,
+				Config:      cfg,
+				StopOnError: opts.StopOnError,
 			}, args)
 			if err != nil {
 				return err
