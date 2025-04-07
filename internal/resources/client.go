@@ -13,8 +13,8 @@ import (
 
 // VersionRegistry is a registry of resources and their preferred versions.
 type VersionRegistry interface {
-	GetPreferred(ctx context.Context, gvk DynamicGroupVersionKind, forceUpdate bool) (schema.GroupVersionResource, error)
-	Resources(ctx context.Context, forceUpdate bool) ([]DynamicGroupVersionKind, error)
+	GetPreferred(ctx context.Context, gvk GroupVersionKind, forceUpdate bool) (schema.GroupVersionResource, error)
+	Resources(ctx context.Context, forceUpdate bool) ([]GroupVersionKind, error)
 }
 
 // NamespacedDynamicClient is a dynamic client with a namespace and a discovery registry.
@@ -25,8 +25,8 @@ type NamespacedDynamicClient struct {
 }
 
 // NewDefaultNamespacedDynamicClient creates a new namespaced dynamic client using the default discovery registry.
-func NewDefaultNamespacedDynamicClient(cfg config.NamespacedRESTConfig) (*NamespacedDynamicClient, error) {
-	registry, err := NewDefaultDiscoveryRegistry(cfg)
+func NewDefaultNamespacedDynamicClient(ctx context.Context, cfg config.NamespacedRESTConfig) (*NamespacedDynamicClient, error) {
+	registry, err := NewDefaultDiscoveryRegistry(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -51,13 +51,13 @@ func NewNamespacedDynamicClient(
 }
 
 // Resources returns all resources in the Grafana API.
-func (c *NamespacedDynamicClient) Resources(ctx context.Context) ([]DynamicGroupVersionKind, error) {
+func (c *NamespacedDynamicClient) Resources(ctx context.Context) ([]GroupVersionKind, error) {
 	return c.registry.Resources(ctx, false)
 }
 
 // List lists resources from the server.
 func (c *NamespacedDynamicClient) List(
-	ctx context.Context, gvk DynamicGroupVersionKind, opts metav1.ListOptions,
+	ctx context.Context, gvk GroupVersionKind, opts metav1.ListOptions,
 ) (*unstructured.UnstructuredList, error) {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {
@@ -75,7 +75,7 @@ func (c *NamespacedDynamicClient) List(
 // Ideally we'd like to use field selectors,
 // but Kubernetes does not support set-based operators in field selectors (only in labels).
 func (c *NamespacedDynamicClient) GetMultiple(
-	ctx context.Context, gvk DynamicGroupVersionKind, names []string, opts metav1.ListOptions,
+	ctx context.Context, gvk GroupVersionKind, names []string, opts metav1.ListOptions,
 ) ([]unstructured.Unstructured, error) {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {
@@ -101,7 +101,7 @@ func (c *NamespacedDynamicClient) GetMultiple(
 
 // Get gets a resource from the server.
 func (c *NamespacedDynamicClient) Get(
-	ctx context.Context, gvk DynamicGroupVersionKind, name string, opts metav1.GetOptions,
+	ctx context.Context, gvk GroupVersionKind, name string, opts metav1.GetOptions,
 ) (*unstructured.Unstructured, error) {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {
@@ -113,7 +113,7 @@ func (c *NamespacedDynamicClient) Get(
 
 // Create creates a resource on the server.
 func (c *NamespacedDynamicClient) Create(
-	ctx context.Context, gvk DynamicGroupVersionKind, obj *unstructured.Unstructured, opts metav1.CreateOptions,
+	ctx context.Context, gvk GroupVersionKind, obj *unstructured.Unstructured, opts metav1.CreateOptions,
 ) (*unstructured.Unstructured, error) {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {
@@ -125,7 +125,7 @@ func (c *NamespacedDynamicClient) Create(
 
 // Update updates a resource on the server.
 func (c *NamespacedDynamicClient) Update(
-	ctx context.Context, gvk DynamicGroupVersionKind, obj *unstructured.Unstructured, opts metav1.UpdateOptions,
+	ctx context.Context, gvk GroupVersionKind, obj *unstructured.Unstructured, opts metav1.UpdateOptions,
 ) (*unstructured.Unstructured, error) {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {
@@ -137,7 +137,7 @@ func (c *NamespacedDynamicClient) Update(
 
 // Delete deletes a resource on the server.
 func (c *NamespacedDynamicClient) Delete(
-	ctx context.Context, gvk DynamicGroupVersionKind, name string, opts metav1.DeleteOptions,
+	ctx context.Context, gvk GroupVersionKind, name string, opts metav1.DeleteOptions,
 ) error {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {
@@ -149,7 +149,7 @@ func (c *NamespacedDynamicClient) Delete(
 
 // Apply applies a resource on the server.
 func (c *NamespacedDynamicClient) Apply(
-	ctx context.Context, gvk DynamicGroupVersionKind, name string, obj *unstructured.Unstructured, opts metav1.ApplyOptions,
+	ctx context.Context, gvk GroupVersionKind, name string, obj *unstructured.Unstructured, opts metav1.ApplyOptions,
 ) (*unstructured.Unstructured, error) {
 	preferred, err := c.registry.GetPreferred(ctx, gvk, false)
 	if err != nil {

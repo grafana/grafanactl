@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -26,8 +27,8 @@ type getOpts struct {
 func (opts *getOpts) setup(flags *pflag.FlagSet) {
 	// Setup some additional formatting options
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
-	opts.IO.RegisterCustomFormat("text", tableFormatter(false))
-	opts.IO.RegisterCustomFormat("wide", tableFormatter(true))
+	opts.IO.RegisterCustomCodec("text", &tableCodec{wide: false})
+	opts.IO.RegisterCustomCodec("wide", &tableCodec{wide: true})
 	opts.IO.DefaultFormat("text")
 
 	// Bind all the flags
@@ -90,12 +91,14 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
   %[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
 `, binaryName),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.LoadConfig(cmd.Context())
+			ctx := cmd.Context()
+
+			cfg, err := configOpts.LoadRESTConfig(ctx)
 			if err != nil {
 				return err
 			}
 
-			res, err := fetchResources(cmd.Context(), fetchOpts{
+			res, err := fetchResources(ctx, fetchRequest{
 				Config:      cfg,
 				StopOnError: opts.StopOnError,
 			}, args)
@@ -103,16 +106,31 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			// Avoid printing a list of results if a single resource is being pulled,
-			// and we are not using the table output format.
-			if res.IsSingleTarget &&
-				len(res.Resources.Items) == 1 &&
-				opts.IO.OutputFormat != "text" &&
-				opts.IO.OutputFormat != "wide" {
-				return opts.IO.Format(cmd.OutOrStdout(), res.Resources.Items[0])
+			codec, err := opts.IO.Codec()
+			if err != nil {
+				return err
 			}
 
-			return opts.IO.Format(cmd.OutOrStdout(), res.Resources)
+			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
+				// Avoid printing a list of results if a single resource is being pulled,
+				// and we are not using the table output format.
+				if res.IsSingleTarget && len(res.Resources.Items) == 1 {
+					return codec.Encode(cmd.OutOrStdout(), res.Resources.Items[0].Object)
+				}
+
+				// For JSON / YAML output we don't want to have "object" keys in the output,
+				// so use the custom printItems type instead.
+				output := printItems{
+					Items: make([]map[string]any, len(res.Resources.Items)),
+				}
+				for i, item := range res.Resources.Items {
+					output.Items[i] = item.Object
+				}
+
+				return codec.Encode(cmd.OutOrStdout(), output)
+			}
+
+			return codec.Encode(cmd.OutOrStdout(), res.Resources)
 		},
 	}
 
@@ -121,74 +139,86 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	return cmd
 }
 
-func tableFormatter(wide bool) func(output io.Writer, input any) error {
-	return func(output io.Writer, input any) error {
-		//nolint:forcetypeassert
-		items := input.(unstructured.UnstructuredList)
+// hack: unstructured objects are serialized with a top-level "object" key,
+// which we don't want, so instead we have a different type for JSON / YAML outputs.
+type printItems struct {
+	Items []map[string]any `json:"items" yaml:"items"`
+}
 
-		// TODO: support per-kind column definitions.
-		//
-		// Read more about type & format here:
-		// https://github.com/OAI/OpenAPI-Specification/blob/main/versions/2.0.md#data-types
-		//
-		// Priority is 0-based (from most important to least important)
-		// and controls whether columns are omitted in (wide: false) tables.
-		table := &metav1.Table{
-			ColumnDefinitions: []metav1.TableColumnDefinition{
-				{
-					Name:        "KIND",
-					Type:        "string",
-					Priority:    0,
-					Description: "The kind of the resource.",
-				},
-				{
-					Name:        "NAME",
-					Type:        "string",
-					Format:      "name",
-					Priority:    0,
-					Description: "The name of the resource.",
-				},
-				{
-					Name:        "NAMESPACE",
-					Priority:    0,
-					Description: "The namespace of the resource.",
-				},
-				{
-					Name:        "AGE",
-					Type:        "string",
-					Format:      "date-time",
-					Priority:    1,
-					Description: "The age of the resource.",
-				},
+type tableCodec struct {
+	wide bool
+}
+
+func (c *tableCodec) Encode(output io.Writer, input any) error {
+	//nolint:forcetypeassert
+	items := input.(unstructured.UnstructuredList)
+
+	// TODO: support per-kind column definitions.
+	//
+	// Read more about type & format here:
+	// https://github.com/OAI/OpenAPI-Specification/blob/main/versions/2.0.md#data-types
+	//
+	// Priority is 0-based (from most important to least important)
+	// and controls whether columns are omitted in (wide: false) tables.
+	table := &metav1.Table{
+		ColumnDefinitions: []metav1.TableColumnDefinition{
+			{
+				Name:        "KIND",
+				Type:        "string",
+				Priority:    0,
+				Description: "The kind of the resource.",
 			},
-		}
-
-		for _, r := range items.Items {
-			age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-			table.Rows = append(table.Rows, metav1.TableRow{
-				Cells: []interface{}{
-					formatKind(r.GroupVersionKind(), wide),
-					r.GetName(),
-					r.GetNamespace(),
-					age,
-				},
-				Object: runtime.RawExtension{
-					Object: &r,
-				},
-			})
-		}
-
-		printer := printers.NewTablePrinter(printers.PrintOptions{
-			Wide:       wide,
-			ShowLabels: wide,
-			// TODO: sorting doesn't actually do anything,
-			// though it is supported in the options.
-			// SortBy:     "name",
-		})
-
-		return printer.PrintObj(table, output)
+			{
+				Name:        "NAME",
+				Type:        "string",
+				Format:      "name",
+				Priority:    0,
+				Description: "The name of the resource.",
+			},
+			{
+				Name:        "NAMESPACE",
+				Priority:    0,
+				Description: "The namespace of the resource.",
+			},
+			{
+				Name:        "AGE",
+				Type:        "string",
+				Format:      "date-time",
+				Priority:    1,
+				Description: "The age of the resource.",
+			},
+		},
 	}
+
+	for _, r := range items.Items {
+		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
+
+		table.Rows = append(table.Rows, metav1.TableRow{
+			Cells: []interface{}{
+				formatKind(r.GroupVersionKind(), c.wide),
+				r.GetName(),
+				r.GetNamespace(),
+				age,
+			},
+			Object: runtime.RawExtension{
+				Object: &r,
+			},
+		})
+	}
+
+	printer := printers.NewTablePrinter(printers.PrintOptions{
+		Wide:       c.wide,
+		ShowLabels: c.wide,
+		// TODO: sorting doesn't actually do anything,
+		// though it is supported in the options.
+		// SortBy:     "name",
+	})
+
+	return printer.PrintObj(table, output)
+}
+
+func (c *tableCodec) Decode(io.Reader, any) error {
+	return errors.New("table codec does not support decoding")
 }
 
 // TODO: we need to change the format of data the puller returns,

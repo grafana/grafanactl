@@ -18,13 +18,8 @@ type Puller struct {
 }
 
 // NewPuller creates a new Puller.
-func NewPuller(cfg config.Context) (*Puller, error) {
-	rcfg, err := config.NewNamespacedRESTConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := NewDefaultNamespacedDynamicClient(rcfg)
+func NewPuller(ctx context.Context, restConfig config.NamespacedRESTConfig) (*Puller, error) {
+	client, err := NewDefaultNamespacedDynamicClient(ctx, restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -34,21 +29,89 @@ func NewPuller(cfg config.Context) (*Puller, error) {
 	}, nil
 }
 
-// PullerRequest describes a list of "pull" commands to get resources from Grafana.
-type PullerRequest struct {
-	Commands        []PullCommand
-	ContinueOnError bool
-	StopOnError     bool
+// PullRequest is a request for pulling resources from Grafana.
+type PullRequest struct {
+	// Which resources to pull.
+	Selectors []Selector
+
+	// Whether the operation should stop upon encountering an error.
+	StopOnError bool
+
+	// Destination list for the pulled resources.
+	Resources *unstructured.UnstructuredList
 }
 
-// PullAll pulls all resources from Grafana.
-func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, error) {
+// Pull pulls resources from Grafana.
+func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
+	// hack: we need to refactor this better, since there's a bunch of code duplication.
+	// but we want to expose a nice minimalistic API to the user.
+	if len(req.Selectors) == 0 {
+		return p.pullAll(ctx, req)
+	}
+
+	logger := logging.FromContext(ctx)
+	logger.Debug("Pulling resources")
+
+	errg, ctx := errgroup.WithContext(ctx)
+	partialRes := make([][]unstructured.Unstructured, len(req.Selectors))
+
+	for idx, cmd := range req.Selectors {
+		errg.Go(func() error {
+			switch cmd.SelectorType {
+			case SelectorTypeAll:
+				res, err := p.client.List(ctx, cmd.GroupVersionKind, metav1.ListOptions{})
+				if err != nil {
+					if req.StopOnError {
+						return err
+					}
+					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
+				} else {
+					partialRes[idx] = res.Items
+				}
+			case SelectorTypeMultiple:
+				res, err := p.client.GetMultiple(ctx, cmd.GroupVersionKind, cmd.ResourceUIDs, metav1.ListOptions{})
+				if err != nil {
+					if req.StopOnError {
+						return err
+					}
+					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
+				} else {
+					partialRes[idx] = res
+				}
+			case SelectorTypeSingle:
+				res, err := p.client.Get(ctx, cmd.GroupVersionKind, cmd.ResourceUIDs[0], metav1.GetOptions{})
+				if err != nil {
+					if req.StopOnError {
+						return err
+					}
+					logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", cmd.String()))
+				} else {
+					partialRes[idx] = []unstructured.Unstructured{*res}
+				}
+			}
+			return nil
+		})
+	}
+
+	if err := errg.Wait(); err != nil {
+		return err
+	}
+
+	req.Resources.Items = make([]unstructured.Unstructured, 0, len(partialRes))
+	for _, r := range partialRes {
+		req.Resources.Items = append(req.Resources.Items, r...)
+	}
+
+	return nil
+}
+
+func (p *Puller) pullAll(ctx context.Context, req PullRequest) error {
 	logger := logging.FromContext(ctx)
 	logger.Debug("Pulling all resources")
 
 	resources, err := p.client.Resources(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	errg, ctx := errgroup.WithContext(ctx)
@@ -61,9 +124,10 @@ func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, e
 				cmdRes[i] = res.Items
 			}
 
-			// TODO: honor "continue on error" flag
-			// return err
 			if err != nil {
+				if req.StopOnError {
+					return err
+				}
 				logger.Warn("Could not pull resources", logs.Err(err), slog.String("kind", r.String()))
 			}
 
@@ -72,75 +136,13 @@ func (p *Puller) PullAll(ctx context.Context) (*unstructured.UnstructuredList, e
 	}
 
 	if err := errg.Wait(); err != nil {
-		return nil, err
+		return err
 	}
 
-	results := &unstructured.UnstructuredList{}
-	results.NewEmptyInstance()
-	results.SetKind("List")
-
+	req.Resources.Items = make([]unstructured.Unstructured, 0, len(cmdRes))
 	for _, r := range cmdRes {
-		results.Items = append(results.Items, r...)
+		req.Resources.Items = append(req.Resources.Items, r...)
 	}
 
-	return results, nil
-}
-
-func (p *Puller) Pull(ctx context.Context, request PullerRequest) (*unstructured.UnstructuredList, error) {
-	logger := logging.FromContext(ctx)
-	logger.Debug("Pulling resources")
-
-	errg, ctx := errgroup.WithContext(ctx)
-	cmdRes := make([][]unstructured.Unstructured, len(request.Commands))
-
-	for idx, cmd := range request.Commands {
-		errg.Go(func() error {
-			switch cmd.Kind {
-			case PullCommandTypeAll:
-				res, err := p.client.List(ctx, cmd.GVK, metav1.ListOptions{})
-				if err != nil {
-					if request.StopOnError {
-						return err
-					}
-					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
-				} else {
-					cmdRes[idx] = res.Items
-				}
-			case PullCommandTypeMultiple:
-				res, err := p.client.GetMultiple(ctx, cmd.GVK, cmd.UIDs, metav1.ListOptions{})
-				if err != nil {
-					if request.StopOnError {
-						return err
-					}
-					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
-				} else {
-					cmdRes[idx] = res
-				}
-			case PullCommandTypeSingle:
-				res, err := p.client.Get(ctx, cmd.GVK, cmd.UIDs[0], metav1.GetOptions{})
-				if err != nil {
-					if request.StopOnError {
-						return err
-					}
-					logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", cmd.String()))
-				} else {
-					cmdRes[idx] = []unstructured.Unstructured{*res}
-				}
-			}
-			return nil
-		})
-	}
-
-	if err := errg.Wait(); err != nil {
-		return nil, err
-	}
-
-	results := &unstructured.UnstructuredList{}
-	results.SetKind("List")
-
-	for _, r := range cmdRes {
-		results.Items = append(results.Items, r...)
-	}
-
-	return results, nil
+	return nil
 }
