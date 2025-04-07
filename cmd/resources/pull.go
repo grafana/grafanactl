@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"text/tabwriter"
+	"strings"
 	"time"
 
 	"github.com/grafana/grafana-app-sdk/logging"
@@ -14,8 +14,12 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/printers"
 )
 
 type pullOpts struct {
@@ -28,7 +32,6 @@ type pullOpts struct {
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	// Setup some additional formatting options
 	opts.IO.RegisterCustomFormat("text", formatResourcesAsText)
-	opts.IO.RegisterCustomFormat("wide", formatResourcesAsWideText)
 
 	opts.IO.DefaultFormat("text")
 
@@ -44,8 +47,8 @@ func (opts *pullOpts) Validate() error {
 		return err
 	}
 
-	if opts.Directory != "" && (opts.IO.OutputFormat == "text" || opts.IO.OutputFormat == "wide") {
-		return errors.New("--directory and --output=text|wide are mutually exclusive")
+	if opts.Directory != "" && opts.IO.OutputFormat == "text" {
+		return errors.New("--directory and --output=text are mutually exclusive")
 	}
 
 	return nil
@@ -192,30 +195,43 @@ func formatResourcesAsText(output io.Writer, input any) error {
 	//nolint:forcetypeassert
 	items := input.(*unstructured.UnstructuredList)
 
-	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-	fmt.Fprintf(out, "KIND\tNAME\tAGE\n")
-	for _, r := range items.Items {
-		gvk := r.GroupVersionKind()
-		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-		fmt.Fprintf(out, "%s\t%s\t%s\n", gvk.Kind, r.GetName(), age)
+	table := &metav1.Table{
+		ColumnDefinitions: []metav1.TableColumnDefinition{
+			{Name: "KIND", Type: "string"},
+			{Name: "NAMESPACE", Type: "string"},
+			{Name: "NAME", Type: "string"},
+			{Name: "AGE", Type: "string"},
+		},
 	}
 
-	return out.Flush()
+	for _, r := range items.Items {
+		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
+
+		table.Rows = append(table.Rows, metav1.TableRow{
+			Cells: []interface{}{
+				formatKind(r.GroupVersionKind()),
+				r.GetNamespace(),
+				r.GetName(),
+				age,
+			},
+			Object: runtime.RawExtension{
+				Object: &r,
+			},
+		})
+	}
+
+	printer := printers.NewTablePrinter(printers.PrintOptions{
+		Wide:       true,
+		ShowLabels: true,
+		SortBy:     "name",
+	})
+
+	return printer.PrintObj(table, output)
 }
 
-func formatResourcesAsWideText(output io.Writer, input any) error {
-	//nolint:forcetypeassert
-	items := input.(*unstructured.UnstructuredList)
-
-	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-	fmt.Fprintf(out, "GROUP\tVERSION\tKIND\tNAMESPACE\tNAME\tAGE\n")
-	for _, r := range items.Items {
-		gvk := r.GroupVersionKind()
-		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-		fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%st%s\n", gvk.Group, gvk.Version, gvk.Kind, r.GetNamespace(), r.GetName(), age)
-	}
-
-	return out.Flush()
+// TODO: we need to change the format of data the puller returns,
+// to include the API metadata for each resource.
+func formatKind(gvk schema.GroupVersionKind) string {
+	plural := strings.ToLower(gvk.Kind) + "s"
+	return fmt.Sprintf("%s.%s.%s", plural, gvk.Version, gvk.Group)
 }
