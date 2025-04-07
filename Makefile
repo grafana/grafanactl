@@ -27,7 +27,7 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: all
-all: lint tests build ## Lints, tests, and builds the project.
+all: lint tests build docs ## Lints, tests, builds, and generates the documentation.
 
 .PHONY: lint
 lint: check-binaries ## Lints the code base.
@@ -55,7 +55,7 @@ deps: check-binaries ## Installs the dependencies.
 	$(RUN_DEVBOX) pip install -qq -r requirements.txt
 
 .PHONY: docs
-docs: check-binaries ## Generates the documentation.
+docs: check-binaries cli-reference config-reference ## Generates the documentation.
 	$(RUN_DEVBOX) mkdocs build -f mkdocs.yml -d ./build/documentation
 
 .PHONY: cli-reference

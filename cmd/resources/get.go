@@ -1,17 +1,13 @@
 package resources
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
-	"github.com/grafana/grafanactl/internal/fail"
-	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,13 +19,15 @@ import (
 )
 
 type getOpts struct {
-	IO cmdio.Options
+	IO              cmdio.Options
+	ContinueOnError bool
 }
 
 func (opts *getOpts) setup(flags *pflag.FlagSet) {
 	// Setup some additional formatting options
-	opts.IO.RegisterCustomFormat("text", formatResourcesAsText)
-
+	flags.BoolVar(&opts.ContinueOnError, "continue-on-error", opts.ContinueOnError, "Continue pulling resources even if an error occurs")
+	opts.IO.RegisterCustomFormat("text", tableFormatter(false))
+	opts.IO.RegisterCustomFormat("wide", tableFormatter(true))
 	opts.IO.DefaultFormat("text")
 
 	// Bind all the flags
@@ -44,18 +42,18 @@ func (opts *getOpts) Validate() error {
 	return nil
 }
 
-func getCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command {
+func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &getOpts{}
 
 	cmd := &cobra.Command{
 		Use:   "get RESOURCES_PATHS",
 		Args:  cobra.ArbitraryArgs,
-		Short: "Display one or many resources",
-		Long:  "Display one or many resources from Grafana. Resources can be filters using a specific format. See examples below for more details.",
+		Short: "Get resources from Grafana",
+		Long:  "Get resources from Grafana using a specific format. See examples below for more details.",
 		Example: fmt.Sprintf(`
   Everything:
 
-  %[1]s resources get
+  %[1]s resources get dashboards/foo
 
   All instances for a given kind(s):
 
@@ -92,75 +90,29 @@ func getCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command
   %[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
 `, binaryName),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-
-			cfg, err := configOpts.LoadConfig(logger)
+			cfg, err := configOpts.LoadConfig(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			pull, err := resources.NewPuller(logger, *cfg.GetCurrentContext())
+			res, err := fetchResources(cmd.Context(), fetchOpts{
+				Config:          cfg,
+				ContinueOnError: opts.ContinueOnError,
+			}, args)
 			if err != nil {
-				// TODO: is this error actually related to what `resources.NewPuller()` does?
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not parse pull command(s)",
-					Details: "One or more of the provided resource paths are invalid",
-					Suggestions: []string{
-						"Make sure that your are passing in valid resource paths",
-					},
-				}
+				return err
 			}
 
-			var (
-				res              *unstructured.UnstructuredList
-				singlePullTarget bool
-				perr             error
-			)
-			if len(args) == 0 {
-				res, perr = pull.PullAll(cmd.Context())
-			} else {
-				invalidCommandErr := &resources.InvalidCommandError{}
-				cmds, err := resources.ParsePullCommands(args)
-				if err != nil && errors.As(err, invalidCommandErr) {
-					return fail.DetailedError{
-						Parent:  err,
-						Summary: "Could not parse pull command(s)",
-						Details: fmt.Sprintf("Failed to parse command '%s'", invalidCommandErr.Command),
-						Suggestions: []string{
-							"Make sure that your are passing in valid resource paths",
-						},
-					}
-				} else if err != nil {
-					return err
-				}
-
-				singlePullTarget = cmds.HasSingleTarget()
-				res, perr = pull.Pull(cmd.Context(), resources.PullerRequest{
-					Commands:        cmds,
-					ContinueOnError: true,
-				})
+			// Avoid printing a list of results if a single resource is being pulled,
+			// and we are not using the table output format.
+			if res.IsSingleTarget &&
+				len(res.Resources.Items) == 1 &&
+				opts.IO.OutputFormat != "text" &&
+				opts.IO.OutputFormat != "wide" {
+				return opts.IO.Format(cmd.OutOrStdout(), res.Resources.Items[0])
 			}
 
-			if perr != nil {
-				return fail.DetailedError{
-					Parent:  perr,
-					Summary: "Could not pull resource(s) from the API",
-					Details: "One or more resources could not be pulled from the API",
-					Suggestions: []string{
-						"Make sure that your are passing in valid resource paths",
-					},
-				}
-			}
-
-			// Avoid printing a list of results if a single resource is being pulled
-			if len(res.Items) != 0 && singlePullTarget && opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
-				return opts.IO.Format(cmd.OutOrStdout(), res.Items[0])
-			}
-
-			return opts.IO.Format(cmd.OutOrStdout(), res)
+			return opts.IO.Format(cmd.OutOrStdout(), res.Resources)
 		},
 	}
 
@@ -169,47 +121,83 @@ func getCmd(logger logging.Logger, configOpts *cmdconfig.Options) *cobra.Command
 	return cmd
 }
 
-func formatResourcesAsText(output io.Writer, input any) error {
-	//nolint:forcetypeassert
-	items := input.(*unstructured.UnstructuredList)
+func tableFormatter(wide bool) func(output io.Writer, input any) error {
+	return func(output io.Writer, input any) error {
+		//nolint:forcetypeassert
+		items := input.(unstructured.UnstructuredList)
 
-	table := &metav1.Table{
-		ColumnDefinitions: []metav1.TableColumnDefinition{
-			{Name: "KIND", Type: "string"},
-			{Name: "NAMESPACE", Type: "string"},
-			{Name: "NAME", Type: "string"},
-			{Name: "AGE", Type: "string"},
-		},
-	}
-
-	for _, r := range items.Items {
-		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
-
-		table.Rows = append(table.Rows, metav1.TableRow{
-			Cells: []interface{}{
-				formatKind(r.GroupVersionKind()),
-				r.GetNamespace(),
-				r.GetName(),
-				age,
+		// TODO: support per-kind column definitions.
+		//
+		// Read more about type & format here:
+		// https://github.com/OAI/OpenAPI-Specification/blob/main/versions/2.0.md#data-types
+		//
+		// Priority is 0-based (from most important to least important)
+		// and controls whether columns are omitted in (wide: false) tables.
+		table := &metav1.Table{
+			ColumnDefinitions: []metav1.TableColumnDefinition{
+				{
+					Name:        "KIND",
+					Type:        "string",
+					Priority:    0,
+					Description: "The kind of the resource.",
+				},
+				{
+					Name:        "NAME",
+					Type:        "string",
+					Format:      "name",
+					Priority:    0,
+					Description: "The name of the resource.",
+				},
+				{
+					Name:        "NAMESPACE",
+					Priority:    0,
+					Description: "The namespace of the resource.",
+				},
+				{
+					Name:        "AGE",
+					Type:        "string",
+					Format:      "date-time",
+					Priority:    1,
+					Description: "The age of the resource.",
+				},
 			},
-			Object: runtime.RawExtension{
-				Object: &r,
-			},
+		}
+
+		for _, r := range items.Items {
+			age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
+
+			table.Rows = append(table.Rows, metav1.TableRow{
+				Cells: []interface{}{
+					formatKind(r.GroupVersionKind(), wide),
+					r.GetName(),
+					r.GetNamespace(),
+					age,
+				},
+				Object: runtime.RawExtension{
+					Object: &r,
+				},
+			})
+		}
+
+		printer := printers.NewTablePrinter(printers.PrintOptions{
+			Wide:       wide,
+			ShowLabels: wide,
+			// TODO: sorting doesn't actually do anything,
+			// though it is supported in the options.
+			// SortBy:     "name",
 		})
+
+		return printer.PrintObj(table, output)
 	}
-
-	printer := printers.NewTablePrinter(printers.PrintOptions{
-		Wide:       true,
-		ShowLabels: true,
-		SortBy:     "name",
-	})
-
-	return printer.PrintObj(table, output)
 }
 
 // TODO: we need to change the format of data the puller returns,
 // to include the API metadata for each resource.
-func formatKind(gvk schema.GroupVersionKind) string {
+func formatKind(gvk schema.GroupVersionKind, wide bool) string {
 	plural := strings.ToLower(gvk.Kind) + "s"
-	return fmt.Sprintf("%s.%s.%s", plural, gvk.Version, gvk.Group)
+	if wide {
+		return fmt.Sprintf("%s.%s.%s", plural, gvk.Version, gvk.Group)
+	}
+
+	return plural
 }

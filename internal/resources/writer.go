@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -29,7 +30,6 @@ func GroupResourcesByKind(extension string) FileNamer {
 }
 
 type FSWriter struct {
-	Logger logging.Logger
 	// Directory on the filesystem where resources should be written.
 	Directory string
 	// Namer is a function mapping a resource to a path on the filesystem
@@ -44,12 +44,12 @@ type FSWriter struct {
 	ContinueOnError bool
 }
 
-func (writer *FSWriter) Write(resources *unstructured.UnstructuredList) error {
-	if resources == nil || len(resources.Items) == 0 {
+func (writer *FSWriter) Write(ctx context.Context, resources unstructured.UnstructuredList) error {
+	if len(resources.Items) == 0 {
 		return nil
 	}
 
-	logger := writer.Logger.With(slog.String("directory", writer.Directory))
+	logger := logging.FromContext(ctx).With(slog.String("directory", writer.Directory))
 	logger.Debug("Writing resources", slog.Int("resources", len(resources.Items)))
 
 	// Create the directory if it doesn't exist
