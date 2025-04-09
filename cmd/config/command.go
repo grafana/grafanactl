@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/fatih/color"
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/resources"
@@ -241,51 +240,20 @@ func checkCmd(configOpts *Options) *cobra.Command {
 
 			stdout := cmd.OutOrStdout()
 
-			io.Success(stdout, "Configuration file: "+io.Green(cfg.Source))
+			io.Success(stdout, "Configuration file: %s", io.Green(cfg.Source))
 
 			if cfg.CurrentContext == "" {
-				io.Error(stdout, "Current context: "+io.Red("<undefined>"))
+				io.Error(stdout, "Current context: %s", io.Red("<undefined>"))
 			} else if cfg.HasContext(cfg.CurrentContext); err != nil {
-				io.Error(stdout, "Current context: "+io.Red(config.ContextNotFound(cfg.CurrentContext).Error()))
+				io.Error(stdout, "Current context: %s", io.Red(config.ContextNotFound(cfg.CurrentContext).Error()))
 			} else {
-				io.Success(stdout, "Current context: "+io.Green(cfg.CurrentContext))
+				io.Success(stdout, "Current context: %s", io.Green(cfg.CurrentContext))
 			}
 
 			cmd.Println()
 
 			for _, gCtx := range cfg.Contexts {
-				title := fmt.Sprintf("Context: %s", color.New(color.Bold).Sprintf(gCtx.Name))
-
-				cmd.Println(io.Yellow(title))
-				cmd.Println(io.Yellow(strings.Repeat("=", len(title))))
-
-				if err := gCtx.Validate(); err != nil {
-					io.Error(stdout, "Configuration: "+io.Red(err.Error()))
-					io.Warning(stdout, "Connectivity: "+io.Yellow("skipped")+"\n")
-					continue
-				} else {
-					io.Success(stdout, "Configuration: "+io.Green("valid"))
-				}
-
-				rest, err := config.NewNamespacedRESTConfig(*gCtx)
-				if err != nil {
-					io.Error(stdout, "Connectivity: "+io.Red(err.Error())+"\n")
-					continue
-				}
-
-				reg, err := resources.NewDefaultDiscoveryRegistry(rest)
-				if err != nil {
-					io.Error(stdout, "Connectivity: "+io.Red(err.Error())+"\n")
-					continue
-				}
-
-				_, err = reg.Resources(cmd.Context(), false)
-				if err != nil {
-					io.Error(stdout, "Connectivity: "+io.Red(err.Error())+"\n")
-					continue
-				}
-
-				io.Success(stdout, "Connectivity: "+io.Green("online")+"\n")
+				checkContext(cmd, gCtx)
 			}
 
 			return nil
@@ -293,6 +261,42 @@ func checkCmd(configOpts *Options) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func checkContext(cmd *cobra.Command, gCtx *config.Context) {
+	stdout := cmd.OutOrStdout()
+	title := "Context: " + io.Bold(gCtx.Name)
+
+	cmd.Println(io.Yellow(title))
+	cmd.Println(io.Yellow(strings.Repeat("=", len(title))))
+
+	if err := gCtx.Validate(); err != nil {
+		io.Error(stdout, "Configuration: %s", io.Red(err.Error()))
+		io.Warning(stdout, "Connectivity: %s", io.Yellow("skipped")+"\n")
+		return
+	}
+
+	io.Success(stdout, "Configuration: %s", io.Green("valid"))
+
+	rest, err := config.NewNamespacedRESTConfig(*gCtx)
+	if err != nil {
+		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
+		return
+	}
+
+	reg, err := resources.NewDefaultDiscoveryRegistry(rest)
+	if err != nil {
+		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
+		return
+	}
+
+	_, err = reg.Resources(cmd.Context(), false)
+	if err != nil {
+		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
+		return
+	}
+
+	io.Success(stdout, "Connectivity: %s", io.Green("online")+"\n")
 }
 
 func useContextCmd(configOpts *Options) *cobra.Command {

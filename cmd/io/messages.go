@@ -13,6 +13,8 @@ var (
 	Blue   = color.New(color.FgBlue).SprintfFunc()
 	Red    = color.New(color.FgRed).SprintfFunc()
 	Yellow = color.New(color.FgYellow).SprintfFunc()
+
+	Bold = color.New(color.Bold).SprintfFunc()
 )
 
 func Success(stdout io.Writer, message string, args ...any) {
