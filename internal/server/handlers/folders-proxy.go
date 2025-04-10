@@ -7,8 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/grafana/grafanactl/internal/httputils"
-	resources2 "github.com/grafana/grafanactl/internal/resources"
-	"github.com/grafana/grafanactl/internal/server/resources"
+	"github.com/grafana/grafanactl/internal/resources"
 )
 
 var _ ProxyConfigurator = &foldersProxy{}
@@ -25,8 +24,8 @@ func NewFoldersProxy(resources *resources.Resources) ProxyConfigurator {
 }
 
 // FIXME: resources stuff.
-func (c *foldersProxy) ResourceType() resources2.GroupVersionKind {
-	return resources2.GroupVersionKind{
+func (c *foldersProxy) ResourceType() resources.GroupVersionKind {
+	return resources.GroupVersionKind{
 		Group: "folder.grafana.app",
 		Kind:  "Folder",
 	}

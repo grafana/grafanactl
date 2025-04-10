@@ -13,9 +13,10 @@ import (
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/logs"
+	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/server"
 	"github.com/grafana/grafanactl/internal/server/livereload"
-	"github.com/grafana/grafanactl/internal/server/resources"
+	serverresources "github.com/grafana/grafanactl/internal/server/resources"
 	"github.com/grafana/grafanactl/internal/server/watch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -73,7 +74,7 @@ TODO
 
 			logger := logging.FromContext(cmd.Context())
 			parsedResources := resources.NewResources()
-			parser := resources.DefaultParser(cmd.Context(), resources.ParserConfig{
+			parser := serverresources.DefaultParser(cmd.Context(), serverresources.ParserConfig{
 				ContinueOnError: true,
 			})
 
