@@ -32,6 +32,10 @@ func (opts *pushOpts) Validate() error {
 		return errors.New("at least one directory is required")
 	}
 
+	if opts.MaxConcurrent < 1 {
+		return errors.New("max-concurrent must be greater than zero")
+	}
+
 	return nil
 }
 
@@ -39,7 +43,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pushOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "push RESOURCES_PATH",
+		Use:   "push [RESOURCE_SELECTOR]...",
 		Args:  cobra.ArbitraryArgs,
 		Short: "Push resources to Grafana",
 		Long:  "Push resources to Grafana using a specific format. See examples below for more details.",

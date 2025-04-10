@@ -45,7 +45,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &pullOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "pull RESOURCES_PATHS",
+		Use:   "pull [RESOURCE_SELECTOR]...",
 		Args:  cobra.ArbitraryArgs,
 		Short: "Pull resources from Grafana",
 		Long:  "Pull resources from Grafana using a specific format. See examples below for more details.",

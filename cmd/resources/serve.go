@@ -23,25 +23,26 @@ import (
 )
 
 type serveOpts struct {
-	Address      string
-	Port         int
-	WatchPaths   []string
-	Script       string
-	ScriptFormat string
+	Address       string
+	Port          int
+	WatchPaths    []string
+	Script        string
+	ScriptFormat  string
+	MaxConcurrent int
 }
 
 func (opts *serveOpts) setup(flags *pflag.FlagSet) {
 	flags.StringVar(&opts.Address, "address", "0.0.0.0", "Address to bind")
 	flags.IntVar(&opts.Port, "port", 8080, "Port on which the server will listen")
 	flags.StringArrayVarP(&opts.WatchPaths, "watch", "w", nil, "Paths to watch for changes")
-	flags.StringVarP(&opts.Script, "script", "S", "", "Script")
+	flags.StringVarP(&opts.Script, "script", "S", "", "Script to execute to generate a resource")
 	flags.StringVarP(&opts.ScriptFormat, "script-format", "f", "yaml", "Format of the data returned by the script")
+	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 }
 
-func (opts *serveOpts) Validate(args []string) error {
-	if len(args) == 0 && opts.Script == "" {
-		// TODO: better error msg
-		return errors.New("must specify path to resources or script")
+func (opts *serveOpts) Validate() error {
+	if opts.MaxConcurrent < 1 {
+		return errors.New("max-concurrent must be greater than zero")
 	}
 
 	return nil
@@ -51,8 +52,8 @@ func serveCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &serveOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "serve",
-		Args:  cobra.MaximumNArgs(1), // TODO: arbitrary list of paths to resources
+		Use:   "serve [RESOURCE_DIR]...",
+		Args:  cobra.ArbitraryArgs,
 		Short: "Serve Grafana resources locally",
 		Long: `Serve Grafana resources locally.
 
@@ -63,10 +64,20 @@ fsnotify requires support from underlying OS to work. The current NFS and SMB pr
 TODO: more information.
 `,
 		Example: fmt.Sprintf(`
-TODO
-  %[1]s resources serve
+	# Serve resources from a directory:
+	%[1]s resources serve ./resources
+
+	# Serve resources from a directory and watch for changes:
+	%[1]s resources serve ./resources --watch ./resources
+
+	# Serve resources from a script that outputs a JSON resource and watch for changes:
+	%[1]s resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
 `, binaryName),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+
 			cfg, err := configOpts.LoadConfig(cmd.Context())
 			if err != nil {
 				return err
@@ -77,11 +88,11 @@ TODO
 			reader := resources.FSReader{
 				Decoders:           format.Codecs(),
 				StopOnError:        false,
-				MaxConcurrentReads: 1, // TODO: flag
+				MaxConcurrentReads: opts.MaxConcurrent,
 			}
 
 			if len(args) != 0 {
-				if err := reader.Read(cmd.Context(), parsedResources, []string{args[0]}); err != nil {
+				if err := reader.Read(cmd.Context(), parsedResources, args); err != nil {
 					return err
 				}
 			}

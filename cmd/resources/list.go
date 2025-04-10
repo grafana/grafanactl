@@ -7,23 +7,12 @@ import (
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
-type listOpts struct {
-	// none so far
-}
-
-func (opts *listOpts) BindFlags(*pflag.FlagSet) {
-	// none so far
-}
-
 func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
-	opts := &listOpts{}
-
 	cmd := &cobra.Command{
 		Use:   "list",
-		Args:  cobra.ArbitraryArgs,
+		Args:  cobra.NoArgs,
 		Short: "List available Grafana API resources",
 		Long:  "List available Grafana API resources.",
 		Example: fmt.Sprintf(`
@@ -59,8 +48,6 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			return out.Flush()
 		},
 	}
-
-	opts.BindFlags(cmd.Flags())
 
 	return cmd
 }

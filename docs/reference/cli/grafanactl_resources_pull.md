@@ -7,7 +7,7 @@ Pull resources from Grafana
 Pull resources from Grafana using a specific format. See examples below for more details.
 
 ```
-grafanactl resources pull RESOURCES_PATHS [flags]
+grafanactl resources pull [RESOURCE_SELECTOR]... [flags]
 ```
 
 ### Examples

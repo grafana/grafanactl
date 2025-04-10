@@ -7,7 +7,7 @@ Push resources to Grafana
 Push resources to Grafana using a specific format. See examples below for more details.
 
 ```
-grafanactl resources push RESOURCES_PATH [flags]
+grafanactl resources push [RESOURCE_SELECTOR]... [flags]
 ```
 
 ### Examples
@@ -61,7 +61,6 @@ grafanactl resources push RESOURCES_PATH [flags]
       --dry-run              If set, the push operation will be simulated, without actually creating or updating any resources.
   -h, --help                 help for push
       --max-concurrent int   Maximum number of concurrent operations (default 10)
-  -o, --output string        Output format. One of: json, yaml (default "yaml")
       --overwrite            Overwrite existing resources
       --stop-on-error        Stop pushing resources when an error occurs
 ```

@@ -6,9 +6,9 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 )
 
-// ProxyConfigurator describes a proxy endpoints that can be used to view/edit
-// resources live via a proxied UI.
-type ProxyConfigurator interface {
+// ResourceHandler describes a set of HTTP handlers that can be used to view or
+// edit a specific resource type via a proxied UI.
+type ResourceHandler interface {
 	ResourceType() resources.GroupVersionKind
 
 	// Endpoints lists HTTP handlers to register on the proxy.
