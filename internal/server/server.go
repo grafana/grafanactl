@@ -34,7 +34,7 @@ type Server struct {
 	config           Config
 	context          *config.Context
 	resources        *resources.Resources
-	resourceHandlers []handlers.ProxyConfigurator
+	resourceHandlers []handlers.ResourceHandler
 	proxy            *httputil.ReverseProxy
 }
 
@@ -43,7 +43,7 @@ func New(config Config, context *config.Context, resources *resources.Resources)
 		config:    config,
 		context:   context,
 		resources: resources,
-		resourceHandlers: []handlers.ProxyConfigurator{
+		resourceHandlers: []handlers.ResourceHandler{
 			handlers.NewDashboardProxy(context, resources),
 			handlers.NewFoldersProxy(resources),
 		},
@@ -230,7 +230,7 @@ func (s *Server) iframeHandler(w http.ResponseWriter, r *http.Request) {
 	kind := chi.URLParam(r, "kind")
 	name := chi.URLParam(r, "name")
 
-	var handler handlers.ProxyConfigurator
+	var handler handlers.ResourceHandler
 	for _, candidate := range s.resourceHandlers {
 		candidateResourceType := candidate.ResourceType()
 

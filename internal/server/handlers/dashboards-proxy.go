@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _ ProxyConfigurator = &DashboardProxy{}
+var _ ResourceHandler = &DashboardProxy{}
 
 // DashboardProxy describes how to proxy Dashboard resources.
 type DashboardProxy struct {

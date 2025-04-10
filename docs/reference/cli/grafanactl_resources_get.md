@@ -7,7 +7,7 @@ Get resources from Grafana
 Get resources from Grafana using a specific format. See examples below for more details.
 
 ```
-grafanactl resources get RESOURCES_PATHS [flags]
+grafanactl resources get [RESOURCE_SELECTOR]... [flags]
 ```
 
 ### Examples

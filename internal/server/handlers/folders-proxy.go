@@ -10,7 +10,7 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 )
 
-var _ ProxyConfigurator = &FoldersProxy{}
+var _ ResourceHandler = &FoldersProxy{}
 
 // FoldersProxy describes how to proxy Folder resources.
 type FoldersProxy struct {

@@ -48,7 +48,7 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &getOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "get RESOURCES_PATHS",
+		Use:   "get [RESOURCE_SELECTOR]...",
 		Args:  cobra.ArbitraryArgs,
 		Short: "Get resources from Grafana",
 		Long:  "Get resources from Grafana using a specific format. See examples below for more details.",
