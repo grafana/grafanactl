@@ -14,9 +14,10 @@ import (
 
 // Kind is a kind of resource.
 type Kind struct {
+	Group    string
+	Kind     string
 	Plural   string
 	Singular string
-	Group    string
 }
 
 // Group is a group of resources.
@@ -36,13 +37,13 @@ type DiscoveryRegistry struct {
 }
 
 // NewDefaultDiscoveryRegistry creates a new discovery registry using the default discovery client.
-func NewDefaultDiscoveryRegistry(cfg config.NamespacedRESTConfig) (*DiscoveryRegistry, error) {
+func NewDefaultDiscoveryRegistry(ctx context.Context, cfg config.NamespacedRESTConfig) (*DiscoveryRegistry, error) {
 	client, err := discovery.NewDiscoveryClientForConfig(&cfg.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewDiscoveryRegistry(client)
+	return NewDiscoveryRegistry(ctx, client)
 }
 
 // NewDiscoveryRegistry creates a new discovery registry.
@@ -51,13 +52,13 @@ func NewDefaultDiscoveryRegistry(cfg config.NamespacedRESTConfig) (*DiscoveryReg
 // by calling the server's preferred resources endpoint.
 //
 // The registry will perform the discovery upon initialization.
-func NewDiscoveryRegistry(client discovery.DiscoveryInterface) (*DiscoveryRegistry, error) {
+func NewDiscoveryRegistry(ctx context.Context, client discovery.DiscoveryInterface) (*DiscoveryRegistry, error) {
 	reg := &DiscoveryRegistry{
 		client:    client,
 		preferred: make(map[schema.GroupResource]schema.GroupVersionResource),
 	}
 
-	if err := reg.Discover(context.Background()); err != nil {
+	if err := reg.Discover(ctx); err != nil {
 		return nil, err
 	}
 
@@ -71,7 +72,7 @@ func NewDiscoveryRegistry(client discovery.DiscoveryInterface) (*DiscoveryRegist
 //
 // If the resource is not found in the registry, an error will be returned.
 func (r *DiscoveryRegistry) GetPreferred(
-	ctx context.Context, gvk DynamicGroupVersionKind, forceUpdate bool,
+	ctx context.Context, gvk GroupVersionKind, forceUpdate bool,
 ) (schema.GroupVersionResource, error) {
 	res, err := r.lookup(gvk)
 	if forceUpdate || err != nil {
@@ -91,22 +92,23 @@ func (r *DiscoveryRegistry) GetPreferred(
 // Resources returns all resources in the Grafana API.
 func (r *DiscoveryRegistry) Resources(
 	ctx context.Context, forceUpdate bool,
-) ([]DynamicGroupVersionKind, error) {
+) ([]GroupVersionKind, error) {
 	if forceUpdate || len(r.groups) == 0 {
 		if err := r.Discover(ctx); err != nil {
 			return nil, err
 		}
 	}
 
-	res := make([]DynamicGroupVersionKind, 0, len(r.groups))
+	res := make([]GroupVersionKind, 0, len(r.groups))
 	for _, g := range r.groups {
 		for _, v := range g.Versions {
 			for _, k := range r.kinds {
 				if k.Group == g.Long {
-					res = append(res, DynamicGroupVersionKind{
+					res = append(res, GroupVersionKind{
 						Group:   g.Long,
 						Version: v,
 						Kind:    k.Singular,
+						Name:    k.Kind,
 					})
 				}
 			}
@@ -161,6 +163,7 @@ func (r *DiscoveryRegistry) Discover(context.Context) error {
 			r.kinds = append(r.kinds, Kind{
 				Plural:   strings.ToLower(res.Name),
 				Singular: strings.ToLower(res.SingularName),
+				Kind:     res.Kind,
 				Group:    group,
 			})
 
@@ -178,7 +181,7 @@ func (r *DiscoveryRegistry) Discover(context.Context) error {
 	return nil
 }
 
-func (r *DiscoveryRegistry) lookup(gvk DynamicGroupVersionKind) (schema.GroupVersionResource, error) {
+func (r *DiscoveryRegistry) lookup(gvk GroupVersionKind) (schema.GroupVersionResource, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -196,7 +199,7 @@ type LookupOptions struct {
 }
 
 // LookupGVR looks up a GVR for a given DynamicGroupVersionKind.
-func LookupGVR(gvk DynamicGroupVersionKind, opts LookupOptions) (schema.GroupVersionResource, error) {
+func LookupGVR(gvk GroupVersionKind, opts LookupOptions) (schema.GroupVersionResource, error) {
 	var res schema.GroupVersionResource
 
 	// If the group was specified, it takes precedence,
@@ -235,7 +238,10 @@ func LookupGVR(gvk DynamicGroupVersionKind, opts LookupOptions) (schema.GroupVer
 	// If at this point we still don't have a group,
 	// we'll use the group of the first kind we find.
 	for _, kind := range opts.Kinds {
-		if kind.Singular == gvk.Kind || kind.Plural == gvk.Kind {
+		// HACK: handle Name vs. Kind.
+		// Currently, the kind on disk is the actual kind,
+		// but what we stored in the registry under `Kind` is the singular form of the kind.
+		if kind.Singular == gvk.Kind || kind.Plural == gvk.Kind || kind.Kind == gvk.Name || kind.Kind == gvk.Kind {
 			// If we already have a group, we need to make sure it matches.
 			if res.Group != "" && res.Group != kind.Group {
 				continue
@@ -251,7 +257,7 @@ func LookupGVR(gvk DynamicGroupVersionKind, opts LookupOptions) (schema.GroupVer
 	// At this point we should have a group and a kind.
 	if res.Resource == "" {
 		return schema.GroupVersionResource{}, fmt.Errorf(
-			"the server does not support API resource '%s/%s'", gvk.Group, gvk.Kind,
+			"the server does not support API resource '%s/%s Name=%s'", gvk.Group, gvk.Kind, gvk.Name,
 		)
 	}
 

@@ -70,8 +70,7 @@ func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...c
 	return config.Load(ctx, opts.configSource(), overrides...)
 }
 
-// LoadConfig loads the configuration file (default, or explicitly set via flags)
-// and validates it.
+// LoadConfig loads the configuration file (default, or explicitly set via flags) and validates it.
 func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 	validator := func(cfg *config.Config) error {
 		// Ensure that the current context actually exists.
@@ -83,6 +82,16 @@ func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 	}
 
 	return opts.loadConfigTolerant(ctx, validator)
+}
+
+// LoadRESTConfig loads the configuration file and constructs a REST config from it.
+func (opts *Options) LoadRESTConfig(ctx context.Context) (config.NamespacedRESTConfig, error) {
+	cfg, err := opts.LoadConfig(ctx)
+	if err != nil {
+		return config.NamespacedRESTConfig{}, err
+	}
+
+	return cfg.GetCurrentContext().ToRESTConfig()
 }
 
 func (opts *Options) configSource() config.Source {
@@ -177,11 +186,12 @@ func viewCmd(configOpts *Options) *cobra.Command {
 				}
 			}
 
-			if err := opts.IO.Format(cmd.OutOrStdout(), cfg); err != nil {
+			codec, err := opts.IO.Codec()
+			if err != nil {
 				return err
 			}
 
-			return nil
+			return codec.Encode(cmd.OutOrStdout(), cfg)
 		},
 	}
 

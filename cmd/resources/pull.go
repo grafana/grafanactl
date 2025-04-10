@@ -11,6 +11,10 @@ import (
 	"github.com/spf13/pflag"
 )
 
+const (
+	defaultResourcesDir = "./resources"
+)
+
 type pullOpts struct {
 	IO          cmdio.Options
 	StopOnError bool
@@ -22,7 +26,7 @@ func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
-	flags.StringVarP(&opts.Directory, "directory", "d", "./resources", "Directory on disk in which the resources will be written. If left empty, nothing will be written on disk and resource details will be printed on stdout")
+	flags.StringVarP(&opts.Directory, "directory", "d", defaultResourcesDir, "Directory on disk in which the resources will be written.")
 }
 
 func (opts *pullOpts) Validate() error {
@@ -91,12 +95,17 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			cfg, err := configOpts.LoadConfig(ctx)
+			codec, err := opts.IO.Codec()
 			if err != nil {
 				return err
 			}
 
-			res, err := fetchResources(cmd.Context(), fetchOpts{
+			cfg, err := configOpts.LoadRESTConfig(ctx)
+			if err != nil {
+				return err
+			}
+
+			res, err := fetchResources(cmd.Context(), fetchRequest{
 				Config:      cfg,
 				StopOnError: opts.StopOnError,
 			}, args)
@@ -107,7 +116,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			writer := resources.FSWriter{
 				Directory:   opts.Directory,
 				Namer:       resources.GroupResourcesByKind(opts.IO.OutputFormat),
-				Formatter:   opts.IO.Format,
+				Encoder:     codec,
 				StopOnError: opts.StopOnError,
 			}
 

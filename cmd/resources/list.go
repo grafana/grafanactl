@@ -5,8 +5,6 @@ import (
 	"text/tabwriter"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
-	"github.com/grafana/grafanactl/internal/config"
-	"github.com/grafana/grafanactl/internal/fail"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -32,50 +30,26 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
   %[1]s resources list
 `, binaryName),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.LoadConfig(cmd.Context())
+			ctx := cmd.Context()
+
+			cfg, err := configOpts.LoadRESTConfig(ctx)
 			if err != nil {
 				return err
 			}
 
-			rest, err := config.NewNamespacedRESTConfig(*cfg.GetCurrentContext())
+			reg, err := resources.NewDefaultDiscoveryRegistry(ctx, cfg)
 			if err != nil {
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not parse config",
-					Details: "The config provided is invalid",
-					Suggestions: []string{
-						"Make sure that you are passing in a valid config",
-					},
-				}
+				return clientInitErr(err)
 			}
 
-			reg, err := resources.NewDefaultDiscoveryRegistry(rest)
+			// TODO: refactor this to return a k8s object list,
+			// e.g. APIResourceList, or unstructured.UnstructuredList.
+			// That way we can use the same code for rendering as for `resources get`.
+			res, err := reg.Resources(ctx, false)
 			if err != nil {
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not discover resources from the API",
-					Details: "The API may not be reachable or the server may not support the discovery API",
-					Suggestions: []string{
-						"Make sure that the API server is running and accessible",
-						"Try using a different context or check your configuration",
-					},
-				}
+				return clientInitErr(err)
 			}
 
-			res, err := reg.Resources(cmd.Context(), false)
-			if err != nil {
-				return fail.DetailedError{
-					Parent:  err,
-					Summary: "Could not discover resources from the API",
-					Details: "The API may not be reachable or the server may not support the discovery API",
-					Suggestions: []string{
-						"Make sure that the API server is running and accessible",
-						"Try using a different context or check your configuration",
-					},
-				}
-			}
-
-			// TODO: add formatters (yaml, json, etc.) / outputters (stdout, file, filetree, etc.)
 			out := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
 			fmt.Fprintf(out, "GROUP\tVERSION\tKIND\n")
 			for _, r := range res {

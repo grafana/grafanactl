@@ -7,19 +7,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParsePullCommands(t *testing.T) {
+func TestParseSelectors(t *testing.T) {
 	tests := []struct {
 		name string
 		cmds []string
-		want []resources.PullCommand
+		want []resources.Selector
 	}{
 		{
 			name: "should parse all resources of a type",
 			cmds: []string{"dashboards"},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeAll,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeAll,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "dashboards",
@@ -30,45 +30,45 @@ func TestParsePullCommands(t *testing.T) {
 		{
 			name: "should parse single resource",
 			cmds: []string{"dashboards/foo"},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeSingle,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeSingle,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo"},
+					ResourceUIDs: []string{"foo"},
 				},
 			},
 		},
 		{
 			name: "should parse multiple resources of the same type",
 			cmds: []string{"dashboards/foo,bar"},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeMultiple,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeMultiple,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo", "bar"},
+					ResourceUIDs: []string{"foo", "bar"},
 				},
 			},
 		},
 		{
 			name: "should parse multiple resources with the same FQDN",
 			cmds: []string{"dashboards.v1alpha1.dashboard.grafana.app/foo,bar"},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeMultiple,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeMultiple,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "dashboard.grafana.app",
 						Version: "v1alpha1",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo", "bar"},
+					ResourceUIDs: []string{"foo", "bar"},
 				},
 			},
 		},
@@ -78,24 +78,24 @@ func TestParsePullCommands(t *testing.T) {
 				"dashboards/foo",
 				"folders/bar",
 			},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeSingle,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeSingle,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo"},
+					ResourceUIDs: []string{"foo"},
 				},
 				{
-					Kind: resources.PullCommandTypeSingle,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeSingle,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "folders",
 					},
-					UIDs: []string{"bar"},
+					ResourceUIDs: []string{"bar"},
 				},
 			},
 		},
@@ -105,24 +105,24 @@ func TestParsePullCommands(t *testing.T) {
 				"dashboards/foo,bar",
 				"folders/qux,quux",
 			},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeMultiple,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeMultiple,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo", "bar"},
+					ResourceUIDs: []string{"foo", "bar"},
 				},
 				{
-					Kind: resources.PullCommandTypeMultiple,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeMultiple,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "folders",
 					},
-					UIDs: []string{"qux", "quux"},
+					ResourceUIDs: []string{"qux", "quux"},
 				},
 			},
 		},
@@ -132,24 +132,24 @@ func TestParsePullCommands(t *testing.T) {
 				"dashboards/foo,bar",
 				"folders.folder/qux,quux",
 			},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeMultiple,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeMultiple,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "",
 						Version: "",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo", "bar"},
+					ResourceUIDs: []string{"foo", "bar"},
 				},
 				{
-					Kind: resources.PullCommandTypeMultiple,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeMultiple,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "folder",
 						Version: "",
 						Kind:    "folders",
 					},
-					UIDs: []string{"qux", "quux"},
+					ResourceUIDs: []string{"qux", "quux"},
 				},
 			},
 		},
@@ -159,24 +159,24 @@ func TestParsePullCommands(t *testing.T) {
 				"dashboards.v1alpha1.dashboard.grafana.app/foo",
 				"folders.v1alpha1.folder.grafana.app/bar",
 			},
-			want: []resources.PullCommand{
+			want: []resources.Selector{
 				{
-					Kind: resources.PullCommandTypeSingle,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeSingle,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "dashboard.grafana.app",
 						Version: "v1alpha1",
 						Kind:    "dashboards",
 					},
-					UIDs: []string{"foo"},
+					ResourceUIDs: []string{"foo"},
 				},
 				{
-					Kind: resources.PullCommandTypeSingle,
-					GVK: resources.DynamicGroupVersionKind{
+					SelectorType: resources.SelectorTypeSingle,
+					GroupVersionKind: resources.GroupVersionKind{
 						Group:   "folder.grafana.app",
 						Version: "v1alpha1",
 						Kind:    "folders",
 					},
-					UIDs: []string{"bar"},
+					ResourceUIDs: []string{"bar"},
 				},
 			},
 		},
@@ -184,7 +184,7 @@ func TestParsePullCommands(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := resources.ParsePullCommands(test.cmds)
+			got, err := resources.ParseSelectors(test.cmds)
 
 			assert.ElementsMatch(t, test.want, got)
 			assert.NoError(t, err)

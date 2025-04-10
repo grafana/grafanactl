@@ -38,9 +38,9 @@ type FSWriter struct {
 	// by FSWriter.
 	// Note: the path should contain an extension.
 	Namer FileNamer
-	// Formatter is the function used to marshal a given resource to the
-	// desired output format.
-	Formatter   format.Formatter
+	// Encoder to use when encoding resources.
+	Encoder format.Encoder
+	// Whether to stop writing resources upon encountering an error.
 	StopOnError bool
 }
 
@@ -90,7 +90,7 @@ func (writer *FSWriter) writeSingle(resource unstructured.Unstructured) error {
 	// MarshalJSON() methods for [unstructured.UnstructuredList] and
 	// [unstructured.Unstructured] types are defined on pointer receivers,
 	// so we need to make sure we dereference `resource` before formatting it.
-	if err := writer.Formatter(file, &resource); err != nil {
+	if err := writer.Encoder.Encode(file, &resource); err != nil {
 		return fmt.Errorf("could write resource: %w", err)
 	}
 

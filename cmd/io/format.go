@@ -2,7 +2,6 @@ package io
 
 import (
 	"fmt"
-	"io"
 	"maps"
 	"slices"
 	"sort"
@@ -15,16 +14,16 @@ import (
 type Options struct {
 	OutputFormat string
 
-	customFormats map[string]format.Formatter
+	customCodecs  map[string]format.Codec
 	defaultFormat string
 }
 
-func (opts *Options) RegisterCustomFormat(name string, formatFunc format.Formatter) {
-	if opts.customFormats == nil {
-		opts.customFormats = make(map[string]format.Formatter)
+func (opts *Options) RegisterCustomCodec(name string, codec format.Codec) {
+	if opts.customCodecs == nil {
+		opts.customCodecs = make(map[string]format.Codec)
 	}
 
-	opts.customFormats[name] = formatFunc
+	opts.customCodecs[name] = codec
 }
 
 func (opts *Options) DefaultFormat(name string) {
@@ -37,51 +36,59 @@ func (opts *Options) BindFlags(flags *pflag.FlagSet) {
 		defaultFormat = opts.defaultFormat
 	}
 
-	flags.StringVarP(&opts.OutputFormat, "output", "o", defaultFormat, "Output format. One of: "+strings.Join(opts.allowedFormats(), ", "))
+	flags.StringVarP(&opts.OutputFormat, "output", "o", defaultFormat, "Output format. One of: "+strings.Join(opts.allowedCodecs(), ", "))
 }
 
 func (opts *Options) Validate() error {
-	formatterFunc := opts.formatterFor(opts.OutputFormat)
-	if formatterFunc == nil {
-		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedFormats(), ", "))
+	codec := opts.codecFor(opts.OutputFormat)
+	if codec == nil {
+		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedCodecs(), ", "))
 	}
 
 	return nil
 }
 
-func (opts *Options) Format(out io.Writer, input any) error {
-	formatterFunc := opts.formatterFor(opts.OutputFormat)
-	if formatterFunc == nil {
-		return fmt.Errorf("unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedFormats(), ", "))
+// We have to return an interface here.
+//
+//nolint:ireturn
+func (opts *Options) Codec() (format.Codec, error) {
+	codec := opts.codecFor(opts.OutputFormat)
+	if codec == nil {
+		return nil, fmt.Errorf(
+			"unknown output format '%s'. Valid formats are: %s", opts.OutputFormat, strings.Join(opts.allowedCodecs(), ", "),
+		)
 	}
 
-	return formatterFunc(out, input)
+	return codec, nil
 }
 
-func (opts *Options) formatterFor(format string) format.Formatter {
-	if opts.customFormats != nil && opts.customFormats[format] != nil {
-		return opts.customFormats[format]
+// We have to return an interface here.
+//
+//nolint:ireturn
+func (opts *Options) codecFor(format string) format.Codec {
+	if opts.customCodecs != nil && opts.customCodecs[format] != nil {
+		return opts.customCodecs[format]
 	}
 
-	return opts.builtinFormatters()[format]
+	return opts.builtinCodecs()[format]
 }
 
-func (opts *Options) builtinFormatters() map[string]format.Formatter {
-	return map[string]format.Formatter{
-		"yaml": format.YAML,
-		"json": format.JSON,
+func (opts *Options) builtinCodecs() map[string]format.Codec {
+	return map[string]format.Codec{
+		"yaml": format.NewYAMLCodec(),
+		"json": format.NewJSONCodec(),
 	}
 }
 
-func (opts *Options) allowedFormats() []string {
-	allowedFormats := slices.Collect(maps.Keys(opts.builtinFormatters()))
-	for name := range opts.customFormats {
-		allowedFormats = append(allowedFormats, name)
+func (opts *Options) allowedCodecs() []string {
+	allowedCodecs := slices.Collect(maps.Keys(opts.builtinCodecs()))
+	for name := range opts.customCodecs {
+		allowedCodecs = append(allowedCodecs, name)
 	}
 
-	// the allowed formats are stored in a map: let's sort them to make the
+	// the allowed codecs are stored in a map: let's sort them to make the
 	// return value of this function deterministic
-	sort.Strings(allowedFormats)
+	sort.Strings(allowedCodecs)
 
-	return allowedFormats
+	return allowedCodecs
 }

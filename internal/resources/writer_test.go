@@ -17,7 +17,7 @@ func TestFSWriter_Write(t *testing.T) {
 
 	writer := resources.FSWriter{
 		Directory: outputDir,
-		Formatter: format.YAML,
+		Encoder:   format.NewYAMLCodec(),
 		Namer: func(resource unstructured.Unstructured) (string, error) {
 			return resource.GetName() + ".yaml", nil
 		},
@@ -36,7 +36,7 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 
 	writer := resources.FSWriter{
 		Directory:   outputDir,
-		Formatter:   format.YAML,
+		Encoder:     format.NewYAMLCodec(),
 		StopOnError: false,
 		Namer: func(resource unstructured.Unstructured) (string, error) {
 			if resource.GetKind() == "Folder" {
@@ -59,7 +59,7 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 
 	writer := resources.FSWriter{
 		Directory: outputDir,
-		Formatter: format.JSON,
+		Encoder:   format.NewJSONCodec(),
 		Namer:     resources.GroupResourcesByKind("json"),
 	}
 
@@ -79,7 +79,7 @@ func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {
 
 	writer := resources.FSWriter{
 		Directory: outputDir,
-		Formatter: format.YAML,
+		Encoder:   format.NewYAMLCodec(),
 		Namer: func(resource unstructured.Unstructured) (string, error) {
 			return resource.GetName() + ".yaml", nil
 		},
