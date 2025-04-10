@@ -1,27 +1,53 @@
 package resources
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/grafana/grafana-app-sdk/logging"
+	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"github.com/grafana/grafanactl/internal/format"
+	"github.com/grafana/grafanactl/internal/logs"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+type UnrecognisedFormatError struct {
+	File   string
+	Format string
+}
+
+func (e UnrecognisedFormatError) Error() string {
+	if e.Format != "" {
+		return "unrecognized format " + e.Format
+	}
+
+	return "unrecognized format for " + e.File
+}
+
+type ParseError struct {
+	File string
+	Err  error
+}
+
+func (err ParseError) Error() string {
+	return fmt.Sprintf("parse error in '%s': %s", err.File, err.Err)
+}
 
 // FSReader is a reader that reads resources from the filesystem.
 //
 // The reader will read all resources from the filesystem and return them as
 // an unstructured list.
 type FSReader struct {
-	// The list of directories in which to search for resources.
-	Directories []string
-	// Decoder to use when decoding resources.
-	Decoder format.Decoder
+	// Decoders to use when decoding resources.
+	Decoders map[format.Format]format.Codec
 	// Whether to stop reading resources upon encountering an error.
 	StopOnError bool
 	// MaxConcurrentReads is the maximum number of concurrent file reads.
@@ -29,11 +55,35 @@ type FSReader struct {
 	MaxConcurrentReads int
 }
 
-// Read reads all resources from the filesystem and returns them as an unstructured list.
-func (reader *FSReader) Read(ctx context.Context, dst *unstructured.UnstructuredList) error {
-	logger := logging.FromContext(ctx)
+func (reader *FSReader) ReadBytes(ctx context.Context, dst *Resources, raw []byte, inputFormat string) error {
+	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
+	logger.Debug("Parsing bytes", slog.String("format", inputFormat))
 
-	if len(reader.Directories) == 0 {
+	_, decoder, err := reader.decoderForFormat(inputFormat)
+	if err != nil {
+		return err
+	}
+
+	object := &unstructured.Unstructured{}
+	if err := decoder.Decode(bytes.NewBuffer(raw), object); err != nil {
+		return ParseError{Err: err}
+	}
+
+	metaAccessor, err := utils.MetaAccessor(object)
+	if err != nil {
+		return err
+	}
+
+	dst.Add(&Resource{Raw: metaAccessor})
+
+	return nil
+}
+
+// Read reads all resources from the filesystem and returns them as an unstructured list.
+func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []string) error {
+	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
+
+	if len(directories) == 0 {
 		logger.Debug("no directories or resources to read")
 		return nil
 	}
@@ -50,10 +100,8 @@ func (reader *FSReader) Read(ctx context.Context, dst *unstructured.Unstructured
 	gr.Go(func() error {
 		defer close(pathCh)
 
-		for _, dir := range reader.Directories {
+		for _, dir := range directories {
 			if err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
-				logger := logging.FromContext(ctx)
-
 				// Early return if context is cancelled
 				if ctx.Err() != nil {
 					return filepath.SkipAll
@@ -63,13 +111,12 @@ func (reader *FSReader) Read(ctx context.Context, dst *unstructured.Unstructured
 					if reader.StopOnError {
 						return err
 					}
-					logger.Warn("failed to traverse directory", "path", path, "error", err)
+					logger.Warn("Failed to traverse directory", slog.String("path", path), logs.Err(err))
 					return nil
 				}
 
 				// For directories, return nil to continue traversing
 				if info.IsDir() {
-					logger.Debug("entering directory", "path", path) // Add debug logging
 					return nil
 				}
 
@@ -97,32 +144,20 @@ func (reader *FSReader) Read(ctx context.Context, dst *unstructured.Unstructured
 
 		for path := range pathCh {
 			readg.Go(func() error {
-				logger.Debug("processing file", "path", path)
+				object := Resource{}
 
 				// Read and decode the file
-				file, err := os.OpenFile(path, os.O_RDONLY, 0)
-				if err != nil {
+				if err := reader.ReadFile(ctx, &object, path); err != nil {
 					if reader.StopOnError {
 						return fmt.Errorf("failed to read file %s: %w", path, err)
 					}
 
-					logger.Warn("failed to read file", "path", path, "error", err)
-					return nil
-				}
-				defer file.Close()
-
-				var obj unstructured.Unstructured
-				if err := reader.Decoder.Decode(file, &obj.Object); err != nil {
-					if reader.StopOnError {
-						return fmt.Errorf("failed to decode file %s: %w", path, err)
-					}
-
-					logger.Warn("failed to decode file", "path", path, "error", err)
+					logger.Warn("failed to read file", slog.String("path", path), logs.Err(err))
 					return nil
 				}
 
 				res := readResult{
-					Object: obj,
+					Object: object,
 					Path:   path,
 				}
 
@@ -140,32 +175,31 @@ func (reader *FSReader) Read(ctx context.Context, dst *unstructured.Unstructured
 
 	// Read all results in parallel.
 	gr.Go(func() error {
-		idx := make(map[objIdx]unstructured.Unstructured)
-		dst.Items = make([]unstructured.Unstructured, 0, reader.MaxConcurrentReads)
+		idx := make(map[objIdx]Resource)
 
 		for res := range resCh {
 			obj := res.Object
 
 			if _, ok := idx[objIdx{
-				gvk:  obj.GetObjectKind().GroupVersionKind(),
-				name: obj.GetName(),
+				gvk:  obj.Raw.GetGroupVersionKind(),
+				name: obj.Name(),
 			}]; ok {
-				logger.Info("skipping duplicate object",
-					"gvk", obj.GetObjectKind().GroupVersionKind(),
-					"name", obj.GetName(),
+				logger.Info("Skipping duplicate object",
+					"gvk", obj.Raw.GetGroupVersionKind(),
+					"name", obj.Name(),
 					"path", res.Path,
 				)
 
 				continue
 			}
 
-			logger.Debug("adding object",
-				"gvk", obj.GetObjectKind().GroupVersionKind(),
-				"name", obj.GetName(),
+			logger.Debug("Adding object",
+				"gvk", obj.Raw.GetGroupVersionKind(),
+				"name", obj.Name(),
 				"path", res.Path,
 			)
 
-			dst.Items = append(dst.Items, obj)
+			dst.Add(&obj)
 		}
 
 		return nil
@@ -174,12 +208,60 @@ func (reader *FSReader) Read(ctx context.Context, dst *unstructured.Unstructured
 	return gr.Wait()
 }
 
+func (reader *FSReader) ReadFile(ctx context.Context, result *Resource, file string) error {
+	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"), slog.String("file", file))
+
+	inputFormat, decoder, err := reader.decoderForFormat(strings.TrimPrefix(path.Ext(file), "."))
+	if err != nil {
+		return err
+	}
+
+	logger.Debug("Parsing file", slog.String("file", file), slog.String("codec", string(inputFormat)))
+
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	object := &unstructured.Unstructured{}
+
+	if err := decoder.Decode(f, object); err != nil {
+		return ParseError{File: file, Err: err}
+	}
+
+	metaAccessor, err := utils.MetaAccessor(object)
+	if err != nil {
+		return err
+	}
+
+	properties, _ := metaAccessor.GetSourceProperties()
+	properties.Path = fmt.Sprintf("%s://%s", inputFormat, file)
+
+	metaAccessor.SetSourceProperties(properties)
+
+	result.Raw = metaAccessor
+
+	return nil
+}
+
+func (reader *FSReader) decoderForFormat(input string) (format.Format, format.Decoder, error) {
+	switch input {
+	case "json":
+		return format.JSON, reader.Decoders[format.JSON], nil
+	case "yaml", "yml":
+		return format.YAML, reader.Decoders[format.YAML], nil
+	default:
+		return format.Unknown, nil, UnrecognisedFormatError{Format: input}
+	}
+}
+
 type objIdx struct {
 	gvk  schema.GroupVersionKind
 	name string
 }
 
 type readResult struct {
-	Object unstructured.Unstructured
+	Object Resource
 	Path   string
 }

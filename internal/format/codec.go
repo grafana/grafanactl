@@ -1,12 +1,27 @@
 package format
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"io"
 
 	"github.com/goccy/go-yaml"
 )
+
+type Format string
+
+const (
+	JSON    Format = "json"
+	YAML    Format = "yaml"
+	Unknown Format = ""
+)
+
+// Codecs return a list of default codecs.
+func Codecs() map[Format]Codec {
+	return map[Format]Codec{
+		JSON: NewJSONCodec(),
+		YAML: NewYAMLCodec(),
+	}
+}
 
 // Encoder encodes values to an io.Writer in a specific format.
 type Encoder interface {
@@ -41,19 +56,19 @@ func (c *YAMLCodec) Encode(dst io.Writer, value any) error {
 		yaml.Indent(2),
 		yaml.IndentSequence(true),
 		yaml.UseJSONMarshaler(),
-		yaml.CustomMarshaler(func(data []byte) ([]byte, error) {
-			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
-			base64.StdEncoding.Encode(dst, data)
-
-			return dst, nil
-		}),
 	)
 
 	return encoder.Encode(value)
 }
 
 func (c *YAMLCodec) Decode(src io.Reader, value any) error {
-	return yaml.NewDecoder(src).Decode(value)
+	decoder := yaml.NewDecoder(
+		src,
+		yaml.Strict(),
+		yaml.UseJSONUnmarshaler(),
+	)
+
+	return decoder.Decode(value)
 }
 
 var _ Codec = (*JSONCodec)(nil)

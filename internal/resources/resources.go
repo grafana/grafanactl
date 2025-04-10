@@ -86,7 +86,15 @@ type Resource struct {
 }
 
 func (r Resource) Ref() ResourceRef {
-	return ResourceRef(fmt.Sprintf("%s/%s:%s-%s", r.APIVersion(), r.Kind(), r.Namespace(), r.Name()))
+	return ResourceRef(fmt.Sprintf("%s/%s-%s", r.GroupVersionKind().String(), r.Namespace(), r.Name()))
+}
+
+func (r Resource) GroupVersionKind() GroupVersionKind {
+	return GroupVersionKind{
+		Group:   r.Group(),
+		Version: r.Version(),
+		Kind:    r.Kind(),
+	}
 }
 
 func (r Resource) Namespace() string {

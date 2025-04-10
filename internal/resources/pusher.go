@@ -2,10 +2,12 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/config"
+	"github.com/grafana/grafanactl/internal/logs"
 	"golang.org/x/sync/errgroup"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +37,7 @@ type PushRequest struct {
 	Selectors []Selector
 
 	// A list of resources to push.
-	Resources *unstructured.UnstructuredList
+	Resources *Resources
 
 	// The maximum number of concurrent pushes.
 	MaxConcurrency int
@@ -66,17 +68,13 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(request.MaxConcurrency)
 
-	for _, res := range request.Resources.Items {
+	_ = request.Resources.ForEach(func(res *Resource) error {
 		g.Go(func() error {
-			name := res.GetName()
-			gvk := GroupVersionKind{
-				Group:   res.GroupVersionKind().Group,
-				Version: res.GroupVersionKind().Version,
-				Kind:    res.GroupVersionKind().Kind,
-			}
+			name := res.Name()
+			gvk := res.GroupVersionKind()
 
 			logger := logger.With(
-				"gvk", gvk,
+				"gvk", res.Raw,
 				"name", name,
 			)
 
@@ -85,7 +83,7 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
 					return fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
 				}
 
-				logger.Warn("skipping resource not supported by the API")
+				logger.Warn("Skipping resource not supported by the API")
 				return nil
 			}
 
@@ -95,20 +93,21 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
 					return err
 				}
 
-				logger.Warn("failed to push resource", "error", err)
+				logger.Warn("Failed to push resource", logs.Err(err))
 				return nil
 			}
 
-			logger.Debug("successfully pushed resource")
+			logger.Info("Successfully pushed resource")
 			return nil
 		})
-	}
+		return nil
+	})
 
 	return g.Wait()
 }
 
 func (p *Pusher) upsertResource(
-	ctx context.Context, gvk GroupVersionKind, name string, src unstructured.Unstructured, overwrite bool, dryRun bool, logger logging.Logger,
+	ctx context.Context, gvk GroupVersionKind, name string, src *Resource, overwrite bool, dryRun bool, logger logging.Logger,
 ) error {
 	var dryRunOpts []string
 	if dryRun {
@@ -120,12 +119,12 @@ func (p *Pusher) upsertResource(
 	if err == nil {
 		// If the resource already exists, check if it is a newer version.
 		// If it is, and overwrite is not set, skip the resource.
-		if dst.GetResourceVersion() != src.GetResourceVersion() {
+		if dst.GetResourceVersion() != src.Raw.GetResourceVersion() {
 			if !overwrite {
 				logger.Debug(
-					"skipping resource as it already exists with a different resource version",
+					"Skipping resource as it already exists with a different resource version",
 					"destinationResourceVersion", dst.GetResourceVersion(),
-					"sourceResourceVersion", src.GetResourceVersion(),
+					"sourceResourceVersion", src.Raw.GetResourceVersion(),
 				)
 				return nil
 			}
@@ -133,27 +132,39 @@ func (p *Pusher) upsertResource(
 			// Force the resource version to be the same as the destination resource version.
 			// This effectively means that we will overwrite the resource in the API with local data.
 			// This will lead to data loss but that's what we want since the overwrite flag is set to true.
-			src.SetResourceVersion(dst.GetResourceVersion())
+			src.Raw.SetResourceVersion(dst.GetResourceVersion())
 		}
+
+		runtimeObj, ok := src.Raw.GetRuntimeObject()
+		if !ok {
+			return errors.New("failed converting resource to runtime object")
+		}
+		unstructuredObj := runtimeObj.(*unstructured.Unstructured)
 
 		// Otherwise, update the resource.
 		// TODO: double-check if we need to do some resource version shenanigans here.
 		// (most likely yes)
 		// Something like – take existing resource, replace the annotations, labels, spec, etc.
 		// and then push it back.
-		if _, err := p.client.Update(ctx, gvk, &src, metav1.UpdateOptions{
+		if _, err := p.client.Update(ctx, gvk, unstructuredObj, metav1.UpdateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
 			return err
 		}
 
-		logger.Debug("updated existing resource")
+		logger.Info("Updated existing resource")
 		return nil
 	}
 
+	runtimeObj, ok := src.Raw.GetRuntimeObject()
+	if !ok {
+		return errors.New("failed converting resource to runtime object")
+	}
+	unstructuredObj := runtimeObj.(*unstructured.Unstructured)
+
 	// If the resource does not exist, create it.
 	if apierrors.IsNotFound(err) {
-		if _, err := p.client.Create(ctx, gvk, &src, metav1.CreateOptions{
+		if _, err := p.client.Create(ctx, gvk, unstructuredObj, metav1.CreateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
 			return err
