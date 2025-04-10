@@ -1,4 +1,4 @@
-package resources
+package local
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
+	"github.com/grafana/grafanactl/internal/resources"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,7 +56,7 @@ type FSReader struct {
 	MaxConcurrentReads int
 }
 
-func (reader *FSReader) ReadBytes(ctx context.Context, dst *Resources, raw []byte, inputFormat string) error {
+func (reader *FSReader) ReadBytes(ctx context.Context, dst *resources.Resources, raw []byte, inputFormat string) error {
 	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
 	logger.Debug("Parsing bytes", slog.String("format", inputFormat))
 
@@ -74,13 +75,15 @@ func (reader *FSReader) ReadBytes(ctx context.Context, dst *Resources, raw []byt
 		return err
 	}
 
-	dst.Add(&Resource{Raw: metaAccessor})
+	dst.Add(&resources.Resource{Raw: metaAccessor})
 
 	return nil
 }
 
 // Read reads all resources from the filesystem and returns them as an unstructured list.
-func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []string) error {
+func (reader *FSReader) Read(
+	ctx context.Context, dst *resources.Resources, filters resources.Filters, directories []string,
+) error {
 	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
 
 	if len(directories) == 0 {
@@ -144,7 +147,7 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 
 		for path := range pathCh {
 			readg.Go(func() error {
-				object := Resource{}
+				var object resources.Resource
 
 				// Read and decode the file
 				if err := reader.ReadFile(ctx, &object, path); err != nil {
@@ -153,6 +156,15 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 					}
 
 					logger.Warn("failed to read file", slog.String("path", path), logs.Err(err))
+					return nil
+				}
+
+				if !filters.Matches(object) {
+					logger.Debug("skipping object because it does not match any filters",
+						"path", path,
+						"gvk", object.GroupVersionKind(),
+						"name", object.Name(),
+					)
 					return nil
 				}
 
@@ -175,7 +187,7 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 
 	// Read all results in parallel.
 	gr.Go(func() error {
-		idx := make(map[objIdx]Resource)
+		idx := make(map[objIdx]resources.Resource)
 
 		for res := range resCh {
 			obj := res.Object
@@ -184,7 +196,7 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 				gvk:  obj.Raw.GetGroupVersionKind(),
 				name: obj.Name(),
 			}]; ok {
-				logger.Info("Skipping duplicate object",
+				logger.Info("skipping duplicate object",
 					"gvk", obj.Raw.GetGroupVersionKind(),
 					"name", obj.Name(),
 					"path", res.Path,
@@ -193,7 +205,7 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 				continue
 			}
 
-			logger.Debug("Adding object",
+			logger.Debug("adding object",
 				"gvk", obj.Raw.GetGroupVersionKind(),
 				"name", obj.Name(),
 				"path", res.Path,
@@ -208,7 +220,7 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 	return gr.Wait()
 }
 
-func (reader *FSReader) ReadFile(ctx context.Context, result *Resource, file string) error {
+func (reader *FSReader) ReadFile(ctx context.Context, result *resources.Resource, file string) error {
 	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"), slog.String("file", file))
 
 	decoder, err := reader.decoderForFormat(strings.TrimPrefix(path.Ext(file), "."))
@@ -263,6 +275,6 @@ type objIdx struct {
 }
 
 type readResult struct {
-	Object Resource
+	Object resources.Resource
 	Path   string
 }

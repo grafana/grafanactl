@@ -11,7 +11,7 @@ import (
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
-	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/grafana/grafanactl/internal/secrets"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -340,15 +340,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	io.Success(stdout, "Configuration: %s", io.Green("valid"))
 
-	reg, err := resources.NewDefaultDiscoveryRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx))
-	if err != nil {
-		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err))+"\n")
-		printSuggestions(err)
-		return
-	}
-
-	_, err = reg.Resources(cmd.Context(), false)
-	if err != nil {
+	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx), 0); err != nil {
 		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err))+"\n")
 		printSuggestions(err)
 		return

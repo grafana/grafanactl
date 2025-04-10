@@ -25,10 +25,11 @@ func NewFoldersProxy(resources *resources.Resources) *FoldersProxy {
 	}
 }
 
-func (c *FoldersProxy) ResourceType() resources.GroupVersionKind {
-	return resources.GroupVersionKind{
-		Group: "folder.grafana.app",
-		Kind:  "Folder",
+// FIXME: resources stuff.
+func (c *FoldersProxy) ResourceType() resources.PartialGVK {
+	return resources.PartialGVK{
+		Group:    "folder.grafana.app",
+		Resource: "folders",
 	}
 }
 

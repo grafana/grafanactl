@@ -6,87 +6,47 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"strings"
 
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// GroupVersionKind is a group, version, and kind,
-// which can be used to identify a resource.
-// Not all fields are required to be set.
-// It is expected that anything that accepts a GroupVersionKind
-// will handle the discovery of the resource based on the fields that are present.
-type GroupVersionKind struct {
-	Group   string
-	Version string
-	Kind    string
-	// TODO: this is a quick hack to get the proper kind name without renaming everything.
-	// Once we refactor discovery this can be removed.
-	Name string
-}
-
-func (gvk GroupVersionKind) String() string {
-	// TODO: handle empty version and group
-	return fmt.Sprintf("%s.%s.%s", gvk.Kind, gvk.Version, gvk.Group)
-}
-
-// ParseGVK parses a GVK string into a DynamicGroupVersionKind.
-func ParseGVK(gvk string) (GroupVersionKind, error) {
-	parts := strings.SplitN(gvk, ".", 3)
-
-	var res GroupVersionKind
-	switch len(parts) {
-	case 2:
-		if len(parts[0]) == 0 {
-			return GroupVersionKind{}, errors.New("must specify kind")
-		}
-
-		if len(parts[1]) == 0 {
-			return GroupVersionKind{}, errors.New("must specify group")
-		}
-
-		res = GroupVersionKind{
-			Group:   parts[1],
-			Version: "", // Default version
-			Kind:    parts[0],
-		}
-	case 3:
-		if len(parts[0]) == 0 {
-			return GroupVersionKind{}, errors.New("must specify kind")
-		}
-
-		if len(parts[1]) == 0 {
-			return GroupVersionKind{}, errors.New("must specify version")
-		}
-
-		if len(parts[2]) == 0 {
-			return GroupVersionKind{}, errors.New("must specify group")
-		}
-
-		res = GroupVersionKind{
-			Group:   parts[2],
-			Version: parts[1],
-			Kind:    parts[0],
-		}
-	default:
-		res = GroupVersionKind{
-			Group:   "", // Default group
-			Version: "", // Default version
-			Kind:    parts[0],
-		}
-	}
-
-	return res, nil
-}
-
+// ResourceRef is a unique identifier for a resource.
 type ResourceRef string
 
+// Resource is a resource in the Grafana API.
 type Resource struct {
 	Raw utils.GrafanaMetaAccessor
 }
 
+// MustFromObject creates a new Resource from an object.
+// If the object is not a valid Grafana resource, it will panic.
+func MustFromObject(obj map[string]any) Resource {
+	return MustFromUnstructured(&unstructured.Unstructured{Object: obj})
+}
+
+// MustFromUnstructured creates a new Resource from an unstructured object.
+// If the object is not a valid Grafana resource, it will panic.
+func MustFromUnstructured(obj *unstructured.Unstructured) Resource {
+	r, err := FromUnstructured(obj)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+
+// FromUnstructured creates a new Resource from an unstructured object.
+func FromUnstructured(obj *unstructured.Unstructured) (Resource, error) {
+	metaAccessor, err := utils.MetaAccessor(obj)
+	if err != nil {
+		return Resource{}, err
+	}
+	return Resource{Raw: metaAccessor}, nil
+}
+
+// ToUnstructured converts the resource to an unstructured object.
 func (r Resource) ToUnstructured() (*unstructured.Unstructured, error) {
 	runtimeObj, ok := r.Raw.GetRuntimeObject()
 	if !ok {
@@ -100,42 +60,49 @@ func (r Resource) ToUnstructured() (*unstructured.Unstructured, error) {
 	return unstructuredObj, nil
 }
 
+// Ref returns a unique identifier for the resource.
 func (r Resource) Ref() ResourceRef {
-	return ResourceRef(fmt.Sprintf("%s/%s-%s", r.GroupVersionKind().String(), r.Namespace(), r.Name()))
+	return ResourceRef(
+		fmt.Sprintf("%s/%s-%s", r.GroupVersionKind().String(), r.Namespace(), r.Name()),
+	)
 }
 
-func (r Resource) GroupVersionKind() GroupVersionKind {
-	return GroupVersionKind{
-		Group:   r.Group(),
-		Version: r.Version(),
-		Kind:    r.Kind(),
-	}
+// GroupVersionKind returns the GroupVersionKind of the resource.
+func (r Resource) GroupVersionKind() schema.GroupVersionKind {
+	return r.Raw.GetGroupVersionKind()
 }
 
+// Namespace returns the namespace of the resource.
 func (r Resource) Namespace() string {
 	return r.Raw.GetNamespace()
 }
 
+// Name returns the name of the resource.
 func (r Resource) Name() string {
 	return r.Raw.GetName()
 }
 
+// Group returns the group of the resource.
 func (r Resource) Group() string {
 	return r.Raw.GetGroupVersionKind().Group
 }
 
+// Kind returns the kind of the resource.
 func (r Resource) Kind() string {
 	return r.Raw.GetGroupVersionKind().Kind
 }
 
+// Version returns the version of the resource.
 func (r Resource) Version() string {
 	return r.Raw.GetGroupVersionKind().Version
 }
 
+// APIVersion returns the API version of the resource.
 func (r Resource) APIVersion() string {
 	return r.Group() + "/" + r.Version()
 }
 
+// SourcePath returns the source path of the resource.
 func (r Resource) SourcePath() string {
 	properties, _ := r.Raw.GetSourceProperties()
 	if properties.Path == "" {
@@ -150,6 +117,7 @@ func (r Resource) SourcePath() string {
 	return filepath.Join(u.Host, u.Path)
 }
 
+// SourceFormat returns the source format of the resource.
 func (r Resource) SourceFormat() string {
 	properties, _ := r.Raw.GetSourceProperties()
 	if properties.Path == "" {
@@ -164,11 +132,13 @@ func (r Resource) SourceFormat() string {
 	return u.Scheme
 }
 
+// Resources is a collection of resources.
 type Resources struct {
 	collection    map[ResourceRef]*Resource
 	onChangeFuncs []func(resource *Resource)
 }
 
+// NewResources creates a new Resources collection.
 func NewResources(resources ...*Resource) *Resources {
 	r := &Resources{
 		collection: make(map[ResourceRef]*Resource),
@@ -179,6 +149,7 @@ func NewResources(resources ...*Resource) *Resources {
 	return r
 }
 
+// Add adds resources to the collection.
 func (r *Resources) Add(resources ...*Resource) {
 	for _, resource := range resources {
 		r.collection[resource.Ref()] = resource
@@ -189,10 +160,12 @@ func (r *Resources) Add(resources ...*Resource) {
 	}
 }
 
+// OnChange adds a callback that will be called when a resource is added to the collection.
 func (r *Resources) OnChange(callback func(resource *Resource)) {
 	r.onChangeFuncs = append(r.onChangeFuncs, callback)
 }
 
+// Find finds a resource by kind and name.
 // TODO: kind + name isn't enough to unambiguously identify a resource.
 func (r *Resources) Find(kind string, name string) (*Resource, bool) {
 	for _, resource := range r.collection {
@@ -204,6 +177,7 @@ func (r *Resources) Find(kind string, name string) (*Resource, bool) {
 	return nil, false
 }
 
+// Merge merges another resources collection into the current one.
 func (r *Resources) Merge(resources *Resources) {
 	_ = resources.ForEach(func(resource *Resource) error {
 		r.Add(resource)
@@ -211,6 +185,7 @@ func (r *Resources) Merge(resources *Resources) {
 	})
 }
 
+// ForEach iterates over all resources in the collection and calls the callback for each resource.
 func (r *Resources) ForEach(callback func(*Resource) error) error {
 	for _, resource := range r.collection {
 		if err := callback(resource); err != nil {
@@ -221,6 +196,8 @@ func (r *Resources) ForEach(callback func(*Resource) error) error {
 	return nil
 }
 
+// ForEachConcurrently iterates over all resources in the collection and calls the callback for each resource.
+// The callback is called concurrently, up to maxInflight at a time.
 func (r *Resources) ForEachConcurrently(
 	ctx context.Context, maxInflight int, callback func(context.Context, *Resource) error,
 ) error {
@@ -236,10 +213,12 @@ func (r *Resources) ForEachConcurrently(
 	return g.Wait()
 }
 
+// Len returns the number of resources in the collection.
 func (r *Resources) Len() int {
 	return len(r.collection)
 }
 
+// AsList returns a list of resources from the collection.
 func (r *Resources) AsList() []*Resource {
 	if r.collection == nil {
 		return nil
@@ -253,6 +232,7 @@ func (r *Resources) AsList() []*Resource {
 	return list
 }
 
+// GroupByKind groups resources by kind.
 func (r *Resources) GroupByKind() map[string]*Resources {
 	resourceByKind := map[string]*Resources{}
 	_ = r.ForEach(func(resource *Resource) error {

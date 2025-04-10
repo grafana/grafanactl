@@ -21,7 +21,8 @@ grafanactl resources list [flags]
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help            help for list
+  -o, --output string   Output format. One of: json, text, wide, yaml (default "text")
 ```
 
 ### Options inherited from parent commands

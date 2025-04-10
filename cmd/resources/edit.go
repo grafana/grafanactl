@@ -7,6 +7,8 @@ import (
 	cmdio "github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/local"
+	"github.com/grafana/grafanactl/internal/resources/remote"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -63,12 +65,12 @@ The edition will be cancelled if no changes are written to the file or if the fi
 				return err
 			}
 
-			pusher, err := resources.NewPusher(ctx, cfg)
+			pusher, err := remote.NewDefaultPusher(ctx, cfg)
 			if err != nil {
 				return err
 			}
 
-			reader := resources.FSReader{
+			reader := local.FSReader{
 				Decoders:           format.Codecs(),
 				MaxConcurrentReads: 1,
 				StopOnError:        true,
@@ -126,7 +128,7 @@ The edition will be cancelled if no changes are written to the file or if the fi
 				return err
 			}
 
-			_, err = pusher.Push(ctx, resources.PushRequest{
+			_, err = pusher.Push(ctx, remote.PushRequest{
 				Resources:         tmpRes,
 				MaxConcurrency:    1,
 				StopOnError:       true,
