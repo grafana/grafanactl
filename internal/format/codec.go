@@ -38,6 +38,8 @@ type Decoder interface {
 type Codec interface {
 	Encoder
 	Decoder
+
+	Format() Format
 }
 
 var _ Codec = (*YAMLCodec)(nil)
@@ -48,6 +50,10 @@ type YAMLCodec struct{}
 // NewYAMLCodec returns a new YAMLCodec.
 func NewYAMLCodec() *YAMLCodec {
 	return &YAMLCodec{}
+}
+
+func (c *YAMLCodec) Format() Format {
+	return YAML
 }
 
 func (c *YAMLCodec) Encode(dst io.Writer, value any) error {
@@ -79,6 +85,10 @@ type JSONCodec struct{}
 // NewJSONCodec returns a new JSONCodec.
 func NewJSONCodec() *JSONCodec {
 	return &JSONCodec{}
+}
+
+func (c *JSONCodec) Format() Format {
+	return JSON
 }
 
 func (c *JSONCodec) Encode(dst io.Writer, value any) error {

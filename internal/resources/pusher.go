@@ -2,7 +2,6 @@ package resources
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/grafana/grafana-app-sdk/logging"
@@ -11,7 +10,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Pusher takes care of pushing resources to Grafana API.
@@ -116,6 +114,7 @@ func (p *Pusher) upsertResource(
 
 	// Check if the resource already exists.
 	dst, err := p.client.Get(ctx, gvk, name, metav1.GetOptions{})
+	//nolint:nestif
 	if err == nil {
 		// If the resource already exists, check if it is a newer version.
 		// If it is, and overwrite is not set, skip the resource.
@@ -135,11 +134,10 @@ func (p *Pusher) upsertResource(
 			src.Raw.SetResourceVersion(dst.GetResourceVersion())
 		}
 
-		runtimeObj, ok := src.Raw.GetRuntimeObject()
-		if !ok {
-			return errors.New("failed converting resource to runtime object")
+		unstructuredObj, err := src.ToUnstructured()
+		if err != nil {
+			return err
 		}
-		unstructuredObj := runtimeObj.(*unstructured.Unstructured)
 
 		// Otherwise, update the resource.
 		// TODO: double-check if we need to do some resource version shenanigans here.
@@ -156,11 +154,10 @@ func (p *Pusher) upsertResource(
 		return nil
 	}
 
-	runtimeObj, ok := src.Raw.GetRuntimeObject()
-	if !ok {
-		return errors.New("failed converting resource to runtime object")
+	unstructuredObj, err := src.ToUnstructured()
+	if err != nil {
+		return err
 	}
-	unstructuredObj := runtimeObj.(*unstructured.Unstructured)
 
 	// If the resource does not exist, create it.
 	if apierrors.IsNotFound(err) {
