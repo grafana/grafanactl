@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset=utf-8>
+    <title>grafanactl - server</title>
+    <link rel="stylesheet" href="/grafanactl/assets/style.css"/>
+    <link rel="icon" type="image/png" href="/grafanactl/assets/fav32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/grafanactl/assets/apple-touch-icon.png" />
+</head>
+<body>
+
+{{ template "proxy/header.html.tmpl" . }}
+
+<main>
+    {{ range $kind, $resources := .Resources.GroupByKind }}
+    <h1>{{ $kind }}</h1>
+    <ul>
+        {{ range $resources.AsList }}
+        <li>
+            {{ if kindHasProxy $kind }}
+                <a href="/grafanactl/{{ .Group }}/{{ .Version }}/{{ .Kind }}/{{ .Name }}">
+                    {{ .Name }}
+                </a>
+            {{ else }}
+                {{ .Name }}
+            {{ end }}
+        </li>
+        {{ end }}
+    </ul>
+    {{ end }}
+</main>
+</body>
+</html>

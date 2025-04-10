@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset=utf-8>
+    <title>grafanactl - server</title>
+    <link rel="stylesheet" href="/grafanactl/assets/style.css"/>
+    <link rel="icon" type="image/png" href="/grafanactl/assets/fav32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/grafanactl/assets/apple-touch-icon.png" />
+</head>
+<body>
+
+{{ template "proxy/header.html.tmpl" . }}
+
+<iframe src="{{ .IframeURL }}"></iframe>
+
+<script>
+window.LiveReloadOptions = {
+    host: 'localhost',
+    port: {{ .Port }},
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/livereload-js@4.0.2/dist/livereload.min.js"></script>
+<script>
+    class CustomReloadPlugin {
+        constructor (window, host) {
+            this.window = window;
+            this.host = host;
+        }
+
+        reload (path, options) {
+            if (path === window.location.pathname) {
+                this.window.document.location.reload();
+            }
+
+            return true;
+        }
+
+        analyze () {
+            return {};
+        }
+    }
+
+    CustomReloadPlugin.identifier = 'custom-reload';
+    CustomReloadPlugin.version = '1.0';
+
+    LiveReload.addPlugin(CustomReloadPlugin);
+</script>
+</body>
+</html>
