@@ -12,11 +12,11 @@ import (
 	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
+	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/server"
 	"github.com/grafana/grafanactl/internal/server/livereload"
-	serverresources "github.com/grafana/grafanactl/internal/server/resources"
 	"github.com/grafana/grafanactl/internal/server/watch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -74,12 +74,14 @@ TODO
 
 			logger := logging.FromContext(cmd.Context())
 			parsedResources := resources.NewResources()
-			parser := serverresources.DefaultParser(cmd.Context(), serverresources.ParserConfig{
-				ContinueOnError: true,
-			})
+			reader := resources.FSReader{
+				Decoders:           format.Codecs(),
+				StopOnError:        false,
+				MaxConcurrentReads: 1, // TODO: flag
+			}
 
 			if len(args) != 0 {
-				if err := parser.ParseInto(parsedResources, args[0]); err != nil {
+				if err := reader.Read(cmd.Context(), parsedResources, []string{args[0]}); err != nil {
 					return err
 				}
 			}
@@ -90,7 +92,7 @@ TODO
 					return err
 				}
 
-				if err = parser.ParseBytesInto(parsedResources, output, opts.ScriptFormat); err != nil {
+				if err = reader.ReadBytes(cmd.Context(), parsedResources, output, opts.ScriptFormat); err != nil {
 					logger.Warn("Could not parse script output", logs.Err(err))
 					return err
 				}
@@ -114,9 +116,13 @@ TODO
 
 				// By default, react to changes by parsing changed files
 				onInputChange := func(file string) {
-					if err = parser.ParseInto(parsedResources, file); err != nil {
+					object := &resources.Resource{}
+					if err = reader.ReadFile(cmd.Context(), object, file); err != nil {
 						logger.Warn("Could not parse file", slog.String("file", file), logs.Err(err))
+						return
 					}
+
+					parsedResources.Add(object)
 				}
 
 				// If a script is given, run the script on change
