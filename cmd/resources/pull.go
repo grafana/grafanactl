@@ -5,7 +5,7 @@ import (
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
-	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -111,9 +111,9 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			writer := resources.FSWriter{
+			writer := local.FSWriter{
 				Directory:   opts.Directory,
-				Namer:       resources.GroupResourcesByKind(opts.IO.OutputFormat),
+				Namer:       local.GroupResourcesByKind(opts.IO.OutputFormat),
 				Encoder:     codec,
 				StopOnError: opts.StopOnError,
 			}

@@ -1,15 +1,41 @@
 package resources
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"slices"
+	"strings"
 	"text/tabwriter"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
+	cmdio "github.com/grafana/grafanactl/cmd/io"
+	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
+type listOpts struct {
+	IO cmdio.Options
+}
+
+func (opts *listOpts) setup(flags *pflag.FlagSet) {
+	opts.IO.RegisterCustomCodec("text", &tabCodec{wide: false})
+	opts.IO.RegisterCustomCodec("wide", &tabCodec{wide: true})
+	opts.IO.DefaultFormat("text")
+
+	opts.IO.BindFlags(flags)
+}
+
+func (opts *listOpts) Validate() error {
+	return opts.IO.Validate()
+}
+
 func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
+	opts := &listOpts{}
+
 	cmd := &cobra.Command{
 		Use:   "list",
 		Args:  cobra.NoArgs,
@@ -21,12 +47,21 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
+			codec, err := opts.IO.Codec()
+			if err != nil {
+				return err
+			}
+
+			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
+				return fmt.Errorf("unsupported output format: %s", opts.IO.OutputFormat)
+			}
+
 			cfg, err := configOpts.LoadRESTConfig(ctx)
 			if err != nil {
 				return err
 			}
 
-			reg, err := resources.NewDefaultDiscoveryRegistry(ctx, cfg)
+			reg, err := discovery.NewDefaultRegistry(ctx, cfg, 0)
 			if err != nil {
 				return err
 			}
@@ -34,20 +69,68 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			// TODO: refactor this to return a k8s object list,
 			// e.g. APIResourceList, or unstructured.UnstructuredList.
 			// That way we can use the same code for rendering as for `resources get`.
-			res, err := reg.Resources(ctx, false)
-			if err != nil {
-				return err
-			}
+			res := reg.SupportedResources()
 
-			out := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
-			fmt.Fprintf(out, "GROUP\tVERSION\tKIND\n")
-			for _, r := range res {
-				fmt.Fprintf(out, "%s\t%s\t%s\n", r.Group, r.Version, r.Kind)
-			}
+			slices.SortStableFunc(res, func(a, b resources.Descriptor) int {
+				res := strings.Compare(a.GroupVersion.Group, b.GroupVersion.Group)
+				if res != 0 {
+					return res
+				}
 
-			return out.Flush()
+				res = strings.Compare(a.GroupVersion.Version, b.GroupVersion.Version)
+				if res != 0 {
+					return res
+				}
+
+				return strings.Compare(a.Kind, b.Kind)
+			})
+
+			return codec.Encode(cmd.OutOrStdout(), res)
 		},
 	}
 
+	opts.setup(cmd.Flags())
+
 	return cmd
+}
+
+type tabCodec struct {
+	wide bool
+}
+
+func (c *tabCodec) Format() format.Format {
+	if c.wide {
+		return "wide"
+	}
+
+	return "text"
+}
+
+func (c *tabCodec) Encode(output io.Writer, input any) error {
+	descs, ok := input.(resources.Descriptors)
+	if !ok {
+		return fmt.Errorf("expected resources.Descriptors, got %T", input)
+	}
+
+	out := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
+	if c.wide {
+		fmt.Fprintf(out, "GROUP\tVERSION\tPLURAL\tSINGULAR\tKIND\n")
+	} else {
+		fmt.Fprintf(out, "GROUP\tVERSION\tPLURAL\n")
+	}
+
+	for _, r := range descs {
+		gv := r.GroupVersion
+		if c.wide {
+			fmt.Fprintf(out, "%s\t%s\t%s\t%s\t%s\n", gv.Group, gv.Version, r.Plural, r.Singular, r.Kind)
+		} else {
+			fmt.Fprintf(out, "%s\t%s\t%s\n", gv.Group, gv.Version, r.Plural)
+		}
+	}
+
+	return out.Flush()
+}
+
+func (c *tabCodec) Decode(io.Reader, any) error {
+	return errors.New("tab codec does not support decoding")
 }

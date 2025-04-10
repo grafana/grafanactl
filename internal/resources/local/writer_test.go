@@ -1,4 +1,4 @@
-package resources_test
+package local_test
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/grafana/grafanactl/internal/format"
-	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -15,7 +15,7 @@ func TestFSWriter_Write(t *testing.T) {
 	req := require.New(t)
 	outputDir := filepath.Join(t.TempDir(), "output")
 
-	writer := resources.FSWriter{
+	writer := local.FSWriter{
 		Directory: outputDir,
 		Encoder:   format.NewYAMLCodec(),
 		Namer: func(resource unstructured.Unstructured) (string, error) {
@@ -34,7 +34,7 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 	req := require.New(t)
 	outputDir := filepath.Join(t.TempDir(), "output")
 
-	writer := resources.FSWriter{
+	writer := local.FSWriter{
 		Directory:   outputDir,
 		Encoder:     format.NewYAMLCodec(),
 		StopOnError: false,
@@ -57,10 +57,10 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 	req := require.New(t)
 	outputDir := filepath.Join(t.TempDir(), "output")
 
-	writer := resources.FSWriter{
+	writer := local.FSWriter{
 		Directory: outputDir,
 		Encoder:   format.NewJSONCodec(),
-		Namer:     resources.GroupResourcesByKind("json"),
+		Namer:     local.GroupResourcesByKind("json"),
 	}
 
 	err := writer.Write(t.Context(), *testResources())
@@ -77,7 +77,7 @@ func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {
 		Items: []unstructured.Unstructured{},
 	}
 
-	writer := resources.FSWriter{
+	writer := local.FSWriter{
 		Directory: outputDir,
 		Encoder:   format.NewYAMLCodec(),
 		Namer: func(resource unstructured.Unstructured) (string, error) {

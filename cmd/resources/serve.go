@@ -16,6 +16,7 @@ import (
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/grafana/grafanactl/internal/server"
 	"github.com/grafana/grafanactl/internal/server/livereload"
 	"github.com/grafana/grafanactl/internal/server/watch"
@@ -92,14 +93,14 @@ support for file notifications.
 
 			logger := logging.FromContext(cmd.Context())
 			parsedResources := resources.NewResources()
-			reader := resources.FSReader{
+			reader := local.FSReader{
 				Decoders:           format.Codecs(),
 				StopOnError:        false,
 				MaxConcurrentReads: opts.MaxConcurrent,
 			}
 
 			if len(args) != 0 {
-				if err := reader.Read(cmd.Context(), parsedResources, args); err != nil {
+				if err := reader.Read(cmd.Context(), parsedResources, resources.Filters{}, args); err != nil {
 					return err
 				}
 			}

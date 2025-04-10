@@ -205,7 +205,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 	templates = templates.Funcs(template.FuncMap{
 		"kindHasProxy": func(kind string) bool {
 			for _, handler := range s.resourceHandlers {
-				if handler.ResourceType().Kind == kind {
+				if handler.ResourceType().Resource == kind {
 					return true
 				}
 			}
@@ -237,7 +237,7 @@ func (s *Server) iframeHandler(w http.ResponseWriter, r *http.Request) {
 	for _, candidate := range s.resourceHandlers {
 		candidateResourceType := candidate.ResourceType()
 
-		if candidateResourceType.Group == group && (candidateResourceType.Version == version || candidateResourceType.Version == "") && candidateResourceType.Kind == kind {
+		if candidateResourceType.Group == group && (candidateResourceType.Version == version || candidateResourceType.Version == "") && candidateResourceType.Resource == kind {
 			handler = candidate
 			break
 		}

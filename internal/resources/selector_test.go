@@ -18,12 +18,13 @@ func TestParseSelectors(t *testing.T) {
 			cmds: []string{"dashboards"},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeAll,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeAll,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "dashboards",
 					},
+					ResourceUIDs: []string{},
 				},
 			},
 		},
@@ -32,11 +33,11 @@ func TestParseSelectors(t *testing.T) {
 			cmds: []string{"dashboards/foo"},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeSingle,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeSingle,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo"},
 				},
@@ -47,11 +48,11 @@ func TestParseSelectors(t *testing.T) {
 			cmds: []string{"dashboards/foo,bar"},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeMultiple,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeMultiple,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo", "bar"},
 				},
@@ -62,11 +63,11 @@ func TestParseSelectors(t *testing.T) {
 			cmds: []string{"dashboards.v1alpha1.dashboard.grafana.app/foo,bar"},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeMultiple,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "dashboard.grafana.app",
-						Version: "v1alpha1",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeMultiple,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "dashboard.grafana.app",
+						Version:  "v1alpha1",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo", "bar"},
 				},
@@ -80,20 +81,20 @@ func TestParseSelectors(t *testing.T) {
 			},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeSingle,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeSingle,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo"},
 				},
 				{
-					SelectorType: resources.SelectorTypeSingle,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "folders",
+					Type: resources.FilterTypeSingle,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "folders",
 					},
 					ResourceUIDs: []string{"bar"},
 				},
@@ -107,20 +108,20 @@ func TestParseSelectors(t *testing.T) {
 			},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeMultiple,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeMultiple,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo", "bar"},
 				},
 				{
-					SelectorType: resources.SelectorTypeMultiple,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "folders",
+					Type: resources.FilterTypeMultiple,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "folders",
 					},
 					ResourceUIDs: []string{"qux", "quux"},
 				},
@@ -134,20 +135,20 @@ func TestParseSelectors(t *testing.T) {
 			},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeMultiple,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "",
-						Version: "",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeMultiple,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "",
+						Version:  "",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo", "bar"},
 				},
 				{
-					SelectorType: resources.SelectorTypeMultiple,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "folder",
-						Version: "",
-						Kind:    "folders",
+					Type: resources.FilterTypeMultiple,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "folder",
+						Version:  "",
+						Resource: "folders",
 					},
 					ResourceUIDs: []string{"qux", "quux"},
 				},
@@ -161,20 +162,20 @@ func TestParseSelectors(t *testing.T) {
 			},
 			want: []resources.Selector{
 				{
-					SelectorType: resources.SelectorTypeSingle,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "dashboard.grafana.app",
-						Version: "v1alpha1",
-						Kind:    "dashboards",
+					Type: resources.FilterTypeSingle,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "dashboard.grafana.app",
+						Version:  "v1alpha1",
+						Resource: "dashboards",
 					},
 					ResourceUIDs: []string{"foo"},
 				},
 				{
-					SelectorType: resources.SelectorTypeSingle,
-					GroupVersionKind: resources.GroupVersionKind{
-						Group:   "folder.grafana.app",
-						Version: "v1alpha1",
-						Kind:    "folders",
+					Type: resources.FilterTypeSingle,
+					GroupVersionKind: resources.PartialGVK{
+						Group:    "folder.grafana.app",
+						Version:  "v1alpha1",
+						Resource: "folders",
 					},
 					ResourceUIDs: []string{"bar"},
 				},

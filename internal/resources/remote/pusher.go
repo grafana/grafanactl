@@ -1,4 +1,4 @@
-package resources
+package remote
 
 import (
 	"context"
@@ -8,34 +8,69 @@ import (
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/logs"
+	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/client"
+	"github.com/grafana/grafanactl/internal/resources/discovery"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// PushRegistry is a registry of resources that can be pushed to Grafana.
+type PushRegistry interface {
+	SupportedResources() resources.Descriptors
+}
+
+// PushClient is a client that can push resources to Grafana.
+type PushClient interface {
+	Create(
+		ctx context.Context, desc resources.Descriptor, obj *unstructured.Unstructured, opts metav1.CreateOptions,
+	) (*unstructured.Unstructured, error)
+
+	Update(
+		ctx context.Context, desc resources.Descriptor, obj *unstructured.Unstructured, opts metav1.UpdateOptions,
+	) (*unstructured.Unstructured, error)
+
+	Get(
+		ctx context.Context, desc resources.Descriptor, name string, opts metav1.GetOptions,
+	) (*unstructured.Unstructured, error)
+}
 
 // Pusher takes care of pushing resources to Grafana API.
 type Pusher struct {
-	client *NamespacedDynamicClient
+	client   PushClient
+	registry PushRegistry
 }
 
-// NewPusher creates a new Pusher.
-func NewPusher(ctx context.Context, cfg config.NamespacedRESTConfig) (*Pusher, error) {
-	client, err := NewDefaultNamespacedDynamicClient(ctx, cfg)
+// NewDefaultPusher creates a new Pusher.
+// It uses the default namespaced dynamic client to push resources to Grafana.
+func NewDefaultPusher(ctx context.Context, cfg config.NamespacedRESTConfig) (*Pusher, error) {
+	client, err := client.NewDefaultNamespacedDynamicClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 
+	registry, err := discovery.NewDefaultRegistry(ctx, cfg, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPusher(client, registry), nil
+}
+
+// NewPusher creates a new Pusher.
+func NewPusher(client PushClient, registry PushRegistry) *Pusher {
 	return &Pusher{
-		client: client,
-	}, nil
+		client:   client,
+		registry: registry,
+	}
 }
 
 // PushRequest is a request for pushing resources to Grafana.
 type PushRequest struct {
-	// A list of selector filters to apply to the resources before pushing them.
-	Selectors []Selector
-
 	// A list of resources to push.
-	Resources *Resources
+	Resources *resources.Resources
 
 	// The maximum number of concurrent pushes.
 	MaxConcurrency int
@@ -59,7 +94,7 @@ type PushRequest struct {
 }
 
 type PushFailure struct {
-	Resource *Resource
+	Resource *resources.Resource
 	Error    error
 }
 
@@ -70,7 +105,7 @@ type PushSummary struct {
 	mu          sync.Mutex
 }
 
-func (summary *PushSummary) recordFailure(resource *Resource, err error) {
+func (summary *PushSummary) recordFailure(resource *resources.Resource, err error) {
 	summary.mu.Lock()
 	defer summary.mu.Unlock()
 
@@ -84,65 +119,65 @@ func (summary *PushSummary) recordFailure(resource *Resource, err error) {
 // Push pushes resources to Grafana.
 func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, error) {
 	summary := &PushSummary{}
-	supported, err := p.supportedGVKs(ctx)
-	if err != nil {
-		return summary, err
-	}
+	supported := p.supportedDescriptors()
 
 	if request.MaxConcurrency < 1 {
 		request.MaxConcurrency = 1
 	}
 
-	err = request.Resources.ForEachConcurrently(ctx, request.MaxConcurrency, func(ctx context.Context, res *Resource) error {
-		name := res.Name()
-		gvk := res.GroupVersionKind()
+	err := request.Resources.ForEachConcurrently(
+		ctx, request.MaxConcurrency, func(ctx context.Context, res *resources.Resource) error {
+			name := res.Name()
+			gvk := res.GroupVersionKind()
 
-		logger := logging.FromContext(ctx).With(
-			"gvk", gvk,
-			"name", name,
-			"dryRun", request.DryRun,
-		)
+			logger := logging.FromContext(ctx).With(
+				"gvk", gvk,
+				"name", name,
+				"dryRun", request.DryRun,
+			)
 
-		if _, ok := supported[gvk]; !ok {
-			err := fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-			summary.recordFailure(res, err)
+			desc, ok := supported[gvk]
+			if !ok {
+				err := fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
+				summary.recordFailure(res, err)
 
-			if request.StopOnError {
-				return err
+				if request.StopOnError {
+					return err
+				}
+
+				if !request.NoPushFailureLog {
+					logger.Warn("Skipping resource not supported by the API")
+				}
+				return nil
 			}
 
-			if !request.NoPushFailureLog {
-				logger.Warn("Skipping resource not supported by the API")
+			if err := p.upsertResource(ctx, desc, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
+				summary.recordFailure(res, err)
+
+				if request.StopOnError {
+					return err
+				}
+
+				if !request.NoPushFailureLog {
+					logger.Warn("Failed to push resource", logs.Err(err))
+				}
+				return nil
 			}
+
+			logger.Info("Resource pushed")
+			summary.PushedCount++
 			return nil
-		}
-
-		if err := p.upsertResource(ctx, gvk, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
-			summary.recordFailure(res, err)
-
-			if request.StopOnError {
-				return err
-			}
-
-			if !request.NoPushFailureLog {
-				logger.Warn("Failed to push resource", logs.Err(err))
-			}
-			return nil
-		}
-
-		logger.Info("Resource pushed")
-		summary.PushedCount++
-		return nil
-	})
+		},
+	)
 
 	return summary, err
 }
 
 func (p *Pusher) upsertResource(
 	ctx context.Context,
-	gvk GroupVersionKind,
+	desc resources.Descriptor,
 	name string,
-	src *Resource,
+	src *resources.Resource,
 	overwrite bool,
 	dryRun bool,
 	logger logging.Logger,
@@ -153,7 +188,7 @@ func (p *Pusher) upsertResource(
 	}
 
 	// Check if the resource already exists.
-	dst, err := p.client.Get(ctx, gvk, name, metav1.GetOptions{})
+	dst, err := p.client.Get(ctx, desc, name, metav1.GetOptions{})
 	//nolint:nestif
 	if err == nil {
 		// If the resource already exists, check if it is a newer version.
@@ -162,7 +197,7 @@ func (p *Pusher) upsertResource(
 			if !overwrite {
 				return fmt.Errorf(
 					"resource `%s/%s` already exists with a different resource version: %s",
-					gvk, name, dst.GetResourceVersion(),
+					desc.GroupVersionKind(), name, dst.GetResourceVersion(),
 				)
 			}
 
@@ -182,7 +217,7 @@ func (p *Pusher) upsertResource(
 		// (most likely yes)
 		// Something like – take existing resource, replace the annotations, labels, spec, etc.
 		// and then push it back.
-		if _, err := p.client.Update(ctx, gvk, unstructuredObj, metav1.UpdateOptions{
+		if _, err := p.client.Update(ctx, desc, unstructuredObj, metav1.UpdateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
 			return err
@@ -199,7 +234,7 @@ func (p *Pusher) upsertResource(
 			return err
 		}
 
-		if _, err := p.client.Create(ctx, gvk, unstructuredObj, metav1.CreateOptions{
+		if _, err := p.client.Create(ctx, desc, unstructuredObj, metav1.CreateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
 			return err
@@ -213,22 +248,13 @@ func (p *Pusher) upsertResource(
 	return err
 }
 
-func (p *Pusher) supportedGVKs(ctx context.Context) (map[GroupVersionKind]struct{}, error) {
-	supported, err := p.client.Resources(ctx)
-	if err != nil {
-		return nil, err
-	}
+func (p *Pusher) supportedDescriptors() map[schema.GroupVersionKind]resources.Descriptor {
+	supported := p.registry.SupportedResources()
 
-	supportedGVKs := make(map[GroupVersionKind]struct{})
+	supportedDescriptors := make(map[schema.GroupVersionKind]resources.Descriptor)
 	for _, sup := range supported {
-		supportedGVKs[GroupVersionKind{
-			Group:   sup.Group,
-			Version: sup.Version,
-			// NB: this is deliberate, because the kind on disk is the actual kind,
-			// but what we stored in the registry under `Name` is the singular form of the kind.
-			Kind: sup.Name,
-		}] = struct{}{}
+		supportedDescriptors[sup.GroupVersionKind()] = sup
 	}
 
-	return supportedGVKs, nil
+	return supportedDescriptors
 }

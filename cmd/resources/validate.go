@@ -10,6 +10,9 @@ import (
 	cmdio "github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/discovery"
+	"github.com/grafana/grafanactl/internal/resources/local"
+	"github.com/grafana/grafanactl/internal/resources/remote"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -94,7 +97,17 @@ This command validates its inputs against a remote Grafana instance.
 				return err
 			}
 
-			reader := resources.FSReader{
+			reg, err := discovery.NewDefaultRegistry(ctx, cfg, 0)
+			if err != nil {
+				return err
+			}
+
+			filters, err := reg.MakeFilters(sels)
+			if err != nil {
+				return err
+			}
+
+			reader := local.FSReader{
 				Decoders:           format.Codecs(),
 				MaxConcurrentReads: opts.MaxConcurrent,
 				StopOnError:        opts.StopOnError,
@@ -102,17 +115,16 @@ This command validates its inputs against a remote Grafana instance.
 
 			resourcesList := resources.NewResources()
 
-			if err := reader.Read(ctx, resourcesList, opts.Directories); err != nil {
+			if err := reader.Read(ctx, resourcesList, filters, opts.Directories); err != nil {
 				return err
 			}
 
-			pusher, err := resources.NewPusher(ctx, cfg)
+			pusher, err := remote.NewDefaultPusher(ctx, cfg)
 			if err != nil {
 				return err
 			}
 
-			req := resources.PushRequest{
-				Selectors:         sels,
+			req := remote.PushRequest{
 				Resources:         resourcesList,
 				MaxConcurrency:    opts.MaxConcurrent,
 				StopOnError:       opts.StopOnError,
@@ -165,7 +177,7 @@ func (c *validationTableCodec) Format() format.Format {
 
 func (c *validationTableCodec) Encode(output io.Writer, input any) error {
 	//nolint:forcetypeassert
-	summary := input.(*resources.PushSummary)
+	summary := input.(*remote.PushSummary)
 
 	tab := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
 

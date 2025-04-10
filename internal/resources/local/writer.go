@@ -1,4 +1,4 @@
-package resources
+package local
 
 import (
 	"context"
