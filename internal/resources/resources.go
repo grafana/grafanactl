@@ -3,7 +3,12 @@ package resources
 import (
 	"errors"
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"strings"
+
+	"github.com/grafana/grafana/pkg/apimachinery/utils"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 // GroupVersionKind is a group, version, and kind,
@@ -72,4 +77,160 @@ func ParseGVK(gvk string) (GroupVersionKind, error) {
 	}
 
 	return res, nil
+}
+
+type ResourceRef string
+
+type Resource struct {
+	Raw utils.GrafanaMetaAccessor
+}
+
+func (r Resource) Ref() ResourceRef {
+	return ResourceRef(fmt.Sprintf("%s/%s:%s-%s", r.APIVersion(), r.Kind(), r.Namespace(), r.Name()))
+}
+
+func (r Resource) Namespace() string {
+	return r.Raw.GetNamespace()
+}
+
+func (r Resource) Name() string {
+	return r.Raw.GetName()
+}
+
+func (r Resource) Group() string {
+	return r.Raw.GetGroupVersionKind().Group
+}
+
+func (r Resource) Kind() string {
+	return r.Raw.GetGroupVersionKind().Kind
+}
+
+func (r Resource) Version() string {
+	return r.Raw.GetGroupVersionKind().Version
+}
+
+func (r Resource) APIVersion() string {
+	return r.Group() + "/" + r.Version()
+}
+
+func (r Resource) SourcePath() string {
+	properties, _ := r.Raw.GetSourceProperties()
+	if properties.Path == "" {
+		return ""
+	}
+
+	u, err := url.Parse(properties.Path)
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(u.Host, u.Path)
+}
+
+func (r Resource) SourceFormat() string {
+	properties, _ := r.Raw.GetSourceProperties()
+	if properties.Path == "" {
+		return ""
+	}
+
+	u, err := url.Parse(properties.Path)
+	if err != nil {
+		return ""
+	}
+
+	return u.Scheme
+}
+
+type Resources struct {
+	collection    *orderedmap.OrderedMap[ResourceRef, *Resource]
+	onChangeFuncs []func(resource *Resource)
+}
+
+func NewResources(resources ...*Resource) *Resources {
+	r := &Resources{
+		collection: orderedmap.New[ResourceRef, *Resource](),
+	}
+
+	r.Add(resources...)
+
+	return r
+}
+
+func (r *Resources) Add(resources ...*Resource) {
+	for _, resource := range resources {
+		r.collection.Set(resource.Ref(), resource)
+
+		for _, cb := range r.onChangeFuncs {
+			cb(resource)
+		}
+	}
+}
+
+func (r *Resources) OnChange(callback func(resource *Resource)) {
+	r.onChangeFuncs = append(r.onChangeFuncs, callback)
+}
+
+// TODO: kind + name isn't enough to unambiguously identify a resource
+func (r *Resources) Find(kind string, name string) (*Resource, bool) {
+	for pair := r.collection.Oldest(); pair != nil; pair = pair.Next() {
+		if pair.Value.Kind() == kind && pair.Value.Name() == name {
+			return pair.Value, true
+		}
+	}
+
+	return nil, false
+}
+
+func (r *Resources) Merge(resources *Resources) {
+	_ = resources.ForEach(func(resource *Resource) error {
+		r.Add(resource)
+		return nil
+	})
+}
+
+func (r *Resources) ForEach(callback func(*Resource) error) error {
+	for pair := r.collection.Oldest(); pair != nil; pair = pair.Next() {
+		if err := callback(pair.Value); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) Len() int {
+	if r.collection == nil {
+		return 0
+	}
+
+	return r.collection.Len()
+}
+
+func (r *Resources) AsList() []*Resource {
+	if r.collection == nil {
+		return nil
+	}
+
+	list := make([]*Resource, 0, r.Len())
+
+	_ = r.ForEach(func(resource *Resource) error {
+		list = append(list, resource)
+		return nil
+	})
+
+	return list
+}
+
+func (r *Resources) GroupByKind() map[string]*Resources {
+	resourceByKind := map[string]*Resources{}
+	_ = r.ForEach(func(resource *Resource) error {
+		if _, ok := resourceByKind[resource.Kind()]; !ok {
+			resourceByKind[resource.Kind()] = NewResources()
+		}
+
+		resourceByKind[resource.Kind()].Add(resource)
+		return nil
+	})
+
+	return resourceByKind
 }

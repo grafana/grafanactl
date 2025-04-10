@@ -18,10 +18,10 @@ import (
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/httputils"
 	"github.com/grafana/grafanactl/internal/logs"
+	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/server/grafana"
 	"github.com/grafana/grafanactl/internal/server/handlers"
 	"github.com/grafana/grafanactl/internal/server/livereload"
-	"github.com/grafana/grafanactl/internal/server/resources"
 )
 
 type Config struct {

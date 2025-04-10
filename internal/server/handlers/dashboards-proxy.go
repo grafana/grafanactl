@@ -14,9 +14,8 @@ import (
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/httputils"
-	resources2 "github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/server/grafana"
-	"github.com/grafana/grafanactl/internal/server/resources"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -36,8 +35,8 @@ func NewDashboardProxy(context *config.Context, resources *resources.Resources) 
 	}
 }
 
-func (c *dashboardProxy) ResourceType() resources2.GroupVersionKind {
-	return resources2.GroupVersionKind{
+func (c *dashboardProxy) ResourceType() resources.GroupVersionKind {
+	return resources.GroupVersionKind{
 		Group: "dashboard.grafana.app",
 		Kind:  "Dashboard",
 	}
