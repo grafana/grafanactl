@@ -10,32 +10,32 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 )
 
-var _ ProxyConfigurator = &foldersProxy{}
+var _ ProxyConfigurator = &FoldersProxy{}
 
-// foldersProxy describes how to proxy Folder resources.
-type foldersProxy struct {
+// FoldersProxy describes how to proxy Folder resources.
+type FoldersProxy struct {
 	resources *resources.Resources
 }
 
-func NewFoldersProxy(resources *resources.Resources) ProxyConfigurator {
-	return &foldersProxy{
+func NewFoldersProxy(resources *resources.Resources) *FoldersProxy {
+	return &FoldersProxy{
 		resources: resources,
 	}
 }
 
 // FIXME: resources stuff.
-func (c *foldersProxy) ResourceType() resources.GroupVersionKind {
+func (c *FoldersProxy) ResourceType() resources.GroupVersionKind {
 	return resources.GroupVersionKind{
 		Group: "folder.grafana.app",
 		Kind:  "Folder",
 	}
 }
 
-func (c *foldersProxy) ProxyURL(_ string) string {
+func (c *FoldersProxy) ProxyURL(_ string) string {
 	return ""
 }
 
-func (c *foldersProxy) Endpoints() []HTTPEndpoint {
+func (c *FoldersProxy) Endpoints() []HTTPEndpoint {
 	return []HTTPEndpoint{
 		{
 			Method:  http.MethodGet,
@@ -45,11 +45,11 @@ func (c *foldersProxy) Endpoints() []HTTPEndpoint {
 	}
 }
 
-func (c *foldersProxy) StaticEndpoints() StaticProxyConfig {
+func (c *FoldersProxy) StaticEndpoints() StaticProxyConfig {
 	return StaticProxyConfig{}
 }
 
-func (c *foldersProxy) folderJSONGetHandler() http.HandlerFunc {
+func (c *FoldersProxy) folderJSONGetHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
 		if name == "" {

@@ -20,33 +20,33 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var _ ProxyConfigurator = &dashboardProxy{}
+var _ ProxyConfigurator = &DashboardProxy{}
 
-// dashboardProxy describes how to proxy Dashboard resources.
-type dashboardProxy struct {
+// DashboardProxy describes how to proxy Dashboard resources.
+type DashboardProxy struct {
 	context   *config.Context
 	resources *resources.Resources
 }
 
-func NewDashboardProxy(context *config.Context, resources *resources.Resources) ProxyConfigurator {
-	return &dashboardProxy{
+func NewDashboardProxy(context *config.Context, resources *resources.Resources) *DashboardProxy {
+	return &DashboardProxy{
 		context:   context,
 		resources: resources,
 	}
 }
 
-func (c *dashboardProxy) ResourceType() resources.GroupVersionKind {
+func (c *DashboardProxy) ResourceType() resources.GroupVersionKind {
 	return resources.GroupVersionKind{
 		Group: "dashboard.grafana.app",
 		Kind:  "Dashboard",
 	}
 }
 
-func (c *dashboardProxy) ProxyURL(uid string) string {
+func (c *DashboardProxy) ProxyURL(uid string) string {
 	return fmt.Sprintf("/d/%s/slug", uid)
 }
 
-func (c *dashboardProxy) Endpoints() []HTTPEndpoint {
+func (c *DashboardProxy) Endpoints() []HTTPEndpoint {
 	return []HTTPEndpoint{
 		{
 			Method:  http.MethodGet,
@@ -66,7 +66,7 @@ func (c *dashboardProxy) Endpoints() []HTTPEndpoint {
 	}
 }
 
-func (c *dashboardProxy) StaticEndpoints() StaticProxyConfig {
+func (c *DashboardProxy) StaticEndpoints() StaticProxyConfig {
 	return StaticProxyConfig{
 		ProxyGet: []string{
 			"/api/datasources/proxy/*",
@@ -84,7 +84,7 @@ func (c *dashboardProxy) StaticEndpoints() StaticProxyConfig {
 	}
 }
 
-func (c *dashboardProxy) dashboardJSONGetHandler() http.HandlerFunc {
+func (c *DashboardProxy) dashboardJSONGetHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resource := c.dashboardFromRequest(w, r)
 		if resource == nil {
@@ -160,7 +160,7 @@ func (c *dashboardProxy) dashboardJSONGetHandler() http.HandlerFunc {
 	}
 }
 
-func (c *dashboardProxy) dashboardJSONPostHandler() http.HandlerFunc {
+func (c *DashboardProxy) dashboardJSONPostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resource := c.dashboardFromRequest(w, r)
 		if resource == nil {
@@ -212,7 +212,7 @@ func (c *dashboardProxy) dashboardJSONPostHandler() http.HandlerFunc {
 	}
 }
 
-func (c *dashboardProxy) dashboardFromRequest(w http.ResponseWriter, r *http.Request) *resources.Resource {
+func (c *DashboardProxy) dashboardFromRequest(w http.ResponseWriter, r *http.Request) *resources.Resource {
 	name := chi.URLParam(r, "name")
 	if name == "" {
 		httputils.Error(r, w, "No name specified", errors.New("no name specified within the URL"), http.StatusBadRequest)

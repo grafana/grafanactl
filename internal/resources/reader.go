@@ -59,7 +59,7 @@ func (reader *FSReader) ReadBytes(ctx context.Context, dst *Resources, raw []byt
 	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
 	logger.Debug("Parsing bytes", slog.String("format", inputFormat))
 
-	_, decoder, err := reader.decoderForFormat(inputFormat)
+	decoder, err := reader.decoderForFormat(inputFormat)
 	if err != nil {
 		return err
 	}
@@ -211,12 +211,12 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 func (reader *FSReader) ReadFile(ctx context.Context, result *Resource, file string) error {
 	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"), slog.String("file", file))
 
-	inputFormat, decoder, err := reader.decoderForFormat(strings.TrimPrefix(path.Ext(file), "."))
+	decoder, err := reader.decoderForFormat(strings.TrimPrefix(path.Ext(file), "."))
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("Parsing file", slog.String("file", file), slog.String("codec", string(inputFormat)))
+	logger.Debug("Parsing file", slog.String("file", file), slog.String("codec", string(decoder.Format())))
 
 	f, err := os.Open(file)
 	if err != nil {
@@ -236,7 +236,7 @@ func (reader *FSReader) ReadFile(ctx context.Context, result *Resource, file str
 	}
 
 	properties, _ := metaAccessor.GetSourceProperties()
-	properties.Path = fmt.Sprintf("%s://%s", inputFormat, file)
+	properties.Path = fmt.Sprintf("%s://%s", string(decoder.Format()), file)
 
 	metaAccessor.SetSourceProperties(properties)
 
@@ -245,14 +245,15 @@ func (reader *FSReader) ReadFile(ctx context.Context, result *Resource, file str
 	return nil
 }
 
-func (reader *FSReader) decoderForFormat(input string) (format.Format, format.Decoder, error) {
+//nolint:ireturn
+func (reader *FSReader) decoderForFormat(input string) (format.Codec, error) {
 	switch input {
 	case "json":
-		return format.JSON, reader.Decoders[format.JSON], nil
+		return reader.Decoders[format.JSON], nil
 	case "yaml", "yml":
-		return format.YAML, reader.Decoders[format.YAML], nil
+		return reader.Decoders[format.YAML], nil
 	default:
-		return format.Unknown, nil, UnrecognisedFormatError{Format: input}
+		return nil, UnrecognisedFormatError{Format: input}
 	}
 }
 

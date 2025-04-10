@@ -9,6 +9,7 @@ import (
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
+	"github.com/grafana/grafanactl/internal/format"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,6 +148,14 @@ type printItems struct {
 
 type tableCodec struct {
 	wide bool
+}
+
+func (c *tableCodec) Format() format.Format {
+	if c.wide {
+		return "wide"
+	}
+
+	return "text"
 }
 
 func (c *tableCodec) Encode(output io.Writer, input any) error {

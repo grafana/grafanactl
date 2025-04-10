@@ -9,6 +9,7 @@ import (
 
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // GroupVersionKind is a group, version, and kind,
@@ -83,6 +84,19 @@ type ResourceRef string
 
 type Resource struct {
 	Raw utils.GrafanaMetaAccessor
+}
+
+func (r Resource) ToUnstructured() (*unstructured.Unstructured, error) {
+	runtimeObj, ok := r.Raw.GetRuntimeObject()
+	if !ok {
+		return nil, errors.New("failed converting resource to runtime object")
+	}
+	unstructuredObj, ok := runtimeObj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, errors.New("failed converting resource to unstructured object")
+	}
+
+	return unstructuredObj, nil
 }
 
 func (r Resource) Ref() ResourceRef {
@@ -178,7 +192,7 @@ func (r *Resources) OnChange(callback func(resource *Resource)) {
 	r.onChangeFuncs = append(r.onChangeFuncs, callback)
 }
 
-// TODO: kind + name isn't enough to unambiguously identify a resource
+// TODO: kind + name isn't enough to unambiguously identify a resource.
 func (r *Resources) Find(kind string, name string) (*Resource, bool) {
 	for pair := r.collection.Oldest(); pair != nil; pair = pair.Next() {
 		if pair.Value.Kind() == kind && pair.Value.Name() == name {
