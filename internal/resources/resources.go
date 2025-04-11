@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -164,13 +163,13 @@ func (r Resource) SourceFormat() string {
 }
 
 type Resources struct {
-	collection    *orderedmap.OrderedMap[ResourceRef, *Resource]
+	collection    map[ResourceRef]*Resource
 	onChangeFuncs []func(resource *Resource)
 }
 
 func NewResources(resources ...*Resource) *Resources {
 	r := &Resources{
-		collection: orderedmap.New[ResourceRef, *Resource](),
+		collection: make(map[ResourceRef]*Resource),
 	}
 
 	r.Add(resources...)
@@ -180,7 +179,7 @@ func NewResources(resources ...*Resource) *Resources {
 
 func (r *Resources) Add(resources ...*Resource) {
 	for _, resource := range resources {
-		r.collection.Set(resource.Ref(), resource)
+		r.collection[resource.Ref()] = resource
 
 		for _, cb := range r.onChangeFuncs {
 			cb(resource)
@@ -194,9 +193,9 @@ func (r *Resources) OnChange(callback func(resource *Resource)) {
 
 // TODO: kind + name isn't enough to unambiguously identify a resource.
 func (r *Resources) Find(kind string, name string) (*Resource, bool) {
-	for pair := r.collection.Oldest(); pair != nil; pair = pair.Next() {
-		if pair.Value.Kind() == kind && pair.Value.Name() == name {
-			return pair.Value, true
+	for _, resource := range r.collection {
+		if resource.Kind() == kind && resource.Name() == name {
+			return resource, true
 		}
 	}
 
@@ -211,8 +210,8 @@ func (r *Resources) Merge(resources *Resources) {
 }
 
 func (r *Resources) ForEach(callback func(*Resource) error) error {
-	for pair := r.collection.Oldest(); pair != nil; pair = pair.Next() {
-		if err := callback(pair.Value); err != nil {
+	for _, resource := range r.collection {
+		if err := callback(resource); err != nil {
 			return err
 		}
 	}
@@ -221,11 +220,7 @@ func (r *Resources) ForEach(callback func(*Resource) error) error {
 }
 
 func (r *Resources) Len() int {
-	if r.collection == nil {
-		return 0
-	}
-
-	return r.collection.Len()
+	return len(r.collection)
 }
 
 func (r *Resources) AsList() []*Resource {
@@ -234,11 +229,9 @@ func (r *Resources) AsList() []*Resource {
 	}
 
 	list := make([]*Resource, 0, r.Len())
-
-	_ = r.ForEach(func(resource *Resource) error {
+	for _, resource := range r.collection {
 		list = append(list, resource)
-		return nil
-	})
+	}
 
 	return list
 }
