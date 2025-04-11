@@ -55,7 +55,7 @@ func (c *DashboardProxy) Endpoints() []HTTPEndpoint {
 		},
 		{
 			Method:  http.MethodGet,
-			URL:     "/apis/dashboard.grafana.app/{version}/namespaces/default/dashboards/{name}/dto",
+			URL:     "/apis/dashboard.grafana.app/{version}/namespaces/{namespace}/dashboards/{name}/dto",
 			Handler: c.dashboardJSONGetHandler(),
 		},
 		{
