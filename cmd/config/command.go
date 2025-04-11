@@ -186,12 +186,7 @@ func viewCmd(configOpts *Options) *cobra.Command {
 				}
 			}
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
-			return codec.Encode(cmd.OutOrStdout(), cfg)
+			return opts.IO.Codec().Encode(cmd.OutOrStdout(), cfg)
 		},
 	}
 

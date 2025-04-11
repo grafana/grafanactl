@@ -95,11 +95,6 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
 			cfg, err := configOpts.LoadRESTConfig(ctx)
 			if err != nil {
 				return err
@@ -116,7 +111,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			writer := resources.FSWriter{
 				Directory:   opts.Directory,
 				Namer:       resources.GroupResourcesByKind(opts.IO.OutputFormat),
-				Encoder:     codec,
+				Encoder:     opts.IO.Codec(),
 				StopOnError: opts.StopOnError,
 			}
 
