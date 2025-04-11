@@ -8,7 +8,7 @@ version: 2
 builds:
   - id: grafanactl
     binary: grafanactl
-    main: ./cmd/cli
+    main: ./cmd
 
     ldflags:
       - -X main.version={{ .Version }}
