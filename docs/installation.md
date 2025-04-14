@@ -17,7 +17,7 @@ Visit the [latest release](https://github.com/grafana/grafanactl/releases/latest
  * Ensure this directory is included in the `PATH` environment variable
  * Verify that you have execute permission on the file
 
-### Build from source
+## Build from source
 
 To build `grafanactl` from source you must:
 
