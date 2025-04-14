@@ -50,12 +50,12 @@ github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db h1:097atOisP2aRj7vFgY
 github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/gorilla/websocket v1.5.0 h1:PPwGk2jz7EePpoHN/+ClbZu8SPxiqlu12wZP/3sWmnc=
-github.com/gorilla/websocket v1.5.0/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/grafana/authlib/claims v0.0.0-20250120084028-e3328c576437 h1:OlwbIVFcYgMjnQhpbZwRPVNrvZKTodvPMqwb8yEqVW0=
 github.com/grafana/authlib/claims v0.0.0-20250120084028-e3328c576437/go.mod h1:r+F8H6awwjNQt/KPZ2GNwjk8TvsJ7/gxzkXN26GlL/A=
-github.com/grafana/grafana-app-sdk/logging v0.35.1 h1:taVpl+RoixTYl0JBJGhH+fPVmwA9wvdwdzJTZsv9buM=
-github.com/grafana/grafana-app-sdk/logging v0.35.1/go.mod h1:Y/bvbDhBiV/tkIle9RW49pgfSPIPSON8Q4qjx3pyqDk=
+github.com/grafana/grafana-app-sdk/logging v0.36.0 h1:LB4wFLtXNLpXJZWl14hL95G3UkZTM0t1jZqV9Aa8PFo=
+github.com/grafana/grafana-app-sdk/logging v0.36.0/go.mod h1:Y/bvbDhBiV/tkIle9RW49pgfSPIPSON8Q4qjx3pyqDk=
 github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250410114613-c4a0eb396be2 h1:kx7AytZqqVMp/CvuTJFSoeul3I1lE6g+KqoUZ+u7hOA=
 github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250410114613-c4a0eb396be2/go.mod h1:HOwlAVzkvTyZWU3tN0oT/9xJ+pPl2YNBhJJiFqHyBnA=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
