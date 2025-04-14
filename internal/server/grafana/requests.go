@@ -2,9 +2,9 @@ package grafana
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/httputils"
@@ -34,28 +34,39 @@ func AuthenticateAndProxyHandler(cfg *config.GrafanaConfig) http.HandlerFunc {
 			return
 		}
 
+		client.CheckRedirect = func(req *http.Request, _ []*http.Request) error {
+			// Being redirected to the login page means authentication is misconfigured.
+			// We interrupt the redirect and let the rest of AuthenticateAndProxyHandler
+			// handle that case.
+			if strings.HasSuffix(req.URL.Path, "/login") {
+				return http.ErrUseLastResponse
+			}
+
+			return nil
+		}
+
 		resp, err := client.Do(req)
-		if err == nil {
+		if err != nil {
 			defer resp.Body.Close()
 			body, _ := io.ReadAll(resp.Body)
 			httputils.Write(r, w, body)
 			return
 		}
 
-		// TODO
-		msg := ""
-		if cfg.APIToken == "" {
-			msg += "<p><b>Warning:</b> No service account token specified.</p>"
-		}
-
 		if resp.StatusCode == http.StatusFound {
 			w.WriteHeader(http.StatusUnauthorized)
-			httputils.Write(r, w, []byte(msg+"<p>Authentication error</p>"))
-		} else {
-			body, _ := io.ReadAll(resp.Body)
-			w.WriteHeader(resp.StatusCode)
-			httputils.Write(r, w, []byte(fmt.Sprintf("%s%s", msg, string(body))))
+			httputils.Write(r, w, []byte(`<html>
+<body style="margin-top: 3rem; color: hsla(225deg, 15%, 90%, 0.82);">
+	<h1>Authentication error</h1>
+	<p>It appears that the Grafana credentials in your configuration are missing or incorrect.</p>
+</body>
+</html>`))
+			return
 		}
+
+		body, _ := io.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		httputils.Write(r, w, body)
 	}
 }
 

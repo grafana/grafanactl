@@ -77,7 +77,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	// Log HTTP requests/responses at debug level
 	r.Use(middleware.RequestLogger(&middleware.DefaultLogFormatter{
-		Logger:  logs.DecorateAtLevel(logging.FromContext(ctx), slog.LevelDebug),
+		Logger:  logs.DecorateAtLevel(logging.FromContext(ctx), slog.LevelInfo),
 		NoColor: s.config.NoColor,
 	}))
 	// Inject the logger in HTTP requests context
