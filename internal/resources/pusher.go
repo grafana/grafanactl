@@ -70,7 +70,7 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
 			gvk := res.GroupVersionKind()
 
 			logger := logging.FromContext(ctx).With(
-				"gvk", res.Raw,
+				"gvk", gvk,
 				"name", name,
 			)
 
@@ -153,13 +153,13 @@ func (p *Pusher) upsertResource(
 		return nil
 	}
 
-	unstructuredObj, err := src.ToUnstructured()
-	if err != nil {
-		return err
-	}
-
 	// If the resource does not exist, create it.
 	if apierrors.IsNotFound(err) {
+		unstructuredObj, err := src.ToUnstructured()
+		if err != nil {
+			return err
+		}
+
 		if _, err := p.client.Create(ctx, gvk, unstructuredObj, metav1.CreateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
