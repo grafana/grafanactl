@@ -54,6 +54,19 @@ deps: check-binaries ## Installs the dependencies.
 	$(RUN_DEVBOX) go mod vendor
 	$(RUN_DEVBOX) pip install -qq -r requirements.txt
 
+.PHONY: clean
+clean: ## Cleans the project.
+	rm -rf bin
+	rm -rf vendor
+	rm -rf .devbox
+
+.PHONY: check-binaries
+check-binaries: ## Check that the required binaries are present.
+	@devbox version >/dev/null 2>&1 || (echo "ERROR: devbox is required. See https://www.jetify.com/devbox/docs/quickstart/"; exit 1)
+
+
+##@ Documentation
+
 .PHONY: docs
 docs: check-binaries cli-reference config-reference ## Generates the documentation.
 	$(RUN_DEVBOX) mkdocs build -f mkdocs.yml -d ./build/documentation
@@ -86,14 +99,4 @@ config-reference-drift: config-reference ## Checks for drift in the generated co
 
 .PHONY: serve-docs
 serve-docs: check-binaries ## Serves the documentation and watches for changes.
-	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml 
-
-.PHONY: clean
-clean: ## Cleans the project.
-	rm -rf bin
-	rm -rf vendor
-	rm -rf .devbox
-
-.PHONY: check-binaries
-check-binaries: ## Check that the required binaries are present.
-	@devbox version >/dev/null 2>&1 || (echo "ERROR: devbox is required. See https://www.jetify.com/devbox/docs/quickstart/"; exit 1)
+	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml
