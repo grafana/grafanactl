@@ -1,6 +1,7 @@
 package resources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -217,6 +219,21 @@ func (r *Resources) ForEach(callback func(*Resource) error) error {
 	}
 
 	return nil
+}
+
+func (r *Resources) ForEachConcurrently(
+	ctx context.Context, maxInflight int, callback func(context.Context, *Resource) error,
+) error {
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxInflight)
+
+	for _, resource := range r.collection {
+		g.Go(func() error {
+			return callback(ctx, resource)
+		})
+	}
+
+	return g.Wait()
 }
 
 func (r *Resources) Len() int {

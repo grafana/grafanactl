@@ -55,36 +55,36 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 	errg, ctx := errgroup.WithContext(ctx)
 	partialRes := make([][]unstructured.Unstructured, len(req.Selectors))
 
-	for idx, cmd := range req.Selectors {
+	for idx, sel := range req.Selectors {
 		errg.Go(func() error {
-			switch cmd.SelectorType {
+			switch sel.SelectorType {
 			case SelectorTypeAll:
-				res, err := p.client.List(ctx, cmd.GroupVersionKind, metav1.ListOptions{})
+				res, err := p.client.List(ctx, sel.GroupVersionKind, metav1.ListOptions{})
 				if err != nil {
 					if req.StopOnError {
 						return err
 					}
-					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
+					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", sel.String()))
 				} else {
 					partialRes[idx] = res.Items
 				}
 			case SelectorTypeMultiple:
-				res, err := p.client.GetMultiple(ctx, cmd.GroupVersionKind, cmd.ResourceUIDs, metav1.ListOptions{})
+				res, err := p.client.GetMultiple(ctx, sel.GroupVersionKind, sel.ResourceUIDs, metav1.ListOptions{})
 				if err != nil {
 					if req.StopOnError {
 						return err
 					}
-					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", cmd.String()))
+					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", sel.String()))
 				} else {
 					partialRes[idx] = res
 				}
 			case SelectorTypeSingle:
-				res, err := p.client.Get(ctx, cmd.GroupVersionKind, cmd.ResourceUIDs[0], metav1.GetOptions{})
+				res, err := p.client.Get(ctx, sel.GroupVersionKind, sel.ResourceUIDs[0], metav1.GetOptions{})
 				if err != nil {
 					if req.StopOnError {
 						return err
 					}
-					logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", cmd.String()))
+					logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", sel.String()))
 				} else {
 					partialRes[idx] = []unstructured.Unstructured{*res}
 				}

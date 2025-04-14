@@ -7,7 +7,6 @@ import (
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/logs"
-	"golang.org/x/sync/errgroup"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -56,22 +55,21 @@ type PushRequest struct {
 
 // Push pushes resources to Grafana.
 func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
-	logger := logging.FromContext(ctx)
-
 	supported, err := p.supportedGVKs(ctx)
 	if err != nil {
 		return err
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(request.MaxConcurrency)
+	if request.MaxConcurrency < 1 {
+		request.MaxConcurrency = 1
+	}
 
-	_ = request.Resources.ForEach(func(res *Resource) error {
-		g.Go(func() error {
+	return request.Resources.ForEachConcurrently(ctx, request.MaxConcurrency,
+		func(ctx context.Context, res *Resource) error {
 			name := res.Name()
 			gvk := res.GroupVersionKind()
 
-			logger := logger.With(
+			logger := logging.FromContext(ctx).With(
 				"gvk", res.Raw,
 				"name", name,
 			)
@@ -95,17 +93,20 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
 				return nil
 			}
 
-			logger.Info("Successfully pushed resource")
+			logger.Info("Resource pushed")
 			return nil
-		})
-		return nil
-	})
-
-	return g.Wait()
+		},
+	)
 }
 
 func (p *Pusher) upsertResource(
-	ctx context.Context, gvk GroupVersionKind, name string, src *Resource, overwrite bool, dryRun bool, logger logging.Logger,
+	ctx context.Context,
+	gvk GroupVersionKind,
+	name string,
+	src *Resource,
+	overwrite bool,
+	dryRun bool,
+	logger logging.Logger,
 ) error {
 	var dryRunOpts []string
 	if dryRun {
@@ -120,12 +121,10 @@ func (p *Pusher) upsertResource(
 		// If it is, and overwrite is not set, skip the resource.
 		if dst.GetResourceVersion() != src.Raw.GetResourceVersion() {
 			if !overwrite {
-				logger.Debug(
-					"Skipping resource as it already exists with a different resource version",
-					"destinationResourceVersion", dst.GetResourceVersion(),
-					"sourceResourceVersion", src.Raw.GetResourceVersion(),
+				return fmt.Errorf(
+					"resource `%s/%s` already exists with a different resource version: %s",
+					gvk, name, dst.GetResourceVersion(),
 				)
-				return nil
 			}
 
 			// Force the resource version to be the same as the destination resource version.
@@ -150,7 +149,7 @@ func (p *Pusher) upsertResource(
 			return err
 		}
 
-		logger.Info("Updated existing resource")
+		logger.Info("Resource updated")
 		return nil
 	}
 
@@ -166,6 +165,9 @@ func (p *Pusher) upsertResource(
 		}); err != nil {
 			return err
 		}
+
+		logger.Info("Resource created")
+		return nil
 	}
 
 	// Some unknown error occurred, return it.
