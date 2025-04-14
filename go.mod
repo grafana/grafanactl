@@ -7,7 +7,7 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi/v5 v5.2.1
 	github.com/goccy/go-yaml v1.17.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/grafana/authlib/claims v0.0.0-20250120084028-e3328c576437
