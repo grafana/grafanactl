@@ -48,44 +48,43 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Short: "Push resources to Grafana",
 		Long:  "Push resources to Grafana using a specific format. See examples below for more details.",
 		Example: fmt.Sprintf(`
-  Everything:
+	# Everything:
 
-  %[1]s resources push
+	%[1]s resources push
 
-  All instances for a given kind(s):
+	# All instances for a given kind(s):
 
-  %[1]s resources push dashboards
-  %[1]s resources push dashboards folders
+	%[1]s resources push dashboards
+	%[1]s resources push dashboards folders
 
-  Single resource kind, one or more resource instances:
+	# Single resource kind, one or more resource instances:
 
-  %[1]s resources push dashboards/foo
-  %[1]s resources push dashboards/foo,bar
+	%[1]s resources push dashboards/foo
+	%[1]s resources push dashboards/foo,bar
 
-  Single resource kind, long kind format:
+	# Single resource kind, long kind format:
 
-  %[1]s resources push dashboard.dashboards/foo
-  %[1]s resources push dashboard.dashboards/foo,bar
+	%[1]s resources push dashboard.dashboards/foo
+	%[1]s resources push dashboard.dashboards/foo,bar
 
-  Single resource kind, long kind format with version:
+	# Single resource kind, long kind format with version:
 
-  %[1]s resources push dashboards.v1alpha1.dashboard.grafana.app/foo
-  %[1]s resources push dashboards.v1alpha1.dashboard.grafana.app/foo,bar
+	%[1]s resources push dashboards.v1alpha1.dashboard.grafana.app/foo
+	%[1]s resources push dashboards.v1alpha1.dashboard.grafana.app/foo,bar
 
-  Multiple resource kinds, one or more resource instances:
+	# Multiple resource kinds, one or more resource instances:
 
-  %[1]s resources push dashboards/foo folders/qux
-  %[1]s resources push dashboards/foo,bar folders/qux,quux
+	%[1]s resources push dashboards/foo folders/qux
+	%[1]s resources push dashboards/foo,bar folders/qux,quux
 
-  Multiple resource kinds, long kind format:
+	# Multiple resource kinds, long kind format:
 
-  %[1]s resources push dashboard.dashboards/foo folder.folders/qux
-  %[1]s resources push dashboard.dashboards/foo,bar folder.folders/qux,quux
+	%[1]s resources push dashboard.dashboards/foo folder.folders/qux
+	%[1]s resources push dashboard.dashboards/foo,bar folder.folders/qux,quux
 
-  Multiple resource kinds, long kind format with version:
+	# Multiple resource kinds, long kind format with version:
 
-  %[1]s resources push dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
-`, binaryName),
+	%[1]s resources push dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux`, binaryName),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
