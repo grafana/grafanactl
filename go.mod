@@ -7,11 +7,11 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-chi/chi v1.5.5
+	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/goccy/go-yaml v1.17.1
-	github.com/gorilla/websocket v1.5.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/grafana/authlib/claims v0.0.0-20250120084028-e3328c576437
-	github.com/grafana/grafana-app-sdk/logging v0.35.1
+	github.com/grafana/grafana-app-sdk/logging v0.36.0
 	github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250410114613-c4a0eb396be2
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
