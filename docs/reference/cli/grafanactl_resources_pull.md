@@ -16,41 +16,41 @@ grafanactl resources pull [RESOURCE_SELECTOR]... [flags]
 
 	# Everything:
 
-	main resources pull
+	grafanactl resources pull
 
 	# All instances for a given kind(s):
 
-	main resources pull dashboards
-	main resources pull dashboards folders
+	grafanactl resources pull dashboards
+	grafanactl resources pull dashboards folders
 
 	# Single resource kind, one or more resource instances:
 
-	main resources pull dashboards/foo
-	main resources pull dashboards/foo,bar
+	grafanactl resources pull dashboards/foo
+	grafanactl resources pull dashboards/foo,bar
 
 	# Single resource kind, long kind format:
 
-	main resources pull dashboard.dashboards/foo
-	main resources pull dashboard.dashboards/foo,bar
+	grafanactl resources pull dashboard.dashboards/foo
+	grafanactl resources pull dashboard.dashboards/foo,bar
 
 	# Single resource kind, long kind format with version:
 
-	main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo
-	main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo,bar
+	grafanactl resources pull dashboards.v1alpha1.dashboard.grafana.app/foo
+	grafanactl resources pull dashboards.v1alpha1.dashboard.grafana.app/foo,bar
 
 	# Multiple resource kinds, one or more resource instances:
 
-	main resources pull dashboards/foo folders/qux
-	main resources pull dashboards/foo,bar folders/qux,quux
+	grafanactl resources pull dashboards/foo folders/qux
+	grafanactl resources pull dashboards/foo,bar folders/qux,quux
 
 	# Multiple resource kinds, long kind format:
 
-	main resources pull dashboard.dashboards/foo folder.folders/qux
-	main resources pull dashboard.dashboards/foo,bar folder.folders/qux,quux
+	grafanactl resources pull dashboard.dashboards/foo folder.folders/qux
+	grafanactl resources pull dashboard.dashboards/foo,bar folder.folders/qux,quux
 
 	# Multiple resource kinds, long kind format with version:
 
-	main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
+	grafanactl resources pull dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
 ```
 
 ### Options

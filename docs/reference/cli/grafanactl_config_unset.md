@@ -17,10 +17,10 @@ grafanactl config unset PROPERTY_NAME [flags]
 ```
 
 	# Unset the "foo" context
-	main config unset contexts.foo
+	grafanactl config unset contexts.foo
 
 	# Unset the "insecure-skip-tls-verify" flag in the "dev-instance" context
-	main config unset contexts.dev-instance.grafana.insecure-skip-tls-verify
+	grafanactl config unset contexts.dev-instance.grafana.insecure-skip-tls-verify
 ```
 
 ### Options

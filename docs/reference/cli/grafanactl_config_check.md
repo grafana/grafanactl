@@ -14,7 +14,7 @@ grafanactl config check [flags]
 
 ```
 
-	main config check
+	grafanactl config check
 ```
 
 ### Options

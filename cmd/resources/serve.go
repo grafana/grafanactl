@@ -68,17 +68,17 @@ Note on NFS/SMB support for --watch: fsnotify requires support from underlying
 OS to work. The current NFS and SMB protocols does not provide network level
 support for file notifications.
 `,
-		Example: fmt.Sprintf(`
+		Example: `
 	# Serve resources from a directory:
-	%[1]s resources serve ./resources
+	grafanactl resources serve ./resources
 
 	# Serve resources from a directory and watch for changes:
-	%[1]s resources serve ./resources --watch ./resources
+	grafanactl resources serve ./resources --watch ./resources
 
 	# Serve resources from a script that outputs a JSON resource and watch for changes:
 	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
-	%[1]s resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
-`, binaryName),
+	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
