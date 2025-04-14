@@ -88,7 +88,7 @@ func (reader *FSReader) Read(ctx context.Context, dst *Resources, directories []
 		return nil
 	}
 
-	if reader.MaxConcurrentReads == 0 {
+	if reader.MaxConcurrentReads < 1 {
 		reader.MaxConcurrentReads = 1
 	}
 
