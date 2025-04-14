@@ -20,6 +20,7 @@ func UnsetValue[V any](input *V, path string) error {
 	return updateValue(reflect.ValueOf(input), pathParts, "", true)
 }
 
+//nolint:gocyclo
 func updateValue(input reflect.Value, path []string, value string, unset bool) error {
 	// Just don't want to deal with pointers later.
 	actualInput := input
@@ -132,6 +133,22 @@ func updateValue(input reflect.Value, path []string, value string, unset bool) e
 		}
 
 		actualInput.SetBool(boolValue)
+	case reflect.Int64:
+		if len(path) != 0 {
+			return fmt.Errorf("more steps after int64: %s", strings.Join(path, "."))
+		}
+
+		if unset {
+			actualInput.SetInt(0)
+			return nil
+		}
+
+		intValue, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return fmt.Errorf("can not parse value as int64: %s", value)
+		}
+
+		actualInput.SetInt(intValue)
 	default:
 		return fmt.Errorf("unhandled kind %v", actualInput.Kind())
 	}
