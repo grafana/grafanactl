@@ -80,6 +80,19 @@ func Test_SetValue(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "int64 in new context",
+			input: config.Config{},
+			path:  "contexts.new.grafana.org-id",
+			value: "1",
+			expectedOutput: config.Config{
+				Contexts: map[string]*config.Context{
+					"new": {
+						Grafana: &config.GrafanaConfig{OrgID: 1},
+					},
+				},
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
