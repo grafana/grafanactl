@@ -57,11 +57,16 @@ func serveCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Short: "Serve Grafana resources locally",
 		Long: `Serve Grafana resources locally.
 
-Note on NFS/SMB support for watch:
+The server started by this command makes it easy to explore and review resources
+locally.
 
-fsnotify requires support from underlying OS to work. The current NFS and SMB protocols does not provide network level support for file notifications.
+While resources are loaded from disk, the server will use the Grafana instance
+described in the current context to access some data (example: to run queries
+when previewing dashboards).
 
-TODO: more information.
+Note on NFS/SMB support for --watch: fsnotify requires support from underlying
+OS to work. The current NFS and SMB protocols does not provide network level
+support for file notifications.
 `,
 		Example: fmt.Sprintf(`
 	# Serve resources from a directory:
@@ -71,6 +76,7 @@ TODO: more information.
 	%[1]s resources serve ./resources --watch ./resources
 
 	# Serve resources from a script that outputs a JSON resource and watch for changes:
+	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
 	%[1]s resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
 `, binaryName),
 		RunE: func(cmd *cobra.Command, args []string) error {
