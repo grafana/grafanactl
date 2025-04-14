@@ -14,44 +14,43 @@ grafanactl resources pull [RESOURCE_SELECTOR]... [flags]
 
 ```
 
-  Everything:
+	# Everything:
 
-  main resources pull
+	main resources pull
 
-  All instances for a given kind(s):
+	# All instances for a given kind(s):
 
-  main resources pull dashboards
-  main resources pull dashboards folders
+	main resources pull dashboards
+	main resources pull dashboards folders
 
-  Single resource kind, one or more resource instances:
+	# Single resource kind, one or more resource instances:
 
-  main resources pull dashboards/foo
-  main resources pull dashboards/foo,bar
+	main resources pull dashboards/foo
+	main resources pull dashboards/foo,bar
 
-  Single resource kind, long kind format:
+	# Single resource kind, long kind format:
 
-  main resources pull dashboard.dashboards/foo
-  main resources pull dashboard.dashboards/foo,bar
+	main resources pull dashboard.dashboards/foo
+	main resources pull dashboard.dashboards/foo,bar
 
-  Single resource kind, long kind format with version:
+	# Single resource kind, long kind format with version:
 
-  main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo
-  main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo,bar
+	main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo
+	main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo,bar
 
-  Multiple resource kinds, one or more resource instances:
+	# Multiple resource kinds, one or more resource instances:
 
-  main resources pull dashboards/foo folders/qux
-  main resources pull dashboards/foo,bar folders/qux,quux
+	main resources pull dashboards/foo folders/qux
+	main resources pull dashboards/foo,bar folders/qux,quux
 
-  Multiple resource kinds, long kind format:
+	# Multiple resource kinds, long kind format:
 
-  main resources pull dashboard.dashboards/foo folder.folders/qux
-  main resources pull dashboard.dashboards/foo,bar folder.folders/qux,quux
+	main resources pull dashboard.dashboards/foo folder.folders/qux
+	main resources pull dashboard.dashboards/foo,bar folder.folders/qux,quux
 
-  Multiple resource kinds, long kind format with version:
+	# Multiple resource kinds, long kind format with version:
 
-  main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
-
+	main resources pull dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
 ```
 
 ### Options

@@ -53,44 +53,43 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Short: "Get resources from Grafana",
 		Long:  "Get resources from Grafana using a specific format. See examples below for more details.",
 		Example: fmt.Sprintf(`
-  Everything:
+	# Everything:
 
-  %[1]s resources get dashboards/foo
+	%[1]s resources get dashboards/foo
 
-  All instances for a given kind(s):
+	# All instances for a given kind(s):
 
-  %[1]s resources get dashboards
-  %[1]s resources get dashboards folders
+	%[1]s resources get dashboards
+	%[1]s resources get dashboards folders
 
-  Single resource kind, one or more resource instances:
+	# Single resource kind, one or more resource instances:
 
-  %[1]s resources get dashboards/foo
-  %[1]s resources get dashboards/foo,bar
+	%[1]s resources get dashboards/foo
+	%[1]s resources get dashboards/foo,bar
 
-  Single resource kind, long kind format:
+	# Single resource kind, long kind format:
 
-  %[1]s resources get dashboard.dashboards/foo
-  %[1]s resources get dashboard.dashboards/foo,bar
+	%[1]s resources get dashboard.dashboards/foo
+	%[1]s resources get dashboard.dashboards/foo,bar
 
-  Single resource kind, long kind format with version:
+	# Single resource kind, long kind format with version:
 
-  %[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo
-  %[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo,bar
+	%[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo
+	%[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo,bar
 
-  Multiple resource kinds, one or more resource instances:
+	# Multiple resource kinds, one or more resource instances:
 
-  %[1]s resources get dashboards/foo folders/qux
-  %[1]s resources get dashboards/foo,bar folders/qux,quux
+	%[1]s resources get dashboards/foo folders/qux
+	%[1]s resources get dashboards/foo,bar folders/qux,quux
 
-  Multiple resource kinds, long kind format:
+	# Multiple resource kinds, long kind format:
 
-  %[1]s resources get dashboard.dashboards/foo folder.folders/qux
-  %[1]s resources get dashboard.dashboards/foo,bar folder.folders/qux,quux
+	%[1]s resources get dashboard.dashboards/foo folder.folders/qux
+	%[1]s resources get dashboard.dashboards/foo,bar folder.folders/qux,quux
 
-  Multiple resource kinds, long kind format with version:
+	# Multiple resource kinds, long kind format with version:
 
-  %[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux
-`, binaryName),
+	%[1]s resources get dashboards.v1alpha1.dashboard.grafana.app/foo folders.v1alpha1.folder.grafana.app/qux`, binaryName),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
