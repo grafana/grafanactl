@@ -284,7 +284,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 		return
 	}
 
-	reg, err := resources.NewDefaultDiscoveryRegistry(rest)
+	reg, err := resources.NewDefaultDiscoveryRegistry(cmd.Context(), rest)
 	if err != nil {
 		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
 		return
