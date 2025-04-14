@@ -1,15 +1,9 @@
 package resources
 
 import (
-	"os"
-	"path"
-
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	"github.com/spf13/cobra"
 )
-
-//nolint:gochecknoglobals
-var binaryName = path.Base(os.Args[0])
 
 func Command() *cobra.Command {
 	configOpts := &cmdconfig.Options{}

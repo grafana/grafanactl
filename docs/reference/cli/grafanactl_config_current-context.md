@@ -14,7 +14,7 @@ grafanactl config current-context [flags]
 
 ```
 
-	main config current-context
+	grafanactl config current-context
 ```
 
 ### Options

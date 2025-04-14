@@ -27,14 +27,14 @@ grafanactl resources serve [RESOURCE_DIR]... [flags]
 ```
 
 	# Serve resources from a directory:
-	main resources serve ./resources
+	grafanactl resources serve ./resources
 
 	# Serve resources from a directory and watch for changes:
-	main resources serve ./resources --watch ./resources
+	grafanactl resources serve ./resources --watch ./resources
 
 	# Serve resources from a script that outputs a JSON resource and watch for changes:
 	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
-	main resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
+	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
 
 ```
 

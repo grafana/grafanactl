@@ -15,9 +15,9 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "List available Grafana API resources",
 		Long:  "List available Grafana API resources.",
-		Example: fmt.Sprintf(`
-	%[1]s resources list
-`, binaryName),
+		Example: `
+	grafanactl resources list
+`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 

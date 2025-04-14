@@ -14,7 +14,7 @@ grafanactl resources list [flags]
 
 ```
 
-	main resources list
+	grafanactl resources list
 
 ```
 

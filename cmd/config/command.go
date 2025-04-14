@@ -3,8 +3,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"strings"
 
 	"github.com/caarlos0/env/v11"
@@ -15,9 +13,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
-
-//nolint:gochecknoglobals
-var binaryName = path.Base(os.Args[0])
 
 type Options struct {
 	ConfigFile string
@@ -165,7 +160,7 @@ func viewCmd(configOpts *Options) *cobra.Command {
 		Use:     "view",
 		Args:    cobra.NoArgs,
 		Short:   "Display the current configuration",
-		Example: "\n\t" + binaryName + " config view",
+		Example: "\n\tgrafanactl config view",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
@@ -209,7 +204,7 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Short:   "Display the current context name",
 		Long:    "Display the current context name.",
-		Example: "\n\t" + binaryName + " config current-context",
+		Example: "\n\tgrafanactl config current-context",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
@@ -231,7 +226,7 @@ func checkCmd(configOpts *Options) *cobra.Command {
 		Args:    cobra.NoArgs,
 		Short:   "Check the current configuration for issues",
 		Long:    "Check the current configuration for issues.",
-		Example: "\n\t" + binaryName + " config check",
+		Example: "\n\tgrafanactl config check",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
@@ -306,7 +301,7 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 		Aliases: []string{"use"},
 		Short:   "Set the current context",
 		Long:    "Set the current context and updates the configuration file.",
-		Example: "\n\t" + binaryName + " config use-context dev-instance",
+		Example: "\n\tgrafanactl config use-context dev-instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
@@ -341,12 +336,12 @@ func setCmd(configOpts *Options) *cobra.Command {
 PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either represent a field or a map entry.
 
 PROPERTY_VALUE is the new value to set.`,
-		Example: fmt.Sprintf(`
+		Example: `
 	# Set the "server" field on the "dev-instance" context to "https://grafana-dev.example"
-	%[1]s config set contexts.dev-instance.grafana.server https://grafana-dev.example
+	grafanactl config set contexts.dev-instance.grafana.server https://grafana-dev.example
 
 	# Disable the validation of the server's SSL certificate in the "dev-instance" context
-	%[1]s config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`, binaryName),
+	grafanactl config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
@@ -372,12 +367,12 @@ func unsetCmd(configOpts *Options) *cobra.Command {
 		Long: `Unset an single value in a configuration file.
 
 PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either represent a field or a map entry.`,
-		Example: fmt.Sprintf(`
+		Example: `
 	# Unset the "foo" context
-	%[1]s config unset contexts.foo
+	grafanactl config unset contexts.foo
 
 	# Unset the "insecure-skip-tls-verify" flag in the "dev-instance" context
-	%[1]s config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`, binaryName),
+	grafanactl config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {

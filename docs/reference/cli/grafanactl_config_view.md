@@ -10,7 +10,7 @@ grafanactl config view [flags]
 
 ```
 
-	main config view
+	grafanactl config view
 ```
 
 ### Options

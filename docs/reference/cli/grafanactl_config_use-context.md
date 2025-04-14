@@ -14,7 +14,7 @@ grafanactl config use-context CONTEXT_NAME [flags]
 
 ```
 
-	main config use-context dev-instance
+	grafanactl config use-context dev-instance
 ```
 
 ### Options
