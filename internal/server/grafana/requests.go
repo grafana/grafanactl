@@ -50,6 +50,7 @@ func AuthenticateAndProxyHandler(cfg *config.GrafanaConfig) http.HandlerFunc {
 			httputils.Error(r, w, http.StatusText(http.StatusInternalServerError), err, http.StatusInternalServerError)
 			return
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusFound {
 			w.WriteHeader(http.StatusUnauthorized)
