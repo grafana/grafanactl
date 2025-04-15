@@ -12,6 +12,7 @@ import (
 	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
+	"github.com/grafana/grafanactl/internal/fail"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
@@ -123,6 +124,7 @@ support for file notifications.
 				}
 			}
 
+			//nolint:nestif
 			if len(opts.WatchPaths) > 0 {
 				livereload.Initialize()
 
@@ -145,7 +147,9 @@ support for file notifications.
 				// If a script is given, run the script on change
 				if opts.Script != "" {
 					onInputChange = func(_ string) {
-						_ = parseFromScript()
+						if err := parseFromScript(); err != nil {
+							_, _ = cmd.ErrOrStderr().Write([]byte(err.Error()))
+						}
 					}
 				}
 
@@ -182,10 +186,10 @@ support for file notifications.
 }
 
 func executeWatchScript(ctx context.Context, command string) ([]byte, error) {
-	logger := logging.FromContext(ctx).With(slog.String("component", "script"), slog.String("command", command))
-
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
+
+	logger := logging.FromContext(ctx).With(slog.String("component", "script"), slog.String("command", command))
 	logger.Debug("executing script")
 
 	var cmd *exec.Cmd
@@ -196,14 +200,26 @@ func executeWatchScript(ctx context.Context, command string) ([]byte, error) {
 		cmd = exec.Command("sh", "-c", command)
 	}
 
+	// If the script exits with a non-zero code, stderr will be used to populate an error.
+	// Otherwise, we ensure that the output will at least be logged.
+	defer func() {
+		if stderr.Len() > 0 {
+			logger.Warn("script stderr", slog.String("output", stderr.String()))
+		}
+	}()
+
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	if stderr.Len() > 0 {
-		logger.Error("script stderr", slog.String("output", stderr.String()))
-	}
 	if err != nil {
-		return nil, fmt.Errorf("script failed: %w", err)
+		details := stderr.String()
+		stderr.Reset()
+
+		return nil, fail.DetailedError{
+			Summary: "Script failed",
+			Details: details,
+			Parent:  err,
+		}
 	}
 
 	return stdout.Bytes(), nil
