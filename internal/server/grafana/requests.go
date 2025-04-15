@@ -47,9 +47,7 @@ func AuthenticateAndProxyHandler(cfg *config.GrafanaConfig) http.HandlerFunc {
 
 		resp, err := client.Do(req)
 		if err != nil {
-			defer resp.Body.Close()
-			body, _ := io.ReadAll(resp.Body)
-			httputils.Write(r, w, body)
+			httputils.Error(r, w, http.StatusText(http.StatusInternalServerError), err, http.StatusInternalServerError)
 			return
 		}
 
