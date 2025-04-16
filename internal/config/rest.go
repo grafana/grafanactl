@@ -1,8 +1,6 @@
 package config
 
 import (
-	"errors"
-
 	"github.com/grafana/authlib/claims"
 	"k8s.io/client-go/rest"
 )
@@ -15,7 +13,7 @@ type NamespacedRESTConfig struct {
 }
 
 // NewNamespacedRESTConfig creates a new namespaced REST config.
-func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
+func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
 	rcfg := rest.Config{
 		// TODO add user agent
 		// UserAgent: cfg.UserAgent.ValueString(),
@@ -52,17 +50,14 @@ func NewNamespacedRESTConfig(cfg Context) (NamespacedRESTConfig, error) {
 
 	// Namespace
 	var namespace string
-	switch {
-	case cfg.Grafana.OrgID != 0:
+	if cfg.Grafana.OrgID != 0 {
 		namespace = claims.OrgNamespaceFormatter(cfg.Grafana.OrgID)
-	case cfg.Grafana.StackID != 0:
+	} else {
 		namespace = claims.CloudNamespaceFormatter(cfg.Grafana.StackID)
-	default:
-		return NamespacedRESTConfig{}, errors.New("please specify Grafana Org ID (for on-prem Grafana) or Grafana Cloud Stack ID (for Grafana Cloud)")
 	}
 
 	return NamespacedRESTConfig{
 		Config:    rcfg,
 		Namespace: namespace,
-	}, nil
+	}
 }

@@ -88,7 +88,7 @@ func (opts *Options) LoadRESTConfig(ctx context.Context) (config.NamespacedRESTC
 		return config.NamespacedRESTConfig{}, err
 	}
 
-	return cfg.GetCurrentContext().ToRESTConfig()
+	return cfg.GetCurrentContext().ToRESTConfig(), nil
 }
 
 func (opts *Options) configSource() config.Source {
@@ -273,13 +273,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	io.Success(stdout, "Configuration: %s", io.Green("valid"))
 
-	rest, err := config.NewNamespacedRESTConfig(*gCtx)
-	if err != nil {
-		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
-		return
-	}
-
-	reg, err := resources.NewDefaultDiscoveryRegistry(cmd.Context(), rest)
+	reg, err := resources.NewDefaultDiscoveryRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx))
 	if err != nil {
 		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
 		return

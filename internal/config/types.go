@@ -3,8 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-
-	"github.com/grafana/grafanactl/internal/fail"
 )
 
 const (
@@ -67,21 +65,8 @@ func (context *Context) Validate() error {
 }
 
 // ToRESTConfig returns a REST config for the context.
-func (context *Context) ToRESTConfig() (NamespacedRESTConfig, error) {
-	res, err := NewNamespacedRESTConfig(*context)
-	if err != nil {
-		// Decorate the error with a more user-friendly message.
-		err = fail.DetailedError{
-			Parent:  err,
-			Summary: "Could not parse API config",
-			Details: "Error when trying to parse the API config, please check your configuration",
-			Suggestions: []string{
-				"Check your configuration and make sure that it has a valid API config in the current context",
-			},
-		}
-	}
-
-	return res, err
+func (context *Context) ToRESTConfig() NamespacedRESTConfig {
+	return NewNamespacedRESTConfig(*context)
 }
 
 type GrafanaConfig struct {
