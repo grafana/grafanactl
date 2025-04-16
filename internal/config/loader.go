@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -13,7 +11,6 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
 	"github.com/grafana/grafana-app-sdk/logging"
-	"github.com/grafana/grafanactl/internal/fail"
 )
 
 const (
@@ -58,7 +55,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 
 	filename, err := source()
 	if err != nil {
-		return config, handleReadError(filename, nil, err)
+		return config, err
 	}
 
 	logging.FromContext(ctx).Debug("Loading config", slog.String("filename", filename))
@@ -66,7 +63,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 
 	contents, err := os.ReadFile(filename)
 	if err != nil {
-		return config, handleReadError(filename, contents, err)
+		return config, err
 	}
 
 	err = yaml.UnmarshalWithOptions(contents, &config, yaml.Strict(), yaml.CustomUnmarshaler[[]byte](func(dest *[]byte, raw []byte) error {
@@ -81,7 +78,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 		return nil
 	}))
 	if err != nil {
-		return config, UnmarshalError(filename, err)
+		return config, UnmarshalError{File: filename, Err: err}
 	}
 
 	for name, ctx := range config.Contexts {
@@ -90,7 +87,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 
 	for _, override := range overrides {
 		if err := override(&config); err != nil {
-			return config, handleReadError(filename, contents, err)
+			return config, annotateErrorWithSource(filename, contents, err)
 		}
 	}
 
@@ -100,7 +97,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 func Write(ctx context.Context, source Source, cfg Config) error {
 	filename, err := source()
 	if err != nil {
-		return handleWriteError(err)
+		return err
 	}
 
 	logging.FromContext(ctx).Debug("Writing config", slog.String("filename", filename))
@@ -117,40 +114,15 @@ func Write(ctx context.Context, source Source, cfg Config) error {
 		}),
 	)
 	if err != nil {
-		return handleWriteError(err)
+		return err
 	}
 
-	return handleWriteError(os.WriteFile(filename, marshaled, configFilePermissions))
+	return os.WriteFile(filename, marshaled, configFilePermissions)
 }
 
-func handleReadError(filename string, contents []byte, err error) error {
+func annotateErrorWithSource(filename string, contents []byte, err error) error {
 	if err == nil {
 		return nil
-	}
-
-	pathErr := &fs.PathError{}
-
-	if errors.Is(err, os.ErrNotExist) && errors.As(err, &pathErr) {
-		return fail.DetailedError{
-			Parent:  err,
-			Summary: "File not found",
-			Details: fmt.Sprintf("could not read '%s'", pathErr.Path),
-			Suggestions: []string{
-				"Check for typos in the command's arguments",
-			},
-		}
-	}
-
-	if errors.Is(err, os.ErrPermission) && errors.As(err, &pathErr) {
-		return fail.DetailedError{
-			Parent:  err,
-			Summary: "Permission denied",
-			Details: fmt.Sprintf("could not read '%s'", pathErr.Path),
-			Suggestions: []string{
-				"Check that the configuration file is readable by the current user",
-				fmt.Sprintf("On Linux/macOS: chmod %o %s", configFilePermissions, pathErr.Path),
-			},
-		}
 	}
 
 	validationError := ValidationError{}
@@ -165,43 +137,10 @@ func handleReadError(filename string, contents []byte, err error) error {
 			return err
 		}
 
-		detailedErr := InvalidConfiguration(filename, validationError.Error(), string(annotatedSource))
-		detailedErr.Suggestions = append(detailedErr.Suggestions, validationError.Suggestions...)
+		validationError.File = filename
+		validationError.AnnotatedSource = string(annotatedSource)
 
-		return detailedErr
-	}
-
-	return err
-}
-
-func handleWriteError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	pathErr := &fs.PathError{}
-
-	if errors.Is(err, os.ErrNotExist) && errors.As(err, &pathErr) {
-		return fail.DetailedError{
-			Parent:  err,
-			Summary: "File not found",
-			Details: fmt.Sprintf("could not write '%s'", pathErr.Path),
-			Suggestions: []string{
-				"Check for typos in the command's arguments",
-			},
-		}
-	}
-
-	if errors.Is(err, os.ErrPermission) && errors.As(err, &pathErr) {
-		return fail.DetailedError{
-			Parent:  err,
-			Summary: "Permission denied",
-			Details: fmt.Sprintf("could not write '%s'", pathErr.Path),
-			Suggestions: []string{
-				"Check that the configuration file is writable by the current user",
-				fmt.Sprintf("On Linux/macOS: chmod %o %s", configFilePermissions, pathErr.Path),
-			},
-		}
+		return validationError
 	}
 
 	return err
