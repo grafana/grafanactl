@@ -28,7 +28,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			reg, err := resources.NewDefaultDiscoveryRegistry(ctx, cfg)
 			if err != nil {
-				return clientInitErr(err)
+				return err
 			}
 
 			// TODO: refactor this to return a k8s object list,
@@ -36,7 +36,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			// That way we can use the same code for rendering as for `resources get`.
 			res, err := reg.Resources(ctx, false)
 			if err != nil {
-				return clientInitErr(err)
+				return err
 			}
 
 			out := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)

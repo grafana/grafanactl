@@ -98,7 +98,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			sels, err := resources.ParseSelectors(args)
 			if err != nil {
-				return parseSelectorErr(err)
+				return err
 			}
 
 			reader := resources.FSReader{
@@ -115,7 +115,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			pusher, err := resources.NewPusher(ctx, cfg)
 			if err != nil {
-				return clientInitErr(err)
+				return err
 			}
 
 			req := resources.PushRequest{
