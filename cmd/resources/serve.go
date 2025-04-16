@@ -11,8 +11,8 @@ import (
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
+	"github.com/grafana/grafanactl/cmd/fail"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
-	"github.com/grafana/grafanactl/internal/fail"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
