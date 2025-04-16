@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v11"
+	"github.com/grafana/grafanactl/cmd/fail"
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/resources"
@@ -262,12 +263,31 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 	stdout := cmd.OutOrStdout()
 	title := "Context: " + io.Bold(gCtx.Name)
 
+	summarizeError := func(err error) string {
+		detailedErr := fail.ErrorToDetailedError(err)
+
+		return fmt.Sprintf("%s: %s", detailedErr.Summary, err.Error())
+	}
+
+	printSuggestions := func(err error) {
+		detailedErr := fail.ErrorToDetailedError(err)
+		if len(detailedErr.Suggestions) != 0 {
+			io.Info(stdout, "Suggestions:\n")
+			for _, suggestion := range detailedErr.Suggestions {
+				stdout.Write([]byte(fmt.Sprintf("  • %s\n", suggestion)))
+			}
+			stdout.Write([]byte("\n"))
+		}
+	}
+
 	cmd.Println(io.Yellow(title))
 	cmd.Println(io.Yellow(strings.Repeat("=", len(title))))
 
 	if err := gCtx.Validate(); err != nil {
-		io.Error(stdout, "Configuration: %s", io.Red(err.Error()))
+		io.Error(stdout, "Configuration: %s", io.Red(summarizeError(err)))
 		io.Warning(stdout, "Connectivity: %s", io.Yellow("skipped")+"\n")
+
+		printSuggestions(err)
 		return
 	}
 
@@ -275,13 +295,15 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	reg, err := resources.NewDefaultDiscoveryRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx))
 	if err != nil {
-		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
+		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err))+"\n")
+		printSuggestions(err)
 		return
 	}
 
 	_, err = reg.Resources(cmd.Context(), false)
 	if err != nil {
-		io.Error(stdout, "Connectivity: %s", io.Red(err.Error())+"\n")
+		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err))+"\n")
+		printSuggestions(err)
 		return
 	}
 
