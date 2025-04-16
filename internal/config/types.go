@@ -132,8 +132,8 @@ func (grafana GrafanaConfig) Validate(contextName string) error {
 			Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
 			Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
 			Suggestions: []string{
-				"specify the Grafana Org ID for on-prem Grafana",
-				"specify the Grafana Cloud Stack ID for Grafana Cloud",
+				"Specify the Grafana Org ID for on-prem Grafana",
+				"Specify the Grafana Cloud Stack ID for Grafana Cloud",
 			},
 		}
 	}

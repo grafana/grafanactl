@@ -7,7 +7,6 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/grafana/grafanactl/internal/config"
-	"github.com/grafana/grafanactl/internal/fail"
 	"github.com/grafana/grafanactl/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -29,8 +28,7 @@ func TestLoad_explicitFile_notFound(t *testing.T) {
 
 	_, err := config.Load(t.Context(), config.ExplicitConfigFile("./testdata/does-not-exist.yaml"))
 	req.Error(err)
-	req.ErrorAs(err, &fail.DetailedError{}, "a detailed error is returned")
-	req.ErrorContains(err, "File not found")
+	req.ErrorIs(err, os.ErrNotExist)
 }
 
 func TestLoad_standardLocation_noExistingConfig(t *testing.T) {
@@ -103,8 +101,8 @@ this-field-is-invalid: []`
 
 	_, err := config.Load(t.Context(), config.ExplicitConfigFile(configFile))
 	req.Error(err)
-	req.ErrorAs(err, &fail.DetailedError{}, "a detailed error is returned")
-	req.ErrorContains(err, "Invalid configuration")
+	req.ErrorAs(err, &config.UnmarshalError{})
+	req.ErrorContains(err, "unknown field \"this-field-is-invalid\"")
 }
 
 func TestWrite(t *testing.T) {

@@ -64,7 +64,7 @@ func Test_UseContextCommand_withUnknownContext(t *testing.T) {
 		Cmd:     config.Command(),
 		Command: []string{"use-context", "--config", "testdata/config.yaml", "unknown-context"},
 		Assertions: []testutils.CommandAssertion{
-			testutils.CommandErrorContains("Context \"unknown-context\" does not exist"),
+			testutils.CommandErrorContains("invalid context \"unknown-context\": context not found"),
 		},
 	}
 	testCase.Run(t)
@@ -196,7 +196,7 @@ func Test_ViewCommand_failsWithUnknownContext(t *testing.T) {
 		Cmd:     config.Command(),
 		Command: []string{"view", "--config", "testdata/config.yaml", "--context", "unknown-context"},
 		Assertions: []testutils.CommandAssertion{
-			testutils.CommandErrorContains("Context \"unknown-context\" does not exist"),
+			testutils.CommandErrorContains("invalid context \"unknown-context\": context not found"),
 		},
 	}
 	testCase.Run(t)
