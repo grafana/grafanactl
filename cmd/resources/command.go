@@ -19,6 +19,7 @@ TODO: more information.
 
 	configOpts.BindFlags(cmd.PersistentFlags())
 
+	cmd.AddCommand(editCmd(configOpts))
 	cmd.AddCommand(getCmd(configOpts))
 	cmd.AddCommand(listCmd(configOpts))
 	cmd.AddCommand(pullCmd(configOpts))
