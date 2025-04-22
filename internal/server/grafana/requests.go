@@ -10,25 +10,25 @@ import (
 	"github.com/grafana/grafanactl/internal/httputils"
 )
 
-func AuthenticateAndProxyHandler(cfg *config.GrafanaConfig) http.HandlerFunc {
+func AuthenticateAndProxyHandler(cfg *config.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/html")
 
-		if cfg.Server == "" {
+		if cfg.Grafana.Server == "" {
 			httputils.Error(r, w, "Error: No Grafana URL configured", errors.New("no Grafana URL configured"), http.StatusBadRequest)
 			return
 		}
 
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, cfg.Server+r.URL.Path, nil)
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, cfg.Grafana.Server+r.URL.Path, nil)
 		if err != nil {
 			httputils.Error(r, w, http.StatusText(http.StatusInternalServerError), err, http.StatusInternalServerError)
 			return
 		}
 
-		AuthenticateRequest(cfg, req)
+		AuthenticateRequest(cfg.Grafana, req)
 		req.Header.Set("User-Agent", httputils.UserAgent)
 
-		client, err := httputils.NewHTTPClient()
+		client, err := httputils.NewHTTPClient(cfg)
 		if err != nil {
 			httputils.Error(r, w, http.StatusText(http.StatusInternalServerError), err, http.StatusInternalServerError)
 			return

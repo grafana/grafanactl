@@ -52,7 +52,7 @@ func (c *DashboardProxy) Endpoints(_ *httputil.ReverseProxy) []HTTPEndpoint {
 		{
 			Method:  http.MethodGet,
 			URL:     "/d/{uid}/{slug}",
-			Handler: grafana.AuthenticateAndProxyHandler(c.context.Grafana),
+			Handler: grafana.AuthenticateAndProxyHandler(c.context),
 		},
 		{
 			Method:  http.MethodGet,
