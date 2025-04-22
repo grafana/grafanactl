@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/http/httputil"
 	"os"
 
 	"github.com/go-chi/chi/v5"
@@ -46,7 +47,7 @@ func (c *DashboardProxy) ProxyURL(uid string) string {
 	return fmt.Sprintf("/d/%s/slug", uid)
 }
 
-func (c *DashboardProxy) Endpoints() []HTTPEndpoint {
+func (c *DashboardProxy) Endpoints(_ *httputil.ReverseProxy) []HTTPEndpoint {
 	return []HTTPEndpoint{
 		{
 			Method:  http.MethodGet,

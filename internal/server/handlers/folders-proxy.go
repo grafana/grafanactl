@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/httputils"
 	"github.com/grafana/grafanactl/internal/resources"
 )
@@ -23,7 +25,6 @@ func NewFoldersProxy(resources *resources.Resources) *FoldersProxy {
 	}
 }
 
-// FIXME: resources stuff.
 func (c *FoldersProxy) ResourceType() resources.GroupVersionKind {
 	return resources.GroupVersionKind{
 		Group: "folder.grafana.app",
@@ -35,12 +36,12 @@ func (c *FoldersProxy) ProxyURL(_ string) string {
 	return ""
 }
 
-func (c *FoldersProxy) Endpoints() []HTTPEndpoint {
+func (c *FoldersProxy) Endpoints(proxy *httputil.ReverseProxy) []HTTPEndpoint {
 	return []HTTPEndpoint{
 		{
 			Method:  http.MethodGet,
 			URL:     "/api/folders/{name}",
-			Handler: c.folderJSONGetHandler(),
+			Handler: c.folderJSONGetHandler(proxy),
 		},
 	}
 }
@@ -49,7 +50,7 @@ func (c *FoldersProxy) StaticEndpoints() StaticProxyConfig {
 	return StaticProxyConfig{}
 }
 
-func (c *FoldersProxy) folderJSONGetHandler() http.HandlerFunc {
+func (c *FoldersProxy) folderJSONGetHandler(proxy *httputil.ReverseProxy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
 		if name == "" {
@@ -60,7 +61,9 @@ func (c *FoldersProxy) folderJSONGetHandler() http.HandlerFunc {
 		// TODO: use at least group + kind to identify a resource
 		resource, found := c.resources.Find("Folder", name)
 		if !found {
-			httputils.Error(r, w, fmt.Sprintf("Folder with name %s not found", name), fmt.Errorf("folder with UID %s not found", name), http.StatusNotFound)
+			logging.FromContext(r.Context()).Info(fmt.Sprintf("Folder with name %s not found: proxying request", name))
+
+			proxy.ServeHTTP(w, r)
 			return
 		}
 
