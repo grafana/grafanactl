@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
+	cmdio "github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
@@ -127,7 +128,22 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				DryRun:            opts.DryRun,
 			}
 
-			return pusher.Push(ctx, req)
+			summary, err := pusher.Push(ctx, req)
+			if err != nil {
+				return err
+			}
+
+			printer := cmdio.Success
+			if summary.FailedCount != 0 {
+				printer = cmdio.Warning
+				if summary.PushedCount == 0 {
+					printer = cmdio.Error
+				}
+			}
+
+			printer(cmd.OutOrStderr(), "%d resources pushed, %d errors", summary.PushedCount, summary.FailedCount)
+
+			return nil
 		},
 	}
 
