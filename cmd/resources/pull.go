@@ -118,7 +118,13 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				StopOnError: opts.StopOnError,
 			}
 
-			return writer.Write(ctx, res.Resources)
+			if err := writer.Write(ctx, res.Resources); err != nil {
+				return err
+			}
+
+			cmdio.Success(cmd.OutOrStderr(), "%d resources pulled", len(res.Resources.Items))
+
+			return nil
 		},
 	}
 
