@@ -141,6 +141,7 @@ type viewOpts struct {
 }
 
 func (opts *viewOpts) BindFlags(flags *pflag.FlagSet) {
+	opts.IO.DefaultFormat("yaml")
 	opts.IO.BindFlags(flags)
 
 	// Override the default yaml codec to enable bytes ↔ base64 conversion

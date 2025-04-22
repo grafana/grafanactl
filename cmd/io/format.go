@@ -31,7 +31,7 @@ func (opts *Options) DefaultFormat(name string) {
 }
 
 func (opts *Options) BindFlags(flags *pflag.FlagSet) {
-	defaultFormat := "yaml"
+	defaultFormat := "json"
 	if opts.defaultFormat != "" {
 		defaultFormat = opts.defaultFormat
 	}
