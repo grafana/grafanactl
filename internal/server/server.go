@@ -64,6 +64,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	s.subpath = u.Path
 	s.proxy = &httputil.ReverseProxy{
+		Transport: httputils.NewTransport(s.context),
 		Rewrite: func(r *httputil.ProxyRequest) {
 			u.Path = "" // to ensure possible sub-paths won't be added twice.
 			r.SetURL(u)
