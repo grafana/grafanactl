@@ -140,6 +140,7 @@ type viewOpts struct {
 }
 
 func (opts *viewOpts) BindFlags(flags *pflag.FlagSet) {
+	opts.IO.DefaultFormat("yaml")
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.Minify, "minify", opts.Minify, "Remove all information not used by current-context from the output")
