@@ -25,6 +25,7 @@ TODO: more information.
 	cmd.AddCommand(pullCmd(configOpts))
 	cmd.AddCommand(pushCmd(configOpts))
 	cmd.AddCommand(serveCmd(configOpts))
+	cmd.AddCommand(validateCmd(configOpts))
 
 	return cmd
 }

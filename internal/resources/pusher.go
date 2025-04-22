@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/config"
@@ -51,16 +52,38 @@ type PushRequest struct {
 	// This will not actually create or update any resources,
 	// but will ensure the requests are valid and perform server-side validations.
 	DryRun bool
+
+	// Disable log emission for push failures. Callers will have to rely on the PushSummary
+	// returned by the Push() function to explore and report failures.
+	NoPushFailureLog bool
+}
+
+type PushFailure struct {
+	Resource *Resource
+	Error    error
 }
 
 type PushSummary struct {
 	PushedCount int
 	FailedCount int
+	Failures    []PushFailure
+	mu          sync.Mutex
+}
+
+func (summary *PushSummary) recordFailure(resource *Resource, err error) {
+	summary.mu.Lock()
+	defer summary.mu.Unlock()
+
+	summary.FailedCount++
+	summary.Failures = append(summary.Failures, PushFailure{
+		Resource: resource,
+		Error:    err,
+	})
 }
 
 // Push pushes resources to Grafana.
-func (p *Pusher) Push(ctx context.Context, request PushRequest) (PushSummary, error) {
-	summary := PushSummary{}
+func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, error) {
+	summary := &PushSummary{}
 	supported, err := p.supportedGVKs(ctx)
 	if err != nil {
 		return summary, err
@@ -77,27 +100,33 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (PushSummary, er
 		logger := logging.FromContext(ctx).With(
 			"gvk", gvk,
 			"name", name,
+			"dryRun", request.DryRun,
 		)
 
 		if _, ok := supported[gvk]; !ok {
-			summary.FailedCount++
-
-			if request.StopOnError {
-				return fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-			}
-
-			logger.Warn("Skipping resource not supported by the API")
-			return nil
-		}
-
-		if err := p.upsertResource(ctx, gvk, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
-			summary.FailedCount++
+			err := fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
+			summary.recordFailure(res, err)
 
 			if request.StopOnError {
 				return err
 			}
 
-			logger.Warn("Failed to push resource", logs.Err(err))
+			if !request.NoPushFailureLog {
+				logger.Warn("Skipping resource not supported by the API")
+			}
+			return nil
+		}
+
+		if err := p.upsertResource(ctx, gvk, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
+			summary.recordFailure(res, err)
+
+			if request.StopOnError {
+				return err
+			}
+
+			if !request.NoPushFailureLog {
+				logger.Warn("Failed to push resource", logs.Err(err))
+			}
 			return nil
 		}
 
