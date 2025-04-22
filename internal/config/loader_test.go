@@ -45,8 +45,8 @@ func TestLoad_standardLocation_noExistingConfig(t *testing.T) {
 	req.NoError(err)
 
 	// An empty configuration is returned
-	req.Empty(cfg.CurrentContext)
-	req.Empty(cfg.Contexts)
+	req.Equal("default", cfg.CurrentContext)
+	req.Len(cfg.Contexts, 1)
 }
 
 func TestLoad_standardLocation_withExistingConfig(t *testing.T) {

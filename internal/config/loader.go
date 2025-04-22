@@ -18,6 +18,12 @@ const (
 	configFilePermissions  = 0o600
 	StandardConfigFolder   = "grafanactl"
 	StandardConfigFileName = "config.yaml"
+
+	defaultEmptyConfigFile = `
+contexts:
+  default: {}
+current-context: default
+`
 )
 
 type Override func(cfg *Config) error
@@ -40,7 +46,7 @@ func StandardLocation() Source {
 		_, err = os.Stat(file)
 		// Create an empty config file, to ensure that the loader won't fail.
 		if os.IsNotExist(err) {
-			if createErr := os.WriteFile(file, []byte(""), configFilePermissions); createErr != nil {
+			if createErr := os.WriteFile(file, []byte(defaultEmptyConfigFile), configFilePermissions); createErr != nil {
 				return "", createErr
 			}
 		} else if err != nil {
