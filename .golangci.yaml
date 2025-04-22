@@ -8,6 +8,7 @@ linters:
     - exhaustruct
     - funlen
     - gocognit
+    - goconst
     - godox
     - gofumpt
     - lll
@@ -28,4 +29,4 @@ linters-settings:
 run:
   modules-download-mode: vendor
   timeout: 3m
-  go: '1.24'
+  go: "1.24"
