@@ -36,6 +36,7 @@ type Server struct {
 	resources        *resources.Resources
 	resourceHandlers []handlers.ResourceHandler
 	proxy            *httputil.ReverseProxy
+	subpath          string
 }
 
 func New(config Config, context *config.Context, resources *resources.Resources) *Server {
@@ -61,6 +62,7 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 
+	s.subpath = u.Path
 	s.proxy = &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
 			u.Path = "" // to ensure possible sub-paths won't be added twice.
@@ -99,11 +101,11 @@ func (s *Server) Start(ctx context.Context) error {
 		for _, endpoint := range handler.Endpoints(s.proxy) {
 			switch endpoint.Method {
 			case http.MethodGet:
-				r.Get(endpoint.URL, endpoint.Handler)
+				r.Get(s.subpath+endpoint.URL, endpoint.Handler)
 			case http.MethodPost:
-				r.Post(endpoint.URL, endpoint.Handler)
+				r.Post(s.subpath+endpoint.URL, endpoint.Handler)
 			case http.MethodPut:
-				r.Put(endpoint.URL, endpoint.Handler)
+				r.Put(s.subpath+endpoint.URL, endpoint.Handler)
 			default:
 				return fmt.Errorf("unknown endpoint method %s", endpoint.Method)
 			}
@@ -137,16 +139,16 @@ func (s *Server) Start(ctx context.Context) error {
 
 func (s *Server) applyStaticProxyConfig(r chi.Router, config handlers.StaticProxyConfig) {
 	for _, pattern := range config.ProxyGet {
-		r.Get(pattern, s.proxy.ServeHTTP)
+		r.Get(s.subpath+pattern, s.proxy.ServeHTTP)
 	}
 	for _, pattern := range config.ProxyPost {
-		r.Post(pattern, s.proxy.ServeHTTP)
+		r.Post(s.subpath+pattern, s.proxy.ServeHTTP)
 	}
 	for pattern, response := range config.MockGet {
-		r.Get(pattern, s.mockHandler(response))
+		r.Get(s.subpath+pattern, s.mockHandler(response))
 	}
 	for pattern, response := range config.MockPost {
-		r.Post(pattern, s.mockHandler(response))
+		r.Post(s.subpath+pattern, s.mockHandler(response))
 	}
 }
 
@@ -247,7 +249,7 @@ func (s *Server) iframeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templateVars := map[string]any{
-		"IframeURL":      handler.ProxyURL(name),
+		"IframeURL":      s.subpath + handler.ProxyURL(name),
 		"CurrentContext": s.context,
 		"Port":           s.config.Port,
 	}

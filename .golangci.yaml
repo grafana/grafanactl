@@ -8,7 +8,6 @@ linters:
   default: all
   disable:
     - cyclop
-    - depguard
     - err113
     - exhaustive
     - exhaustruct
@@ -30,6 +29,12 @@ linters:
     errcheck:
       exclude-functions:
         - fmt:.*
+    depguard:
+      rules:
+        debug_tools:
+          deny:
+            - pkg: "github.com/davecgh/go-spew"
+              desc: debug statements should be removed
 
   exclusions:
     generated: lax
