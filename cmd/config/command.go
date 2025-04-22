@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafanactl/cmd/fail"
 	"github.com/grafana/grafanactl/cmd/io"
 	"github.com/grafana/grafanactl/internal/config"
+	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/secrets"
 	"github.com/spf13/cobra"
@@ -142,6 +143,11 @@ type viewOpts struct {
 func (opts *viewOpts) BindFlags(flags *pflag.FlagSet) {
 	opts.IO.BindFlags(flags)
 
+	// Override the default yaml codec to enable bytes ↔ base64 conversion
+	opts.IO.RegisterCustomCodec("yaml", &format.YAMLCodec{
+		BytesAsBase64: true,
+	})
+
 	flags.BoolVar(&opts.Minify, "minify", opts.Minify, "Remove all information not used by current-context from the output")
 	flags.BoolVar(&opts.Raw, "raw", opts.Raw, "Display sensitive information")
 }
@@ -238,11 +244,12 @@ func checkCmd(configOpts *Options) *cobra.Command {
 
 			io.Success(stdout, "Configuration file: %s", io.Green(cfg.Source))
 
-			if cfg.CurrentContext == "" {
+			switch {
+			case cfg.CurrentContext == "":
 				io.Error(stdout, "Current context: %s", io.Red("<undefined>"))
-			} else if cfg.HasContext(cfg.CurrentContext); err != nil {
+			case !cfg.HasContext(cfg.CurrentContext):
 				io.Error(stdout, "Current context: %s", io.Red(config.ContextNotFound(cfg.CurrentContext).Error()))
-			} else {
+			default:
 				io.Success(stdout, "Current context: %s", io.Green(cfg.CurrentContext))
 			}
 

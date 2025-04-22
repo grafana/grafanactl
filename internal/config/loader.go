@@ -1,8 +1,8 @@
 package config
 
 import (
+	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"log/slog"
 	"os"
@@ -11,6 +11,7 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
 	"github.com/grafana/grafana-app-sdk/logging"
+	"github.com/grafana/grafanactl/internal/format"
 )
 
 const (
@@ -66,18 +67,8 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 		return config, err
 	}
 
-	err = yaml.UnmarshalWithOptions(contents, &config, yaml.Strict(), yaml.CustomUnmarshaler[[]byte](func(dest *[]byte, raw []byte) error {
-		dst := make([]byte, base64.StdEncoding.DecodedLen(len(raw)))
-		_, err := base64.StdEncoding.Decode(dst, raw)
-		if err != nil {
-			return err
-		}
-
-		*dest = dst
-
-		return nil
-	}))
-	if err != nil {
+	codec := &format.YAMLCodec{BytesAsBase64: true}
+	if err := codec.Decode(bytes.NewBuffer(contents), &config); err != nil {
 		return config, UnmarshalError{File: filename, Err: err}
 	}
 
@@ -102,22 +93,14 @@ func Write(ctx context.Context, source Source, cfg Config) error {
 
 	logging.FromContext(ctx).Debug("Writing config", slog.String("filename", filename))
 
-	marshaled, err := yaml.MarshalWithOptions(
-		cfg,
-		yaml.Indent(2),
-		yaml.IndentSequence(true),
-		yaml.CustomMarshaler[[]byte](func(data []byte) ([]byte, error) {
-			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
-			base64.StdEncoding.Encode(dst, data)
-
-			return dst, nil
-		}),
-	)
+	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, configFilePermissions)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	return os.WriteFile(filename, marshaled, configFilePermissions)
+	codec := &format.YAMLCodec{BytesAsBase64: true}
+	return codec.Encode(file, cfg)
 }
 
 func annotateErrorWithSource(filename string, contents []byte, err error) error {

@@ -1,6 +1,7 @@
 package format
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"io"
 
@@ -10,9 +11,8 @@ import (
 type Format string
 
 const (
-	JSON    Format = "json"
-	YAML    Format = "yaml"
-	Unknown Format = ""
+	JSON Format = "json"
+	YAML Format = "yaml"
 )
 
 // Codecs return a list of default codecs.
@@ -45,7 +45,9 @@ type Codec interface {
 var _ Codec = (*YAMLCodec)(nil)
 
 // YAMLCodec is a Codec that encodes and decodes resources to and from YAML.
-type YAMLCodec struct{}
+type YAMLCodec struct {
+	BytesAsBase64 bool
+}
 
 // NewYAMLCodec returns a new YAMLCodec.
 func NewYAMLCodec() *YAMLCodec {
@@ -57,24 +59,45 @@ func (c *YAMLCodec) Format() Format {
 }
 
 func (c *YAMLCodec) Encode(dst io.Writer, value any) error {
-	encoder := yaml.NewEncoder(
-		dst,
+	opts := []yaml.EncodeOption{
 		yaml.Indent(2),
 		yaml.IndentSequence(true),
 		yaml.UseJSONMarshaler(),
-	)
+	}
 
-	return encoder.Encode(value)
+	if c.BytesAsBase64 {
+		opts = append(opts, yaml.CustomMarshaler(func(data []byte) ([]byte, error) {
+			dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+			base64.StdEncoding.Encode(dst, data)
+
+			return dst, nil
+		}))
+	}
+
+	return yaml.NewEncoder(dst, opts...).Encode(value)
 }
 
 func (c *YAMLCodec) Decode(src io.Reader, value any) error {
-	decoder := yaml.NewDecoder(
-		src,
+	opts := []yaml.DecodeOption{
 		yaml.Strict(),
 		yaml.UseJSONUnmarshaler(),
-	)
+	}
 
-	return decoder.Decode(value)
+	if c.BytesAsBase64 {
+		opts = append(opts, yaml.CustomUnmarshaler(func(dest *[]byte, raw []byte) error {
+			dst := make([]byte, base64.StdEncoding.DecodedLen(len(raw)))
+			_, err := base64.StdEncoding.Decode(dst, raw)
+			if err != nil {
+				return err
+			}
+
+			*dest = dst
+
+			return nil
+		}))
+	}
+
+	return yaml.NewDecoder(src, opts...).Decode(value)
 }
 
 var _ Codec = (*JSONCodec)(nil)
