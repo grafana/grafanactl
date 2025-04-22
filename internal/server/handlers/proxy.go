@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"net/http/httputil"
 
 	"github.com/grafana/grafanactl/internal/resources"
 )
@@ -12,7 +13,7 @@ type ResourceHandler interface {
 	ResourceType() resources.GroupVersionKind
 
 	// Endpoints lists HTTP handlers to register on the proxy.
-	Endpoints() []HTTPEndpoint
+	Endpoints(proxy *httputil.ReverseProxy) []HTTPEndpoint
 
 	// ProxyURL returns a URL path for a resource on the proxy
 	ProxyURL(uid string) string

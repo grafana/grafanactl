@@ -96,7 +96,7 @@ func (s *Server) Start(ctx context.Context) error {
 	for _, handler := range s.resourceHandlers {
 		logging.FromContext(ctx).Debug("registering proxy handler")
 
-		for _, endpoint := range handler.Endpoints() {
+		for _, endpoint := range handler.Endpoints(s.proxy) {
 			switch endpoint.Method {
 			case http.MethodGet:
 				r.Get(endpoint.URL, endpoint.Handler)
@@ -137,10 +137,10 @@ func (s *Server) Start(ctx context.Context) error {
 
 func (s *Server) applyStaticProxyConfig(r chi.Router, config handlers.StaticProxyConfig) {
 	for _, pattern := range config.ProxyGet {
-		r.Get(pattern, s.ProxyRequestHandler)
+		r.Get(pattern, s.proxy.ServeHTTP)
 	}
 	for _, pattern := range config.ProxyPost {
-		r.Post(pattern, s.ProxyRequestHandler)
+		r.Post(pattern, s.proxy.ServeHTTP)
 	}
 	for pattern, response := range config.MockGet {
 		r.Get(pattern, s.mockHandler(response))
@@ -256,8 +256,4 @@ func (s *Server) iframeHandler(w http.ResponseWriter, r *http.Request) {
 		httputils.Error(r, w, "Error while executing template", err, http.StatusInternalServerError)
 		return
 	}
-}
-
-func (s *Server) ProxyRequestHandler(w http.ResponseWriter, r *http.Request) {
-	s.proxy.ServeHTTP(w, r)
 }
