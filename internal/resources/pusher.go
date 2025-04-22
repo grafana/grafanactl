@@ -53,50 +53,60 @@ type PushRequest struct {
 	DryRun bool
 }
 
+type PushSummary struct {
+	PushedCount int
+	FailedCount int
+}
+
 // Push pushes resources to Grafana.
-func (p *Pusher) Push(ctx context.Context, request PushRequest) error {
+func (p *Pusher) Push(ctx context.Context, request PushRequest) (PushSummary, error) {
+	summary := PushSummary{}
 	supported, err := p.supportedGVKs(ctx)
 	if err != nil {
-		return err
+		return summary, err
 	}
 
 	if request.MaxConcurrency < 1 {
 		request.MaxConcurrency = 1
 	}
 
-	return request.Resources.ForEachConcurrently(ctx, request.MaxConcurrency,
-		func(ctx context.Context, res *Resource) error {
-			name := res.Name()
-			gvk := res.GroupVersionKind()
+	err = request.Resources.ForEachConcurrently(ctx, request.MaxConcurrency, func(ctx context.Context, res *Resource) error {
+		name := res.Name()
+		gvk := res.GroupVersionKind()
 
-			logger := logging.FromContext(ctx).With(
-				"gvk", gvk,
-				"name", name,
-			)
+		logger := logging.FromContext(ctx).With(
+			"gvk", gvk,
+			"name", name,
+		)
 
-			if _, ok := supported[gvk]; !ok {
-				if request.StopOnError {
-					return fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-				}
+		if _, ok := supported[gvk]; !ok {
+			summary.FailedCount++
 
-				logger.Warn("Skipping resource not supported by the API")
-				return nil
+			if request.StopOnError {
+				return fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
 			}
 
-			if err := p.upsertResource(
-				ctx, gvk, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
-				if request.StopOnError {
-					return err
-				}
-
-				logger.Warn("Failed to push resource", logs.Err(err))
-				return nil
-			}
-
-			logger.Info("Resource pushed")
+			logger.Warn("Skipping resource not supported by the API")
 			return nil
-		},
-	)
+		}
+
+		if err := p.upsertResource(ctx, gvk, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
+			summary.FailedCount++
+
+			if request.StopOnError {
+				return err
+			}
+
+			logger.Warn("Failed to push resource", logs.Err(err))
+			return nil
+		}
+
+		logger.Info("Resource pushed")
+		summary.PushedCount++
+		return nil
+	})
+
+	return summary, err
 }
 
 func (p *Pusher) upsertResource(
