@@ -126,7 +126,7 @@ The edition will be cancelled if no changes are written to the file or if the fi
 				return err
 			}
 
-			err = pusher.Push(ctx, resources.PushRequest{
+			_, err = pusher.Push(ctx, resources.PushRequest{
 				Resources:         tmpRes,
 				MaxConcurrency:    1,
 				StopOnError:       true,

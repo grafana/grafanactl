@@ -33,4 +33,5 @@ TODO: more information.
 * [grafanactl resources pull](grafanactl_resources_pull.md)	 - Pull resources from Grafana
 * [grafanactl resources push](grafanactl_resources_push.md)	 - Push resources to Grafana
 * [grafanactl resources serve](grafanactl_resources_serve.md)	 - Serve Grafana resources locally
+* [grafanactl resources validate](grafanactl_resources_validate.md)	 - Validate resources
 
