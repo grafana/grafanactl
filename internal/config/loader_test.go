@@ -45,7 +45,7 @@ func TestLoad_standardLocation_noExistingConfig(t *testing.T) {
 	req.NoError(err)
 
 	// An empty configuration is returned
-	req.Equal("", cfg.CurrentContext)
+	req.Empty(cfg.CurrentContext)
 	req.Empty(cfg.Contexts)
 }
 

@@ -274,7 +274,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 		if len(detailedErr.Suggestions) != 0 {
 			io.Info(stdout, "Suggestions:\n")
 			for _, suggestion := range detailedErr.Suggestions {
-				stdout.Write([]byte(fmt.Sprintf("  • %s\n", suggestion)))
+				fmt.Fprintf(stdout, "  • %s\n", suggestion)
 			}
 			stdout.Write([]byte("\n"))
 		}

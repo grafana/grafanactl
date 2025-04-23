@@ -35,7 +35,7 @@ func TestRedact_withEmptySecret(t *testing.T) {
 	req.NoError(err)
 
 	req.Equal("public", input.Public)
-	req.Equal("", input.Secret)
+	req.Empty(input.Secret)
 	req.Nil(input.SecretBytes)
 }
 

@@ -1,5 +1,11 @@
+version: "2"
+
+run:
+  go: "1.24"
+  modules-download-mode: vendor
+
 linters:
-  enable-all: true
+  default: all
   disable:
     - cyclop
     - depguard
@@ -9,7 +15,6 @@ linters:
     - funlen
     - gocognit
     - godox
-    - gofumpt
     - lll
     - mnd
     - nlreturn
@@ -20,12 +25,27 @@ linters:
     - wrapcheck
     - wsl
 
-linters-settings:
-  errcheck:
-    exclude-functions:
-      - fmt:.*
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt:.*
 
-run:
-  modules-download-mode: vendor
-  timeout: 3m
-  go: '1.24'
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
