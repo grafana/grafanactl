@@ -68,13 +68,29 @@ check-binaries: ## Check that the required binaries are present.
 ##@ Documentation
 
 .PHONY: docs
-docs: check-binaries cli-reference config-reference ## Generates the documentation.
+docs: check-binaries reference ## Generates the documentation.
 	$(RUN_DEVBOX) mkdocs build -f mkdocs.yml -d ./build/documentation
+
+.PHONY: reference
+reference: cli-reference env-var-reference config-reference ## Generates all references documentation pages.
+
+.PHONY: reference-drift
+reference-drift: cli-reference-drift env-var-reference-drift config-reference-drift ## Checks for drift in all references documentation pages.
 
 .PHONY: cli-reference
 cli-reference: check-binaries ## Generates a reference for the CLI.
 	@rm -rf ./docs/reference/cli
 	@$(RUN_DEVBOX) go run scripts/cmd-reference/*.go "./docs/reference/cli"
+
+.PHONY: env-var-reference
+env-var-reference: check-binaries ## Generates an environment variables reference.
+	@rm -rf ./docs/reference/environment-variables
+	@$(RUN_DEVBOX) go run scripts/env-vars-reference/*.go "./docs/reference/environment-variables"
+
+.PHONY: config-reference
+config-reference: check-binaries ## Generates a reference for the configuration file.
+	@rm -rf ./docs/reference/configuration
+	@$(RUN_DEVBOX) go run scripts/config-reference/*.go "./docs/reference/configuration"
 
 .PHONY: cli-reference-drift
 cli-reference-drift: cli-reference ## Checks for drift in the generated CLI reference.
@@ -84,10 +100,13 @@ cli-reference-drift: cli-reference ## Checks for drift in the generated CLI refe
 		exit 1; \
  	fi
 
-.PHONY: config-reference
-config-reference: check-binaries ## Generates a reference for the configuration file.
-	@rm -rf ./docs/reference/configuration
-	@$(RUN_DEVBOX) go run scripts/config-reference/*.go "./docs/reference/configuration"
+.PHONY: env-var-reference-drift
+env-var-reference-drift: env-var-reference ## Checks for drift in the generated environment variables reference.
+	@if ! git diff --exit-code --quiet HEAD ./docs/reference/environment-variables/ ; then \
+		echo "Drift detected in the generated environment variables reference."; \
+		echo 'Run `make env-var-reference` and commit the modified files.'; \
+		exit 1; \
+ 	fi
 
 .PHONY: config-reference-drift
 config-reference-drift: config-reference ## Checks for drift in the generated config file reference.
