@@ -1,7 +1,5 @@
 ---
 title: Home
-hide:
-  - navigation
 ---
 
 # grafanactl

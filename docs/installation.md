@@ -1,7 +1,5 @@
 ---
 title: Installation
-hide:
-  - navigation
 ---
 
 # Installation
