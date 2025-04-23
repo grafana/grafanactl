@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/grafana/grafanactl/cmd/fail"
@@ -129,6 +130,7 @@ The configuration file to load is chosen as follows:
 	cmd.AddCommand(unsetCmd(configOpts))
 	cmd.AddCommand(useContextCmd(configOpts))
 	cmd.AddCommand(viewCmd(configOpts))
+	cmd.AddCommand(listContextsCmd(configOpts))
 
 	return cmd
 }
@@ -222,6 +224,43 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 			cmd.Println(cfg.CurrentContext)
 
 			return nil
+		},
+	}
+
+	return cmd
+}
+
+func listContextsCmd(configOpts *Options) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "list-contexts",
+		Args:    cobra.NoArgs,
+		Short:   "List the contexts defined in the configuration",
+		Long:    "List the contexts defined in the configuration.",
+		Example: "\n\tgrafanactl config list-contexts",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			tab := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
+
+			fmt.Fprintf(tab, "CURRENT\tNAME\tGRAFANA SERVER\n")
+			for _, context := range cfg.Contexts {
+				server := " "
+				if context.Grafana != nil {
+					server = context.Grafana.Server
+				}
+
+				current := " "
+				if cfg.CurrentContext == context.Name {
+					current = "*"
+				}
+
+				fmt.Fprintf(tab, "%s\t%s\t%s\n", current, context.Name, server)
+			}
+
+			return tab.Flush()
 		},
 	}
 
