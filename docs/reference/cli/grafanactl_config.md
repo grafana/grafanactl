@@ -37,6 +37,7 @@ The configuration file to load is chosen as follows:
 * [grafanactl](grafanactl.md)	 - 
 * [grafanactl config check](grafanactl_config_check.md)	 - Check the current configuration for issues
 * [grafanactl config current-context](grafanactl_config_current-context.md)	 - Display the current context name
+* [grafanactl config list-contexts](grafanactl_config_list-contexts.md)	 - List the contexts defined in the configuration
 * [grafanactl config set](grafanactl_config_set.md)	 - Set an single value in a configuration file
 * [grafanactl config unset](grafanactl_config_unset.md)	 - Unset an single value in a configuration file
 * [grafanactl config use-context](grafanactl_config_use-context.md)	 - Set the current context
