@@ -24,9 +24,7 @@ markdown_extensions:
 theme:
   name: "material"
   features:
-    - navigation.tabs
     - navigation.indexes
-    - navigation.top
     - navigation.prune
     - search.highlight
 
