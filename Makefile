@@ -39,7 +39,7 @@ tests: check-binaries ## Runs the tests.
 
 .PHONY: build
 build: check-binaries ## Builds the binary into the `./bin/grafanactl`.
-	$(RUN_DEVBOX) go build -o bin/grafanactl ./cmd
+	$(RUN_DEVBOX) go build -buildvcs=false -o bin/grafanactl ./cmd
 
 .PHONY: install
 install: build ## Installs the binary into `$GOPATH/bin`.
