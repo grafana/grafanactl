@@ -37,7 +37,7 @@ grafanactl resources edit RESOURCE_SELECTOR [flags]
 
 ```
   -h, --help            help for edit
-  -o, --output string   Output format. One of: json, yaml (default "yaml")
+  -o, --output string   Output format. One of: json, yaml (default "json")
 ```
 
 ### Options inherited from parent commands
