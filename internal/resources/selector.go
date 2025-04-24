@@ -19,6 +19,20 @@ func (e InvalidSelectorError) Error() string {
 // Selectors is a list of resource selectors.
 type Selectors []Selector
 
+func (s Selectors) HasNamedSelectorsOnly() bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	for _, selector := range s {
+		if !selector.IsNamedSelector() {
+			return false
+		}
+	}
+
+	return true
+}
+
 // IsSingleTarget returns true if the selector is to get a single resource.
 func (s Selectors) IsSingleTarget() bool {
 	if len(s) != 1 {
@@ -53,6 +67,10 @@ type Selector struct {
 	Type             FilterType
 	GroupVersionKind PartialGVK
 	ResourceUIDs     []string
+}
+
+func (sel Selector) IsNamedSelector() bool {
+	return len(sel.ResourceUIDs) != 0
 }
 
 func (sel *Selector) String() string {

@@ -70,12 +70,12 @@ func (reader *FSReader) ReadBytes(ctx context.Context, dst *resources.Resources,
 		return ParseError{Err: err}
 	}
 
-	metaAccessor, err := utils.MetaAccessor(object)
+	r, err := resources.FromUnstructured(object)
 	if err != nil {
 		return err
 	}
 
-	dst.Add(&resources.Resource{Raw: metaAccessor})
+	dst.Add(&r)
 
 	return nil
 }

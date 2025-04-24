@@ -12,9 +12,10 @@ import (
 )
 
 type fetchRequest struct {
-	Config             config.NamespacedRESTConfig
-	StopOnError        bool
-	ExpectSingleTarget bool
+	Config               config.NamespacedRESTConfig
+	StopOnError          bool
+	ExpectSingleTarget   bool
+	ExpectNamedSelectors bool
 }
 
 type fetchResponse struct {
@@ -28,6 +29,20 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 		return nil, err
 	}
 
+	if opts.ExpectSingleTarget && !sels.IsSingleTarget() {
+		return nil, fail.DetailedError{
+			Summary: "Invalid resource selector",
+			Details: "Expected a resource selector targeting a single resource. Example: dashboard/some-dashboard",
+		}
+	}
+
+	if opts.ExpectNamedSelectors && !sels.HasNamedSelectorsOnly() {
+		return nil, fail.DetailedError{
+			Summary: "Invalid resource selector",
+			Details: "Expected a resource selector targeting named resources only. Example: dashboard/some-dashboard",
+		}
+	}
+
 	reg, err := discovery.NewDefaultRegistry(ctx, opts.Config)
 	if err != nil {
 		return nil, err
@@ -36,13 +51,6 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 	filters, err := reg.MakeFilters(sels)
 	if err != nil {
 		return nil, err
-	}
-
-	if opts.ExpectSingleTarget && !sels.IsSingleTarget() {
-		return nil, fail.DetailedError{
-			Summary: "Invalid resource selector",
-			Details: "Expected a resource selector targeting a single resource. Example: dashboard/some-dashboard",
-		}
 	}
 
 	pull, err := remote.NewDefaultPuller(ctx, opts.Config)
