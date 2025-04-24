@@ -12,10 +12,9 @@ import (
 )
 
 type fetchRequest struct {
-	Config               config.NamespacedRESTConfig
-	StopOnError          bool
-	ExpectSingleTarget   bool
-	ExpectNamedSelectors bool
+	Config             config.NamespacedRESTConfig
+	StopOnError        bool
+	ExpectSingleTarget bool
 }
 
 type fetchResponse struct {
@@ -33,13 +32,6 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 		return nil, fail.DetailedError{
 			Summary: "Invalid resource selector",
 			Details: "Expected a resource selector targeting a single resource. Example: dashboard/some-dashboard",
-		}
-	}
-
-	if opts.ExpectNamedSelectors && !sels.HasNamedSelectorsOnly() {
-		return nil, fail.DetailedError{
-			Summary: "Invalid resource selector",
-			Details: "Expected a resource selector targeting named resources only. Example: dashboard/some-dashboard",
 		}
 	}
 

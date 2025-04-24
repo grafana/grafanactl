@@ -4,8 +4,12 @@ import (
 	"errors"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
+	"github.com/grafana/grafanactl/cmd/fail"
 	cmdio "github.com/grafana/grafanactl/cmd/io"
+	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/discovery"
+	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/grafana/grafanactl/internal/resources/remote"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -16,6 +20,7 @@ type deleteOpts struct {
 	All           bool
 	MaxConcurrent int
 	DryRun        bool
+	Directories   []string
 }
 
 func (opts *deleteOpts) setup(flags *pflag.FlagSet) {
@@ -23,11 +28,20 @@ func (opts *deleteOpts) setup(flags *pflag.FlagSet) {
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.All, "all", opts.All, "Delete all resources of the specified resource types")
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the delete operation will be simulated")
+	flags.StringSliceVarP(&opts.Directories, "directory", "d", nil, "Directories on disk containing the resources to delete")
 }
 
-func (opts *deleteOpts) Validate() error {
+func (opts *deleteOpts) Validate(args []string) error {
 	if opts.MaxConcurrent < 1 {
 		return errors.New("max-concurrent must be greater than zero")
+	}
+
+	if len(args) != 0 && len(opts.Directories) != 0 {
+		return errors.New("--directory can not be used with resource selectors")
+	}
+
+	if len(args) == 0 && len(opts.Directories) == 0 {
+		return errors.New("either --directory or resource selectors need to be specified")
 	}
 
 	return nil
@@ -37,8 +51,8 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &deleteOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "delete RESOURCE_SELECTOR...",
-		Args:  cobra.MinimumNArgs(1),
+		Use:   "delete [RESOURCE_SELECTOR]...",
+		Args:  cobra.ArbitraryArgs,
 		Short: "Delete resources from Grafana",
 		Long:  "Delete resources from Grafana.",
 		Example: `
@@ -53,11 +67,14 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 	# Delete every dashboard
 	grafanactl resources delete dashboards --all
+
+	# Delete every resource from the given directory
+	grafanactl resources delete -d ./resources/Dashboard
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			if err := opts.Validate(); err != nil {
+			if err := opts.Validate(args); err != nil {
 				return err
 			}
 
@@ -66,31 +83,70 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			res, err := fetchResources(ctx, fetchRequest{
-				Config:               cfg,
-				StopOnError:          opts.StopOnError,
-				ExpectNamedSelectors: !opts.All,
-			}, args)
+			sels, err := resources.ParseSelectors(args)
 			if err != nil {
 				return err
 			}
 
-			toDelete, err := resources.NewResourcesFromUnstructured(res.Resources)
-			if err != nil {
-				return err
+			if !opts.All && !sels.HasNamedSelectorsOnly() {
+				return fail.DetailedError{
+					Summary: "Invalid resource selector",
+					Details: "Expected a resource selector targeting named resources only. Example: dashboard/some-dashboard",
+				}
+			}
+
+			var res *resources.Resources
+			// Load resources by selectors
+			if len(args) != 0 {
+				fetchRes, err := fetchResources(ctx, fetchRequest{
+					Config:      cfg,
+					StopOnError: opts.StopOnError,
+				}, args)
+				if err != nil {
+					return err
+				}
+
+				res, err = resources.NewResourcesFromUnstructured(fetchRes.Resources)
+				if err != nil {
+					return err
+				}
+			} else {
+				// Load resources from the filesystem
+
+				reg, err := discovery.NewDefaultRegistry(ctx, cfg)
+				if err != nil {
+					return err
+				}
+
+				reader := local.FSReader{
+					Decoders:           format.Codecs(),
+					MaxConcurrentReads: opts.MaxConcurrent,
+					StopOnError:        opts.StopOnError,
+				}
+
+				filters, err := reg.MakeFilters(sels)
+				if err != nil {
+					return err
+				}
+
+				res = resources.NewResources()
+				if err := reader.Read(ctx, res, filters, opts.Directories); err != nil {
+					return err
+				}
 			}
 
 			if opts.DryRun {
 				cmdio.Info(cmd.OutOrStdout(), "Dry-run mode enabled")
 			}
 
+			// Delete!
 			deleter, err := remote.NewDeleter(ctx, cfg)
 			if err != nil {
 				return err
 			}
 
 			req := remote.DeleteRequest{
-				Resources:      toDelete,
+				Resources:      res,
 				MaxConcurrency: opts.MaxConcurrent,
 				StopOnError:    opts.StopOnError,
 				DryRun:         opts.DryRun,
@@ -101,6 +157,7 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
+			// Reporting time.
 			printer := cmdio.Success
 			if summary.FailedCount != 0 {
 				printer = cmdio.Warning
