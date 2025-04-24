@@ -1,9 +1,8 @@
 package config
 
 import (
-	"k8s.io/client-go/rest"
-
 	authlib "github.com/grafana/authlib/types"
+	"k8s.io/client-go/rest"
 )
 
 // NamespacedRESTConfig is a REST config with a namespace.
