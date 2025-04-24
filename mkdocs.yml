@@ -6,6 +6,7 @@ repo_url: "https://github.com/grafana/grafanactl"
 
 plugins:
   - search
+  - mkdocs-nav-weight
 
 markdown_extensions:
   - attr_list
