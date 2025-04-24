@@ -19,7 +19,6 @@ Additional information can be found in
 [Release life cycle for Grafana Labs](https://grafana.com/docs/release-life-cycle/).
 
 !!! note
-
     Bugs and issues are handled solely by Engineering teams. On-call support
     or SLAs are not available.
 
