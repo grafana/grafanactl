@@ -2,9 +2,13 @@
 title: Home
 ---
 
-# grafanactl
+# Grafana CLI
 
-TBD.
+Grafana CLI (_grafanactl_) is a command-line tool designed to simplify interaction with Grafana instances.
+
+It enables users to authenticate, manage multiple environments, and perform administrative tasks through Grafana's REST API — all from the terminal.
+
+Whether you're automating workflows in CI/CD pipelines or switching between staging and production environments, Grafana CLI provides a flexible and scriptable way to manage your Grafana setup efficiently.
 
 ## Maturity
 
