@@ -10,7 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/goccy/go-yaml v1.17.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/grafana/authlib/claims v0.0.0-20250120084028-e3328c576437
+	github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a
 	github.com/grafana/grafana-app-sdk/logging v0.36.3
 	github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250423121358-ed27d76d7fb9
 	github.com/spf13/cobra v1.9.1
