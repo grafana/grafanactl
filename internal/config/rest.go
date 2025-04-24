@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/grafana/authlib/claims"
 	"k8s.io/client-go/rest"
+
+	authlib "github.com/grafana/authlib/types"
 )
 
 // NamespacedRESTConfig is a REST config with a namespace.
@@ -51,9 +52,9 @@ func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
 	// Namespace
 	var namespace string
 	if cfg.Grafana.OrgID != 0 {
-		namespace = claims.OrgNamespaceFormatter(cfg.Grafana.OrgID)
+		namespace = authlib.OrgNamespaceFormatter(cfg.Grafana.OrgID)
 	} else {
-		namespace = claims.CloudNamespaceFormatter(cfg.Grafana.StackID)
+		namespace = authlib.CloudNamespaceFormatter(cfg.Grafana.StackID)
 	}
 
 	return NamespacedRESTConfig{
