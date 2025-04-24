@@ -1,5 +1,5 @@
-site_name: grafanactl
-site_author: 'Grafana Labs'
+site_name: Grafana CLI
+site_author: "Grafana Labs"
 
 repo_name: "grafana/grafanactl"
 repo_url: "https://github.com/grafana/grafanactl"
