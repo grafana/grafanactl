@@ -141,7 +141,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				}
 			}
 
-			printer(cmd.OutOrStderr(), "%d resources pushed, %d errors", summary.PushedCount, summary.FailedCount)
+			printer(cmd.OutOrStdout(), "%d resources pushed, %d errors", summary.PushedCount, summary.FailedCount)
 
 			return nil
 		},

@@ -122,7 +122,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			cmdio.Success(cmd.OutOrStderr(), "%d resources pulled", len(res.Resources.Items))
+			cmdio.Success(cmd.OutOrStdout(), "%d resources pulled", len(res.Resources.Items))
 
 			return nil
 		},

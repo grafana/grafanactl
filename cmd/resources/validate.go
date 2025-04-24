@@ -127,7 +127,7 @@ This command validates its inputs against a remote Grafana instance.
 			}
 
 			if summary.FailedCount == 0 && opts.IO.OutputFormat == "text" {
-				cmdio.Success(cmd.OutOrStderr(), "No errors found.")
+				cmdio.Success(cmd.OutOrStdout(), "No errors found.")
 				return nil
 			}
 
@@ -157,8 +157,7 @@ This command validates its inputs against a remote Grafana instance.
 	return cmd
 }
 
-type validationTableCodec struct {
-}
+type validationTableCodec struct{}
 
 func (c *validationTableCodec) Format() format.Format {
 	return "text"
