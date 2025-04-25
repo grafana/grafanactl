@@ -340,7 +340,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	io.Success(stdout, "Configuration: %s", io.Green("valid"))
 
-	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx), 0); err != nil {
+	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx)); err != nil {
 		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err))+"\n")
 		printSuggestions(err)
 		return

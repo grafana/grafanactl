@@ -48,7 +48,7 @@ func NewDefaultPuller(ctx context.Context, restConfig config.NamespacedRESTConfi
 		return nil, err
 	}
 
-	registry, err := discovery.NewDefaultRegistry(ctx, restConfig, 0)
+	registry, err := discovery.NewDefaultRegistry(ctx, restConfig)
 	if err != nil {
 		return nil, err
 	}

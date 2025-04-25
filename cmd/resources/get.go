@@ -2,9 +2,7 @@ package resources
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/config"
@@ -15,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/printers"
 )
@@ -198,20 +195,45 @@ func (c *tableCodec) Encode(output io.Writer, input any) error {
 		},
 	}
 
+	if c.wide {
+		table.ColumnDefinitions = append(table.ColumnDefinitions, metav1.TableColumnDefinition{
+			Name:     "GROUPVERSION",
+			Type:     "string",
+			Priority: 0,
+		})
+	}
+
 	for _, r := range items.Items {
 		age := duration.HumanDuration(time.Since(r.GetCreationTimestamp().Time))
+		var row metav1.TableRow
+		if c.wide {
+			row = metav1.TableRow{
+				Cells: []interface{}{
+					r.GetKind(),
+					r.GetName(),
+					r.GetNamespace(),
+					age,
+					r.GroupVersionKind().GroupVersion().String(),
+				},
+				Object: runtime.RawExtension{
+					Object: &r,
+				},
+			}
+		} else {
+			row = metav1.TableRow{
+				Cells: []interface{}{
+					r.GetKind(),
+					r.GetName(),
+					r.GetNamespace(),
+					age,
+				},
+				Object: runtime.RawExtension{
+					Object: &r,
+				},
+			}
+		}
 
-		table.Rows = append(table.Rows, metav1.TableRow{
-			Cells: []interface{}{
-				formatKind(r.GroupVersionKind(), c.wide),
-				r.GetName(),
-				r.GetNamespace(),
-				age,
-			},
-			Object: runtime.RawExtension{
-				Object: &r,
-			},
-		})
+		table.Rows = append(table.Rows, row)
 	}
 
 	printer := printers.NewTablePrinter(printers.PrintOptions{
@@ -227,15 +249,4 @@ func (c *tableCodec) Encode(output io.Writer, input any) error {
 
 func (c *tableCodec) Decode(io.Reader, any) error {
 	return errors.New("table codec does not support decoding")
-}
-
-// TODO: we need to change the format of data the puller returns,
-// to include the API metadata for each resource.
-func formatKind(gvk schema.GroupVersionKind, wide bool) string {
-	plural := strings.ToLower(gvk.Kind) + "s"
-	if wide {
-		return fmt.Sprintf("%s.%s.%s", plural, gvk.Version, gvk.Group)
-	}
-
-	return plural
 }

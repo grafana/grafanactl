@@ -51,7 +51,7 @@ func NewDefaultPusher(ctx context.Context, cfg config.NamespacedRESTConfig) (*Pu
 		return nil, err
 	}
 
-	registry, err := discovery.NewDefaultRegistry(ctx, cfg, 0)
+	registry, err := discovery.NewDefaultRegistry(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

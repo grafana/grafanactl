@@ -231,7 +231,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 				resources: resources,
 			}
 
-			reg, err := discovery.NewRegistry(t.Context(), client, 0)
+			reg, err := discovery.NewRegistry(t.Context(), client)
 			require.NoError(t, err)
 
 			got, err := reg.MakeFilters(test.selectors)
@@ -286,7 +286,7 @@ func TestRegistry_PreferredResources(t *testing.T) {
 				resources: resources,
 			}
 
-			reg, err := discovery.NewRegistry(t.Context(), client, 0)
+			reg, err := discovery.NewRegistry(t.Context(), client)
 			require.NoError(t, err)
 
 			got := reg.PreferredResources()
@@ -344,7 +344,7 @@ func TestRegistry_SupportedResources(t *testing.T) {
 				resources: resources,
 			}
 
-			reg, err := discovery.NewRegistry(t.Context(), client, 0)
+			reg, err := discovery.NewRegistry(t.Context(), client)
 			require.NoError(t, err)
 
 			got := reg.SupportedResources()
@@ -383,7 +383,7 @@ func TestRegistry_Discover(t *testing.T) {
 				err:       test.err,
 			}
 
-			reg, err := discovery.NewRegistry(t.Context(), client, 0)
+			reg, err := discovery.NewRegistry(t.Context(), client)
 			discoverErr := reg.Discover(t.Context())
 
 			if test.wantErr {
