@@ -3,5 +3,6 @@
   "single-title": {
     "front_matter_title": ""
   },
-  "line-length": false
+  "line-length": false,
+  "no-inline-html": false
 }
