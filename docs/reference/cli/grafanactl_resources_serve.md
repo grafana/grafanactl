@@ -13,7 +13,7 @@ While resources are loaded from disk, the server will use the Grafana instance
 described in the current context to access some data (example: to run queries
 when previewing dashboards).
 
-Note on NFS/SMB support for --watch: fsnotify requires support from underlying
+Note on NFS/SMB and watch mode: fsnotify requires support from underlying
 OS to work. The current NFS and SMB protocols does not provide network level
 support for file notifications.
 
@@ -29,12 +29,12 @@ grafanactl resources serve [RESOURCE_DIR]... [flags]
 	# Serve resources from a directory:
 	grafanactl resources serve ./resources
 
-	# Serve resources from a directory and watch for changes:
-	grafanactl resources serve ./resources --watch ./resources
+	# Serve resources from a directory but don't watch for changes:
+	grafanactl resources serve ./resources --no-watch
 
-	# Serve resources from a script that outputs a JSON resource and watch for changes:
+	# Serve resources from a script that outputs a YAML resource and watch for changes:
 	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
-	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
+	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format yaml
 
 ```
 
@@ -44,9 +44,10 @@ grafanactl resources serve [RESOURCE_DIR]... [flags]
       --address string         Address to bind (default "0.0.0.0")
   -h, --help                   help for serve
       --max-concurrent int     Maximum number of concurrent operations (default 10)
+      --no-watch               Do not watch for changes
       --port int               Port on which the server will listen (default 8080)
   -S, --script string          Script to execute to generate a resource
-  -f, --script-format string   Format of the data returned by the script (default "yaml")
+  -f, --script-format string   Format of the data returned by the script (default "json")
   -w, --watch stringArray      Paths to watch for changes
 ```
 

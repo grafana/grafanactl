@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"runtime"
+	"slices"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
@@ -28,6 +29,7 @@ type serveOpts struct {
 	Address       string
 	Port          int
 	WatchPaths    []string
+	NoWatch       bool
 	Script        string
 	ScriptFormat  string
 	MaxConcurrent int
@@ -37,9 +39,18 @@ func (opts *serveOpts) setup(flags *pflag.FlagSet) {
 	flags.StringVar(&opts.Address, "address", "0.0.0.0", "Address to bind")
 	flags.IntVar(&opts.Port, "port", 8080, "Port on which the server will listen")
 	flags.StringArrayVarP(&opts.WatchPaths, "watch", "w", nil, "Paths to watch for changes")
+	flags.BoolVar(&opts.NoWatch, "no-watch", opts.NoWatch, "Do not watch for changes")
 	flags.StringVarP(&opts.Script, "script", "S", "", "Script to execute to generate a resource")
-	flags.StringVarP(&opts.ScriptFormat, "script-format", "f", "yaml", "Format of the data returned by the script")
+	flags.StringVarP(&opts.ScriptFormat, "script-format", "f", "json", "Format of the data returned by the script")
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
+}
+
+func (opts *serveOpts) watchTargets(args []string) []string {
+	if opts.NoWatch {
+		return nil
+	}
+
+	return slices.Concat(args, opts.WatchPaths)
 }
 
 func (opts *serveOpts) Validate() error {
@@ -66,7 +77,7 @@ While resources are loaded from disk, the server will use the Grafana instance
 described in the current context to access some data (example: to run queries
 when previewing dashboards).
 
-Note on NFS/SMB support for --watch: fsnotify requires support from underlying
+Note on NFS/SMB and watch mode: fsnotify requires support from underlying
 OS to work. The current NFS and SMB protocols does not provide network level
 support for file notifications.
 `,
@@ -74,12 +85,12 @@ support for file notifications.
 	# Serve resources from a directory:
 	grafanactl resources serve ./resources
 
-	# Serve resources from a directory and watch for changes:
-	grafanactl resources serve ./resources --watch ./resources
+	# Serve resources from a directory but don't watch for changes:
+	grafanactl resources serve ./resources --no-watch
 
-	# Serve resources from a script that outputs a JSON resource and watch for changes:
+	# Serve resources from a script that outputs a YAML resource and watch for changes:
 	# Note: the Grafana Foundation SDK can be used to generate dashboards (https://grafana.github.io/grafana-foundation-sdk/)
-	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format json
+	grafanactl resources serve --script 'go run dashboard-generator/*.go' --watch ./dashboard-generator --script-format yaml
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
@@ -126,7 +137,7 @@ support for file notifications.
 			}
 
 			//nolint:nestif
-			if len(opts.WatchPaths) > 0 {
+			if len(opts.watchTargets(args)) > 0 {
 				livereload.Initialize()
 
 				parsedResources.OnChange(func(resource *resources.Resource) {
@@ -159,7 +170,7 @@ support for file notifications.
 					return err
 				}
 
-				if err := watcher.Add(opts.WatchPaths...); err != nil {
+				if err := watcher.Add(opts.watchTargets(args)...); err != nil {
 					return err
 				}
 
