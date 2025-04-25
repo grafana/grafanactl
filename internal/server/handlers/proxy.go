@@ -10,7 +10,7 @@ import (
 // ResourceHandler describes a set of HTTP handlers that can be used to view or
 // edit a specific resource type via a proxied UI.
 type ResourceHandler interface {
-	ResourceType() resources.PartialGVK
+	ResourceType() resources.Descriptor
 
 	// Endpoints lists HTTP handlers to register on the proxy.
 	Endpoints(proxy *httputil.ReverseProxy) []HTTPEndpoint
