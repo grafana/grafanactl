@@ -10,6 +10,7 @@ import (
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/httputils"
 	"github.com/grafana/grafanactl/internal/resources"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var _ ResourceHandler = &FoldersProxy{}
@@ -26,10 +27,15 @@ func NewFoldersProxy(resources *resources.Resources) *FoldersProxy {
 }
 
 // FIXME: resources stuff.
-func (c *FoldersProxy) ResourceType() resources.PartialGVK {
-	return resources.PartialGVK{
-		Group:    "folder.grafana.app",
-		Resource: "folders",
+func (c *FoldersProxy) ResourceType() resources.Descriptor {
+	return resources.Descriptor{
+		GroupVersion: schema.GroupVersion{
+			Group: "folder.grafana.app",
+			// Serves any version
+		},
+		Kind:     "Folder",
+		Singular: "folder",
+		Plural:   "folders",
 	}
 }
 

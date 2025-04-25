@@ -36,10 +36,15 @@ func NewDashboardProxy(context *config.Context, resources *resources.Resources) 
 	}
 }
 
-func (c *DashboardProxy) ResourceType() resources.PartialGVK {
-	return resources.PartialGVK{
-		Group:    "dashboard.grafana.app",
-		Resource: "dashboards",
+func (c *DashboardProxy) ResourceType() resources.Descriptor {
+	return resources.Descriptor{
+		GroupVersion: schema.GroupVersion{
+			Group: "dashboard.grafana.app",
+			// Serves any version
+		},
+		Kind:     "Dashboard",
+		Singular: "dashboard",
+		Plural:   "dashboards",
 	}
 }
 
