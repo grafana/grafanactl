@@ -61,7 +61,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			reg, err := discovery.NewDefaultRegistry(ctx, cfg, 0)
+			reg, err := discovery.NewDefaultRegistry(ctx, cfg)
 			if err != nil {
 				return err
 			}

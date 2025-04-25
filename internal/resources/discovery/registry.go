@@ -4,7 +4,6 @@ import (
 	"context"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/resources"
@@ -34,21 +33,18 @@ type Client interface {
 
 // Registry is a registry of resources and their preferred versions.
 type Registry struct {
-	client          Client
-	index           RegistryIndex
-	refreshInterval time.Duration
+	client Client
+	index  RegistryIndex
 }
 
 // NewDefaultRegistry creates a new discovery registry using the default discovery client.
-func NewDefaultRegistry(
-	ctx context.Context, cfg config.NamespacedRESTConfig, refreshInterval time.Duration,
-) (*Registry, error) {
+func NewDefaultRegistry(ctx context.Context, cfg config.NamespacedRESTConfig) (*Registry, error) {
 	client, err := discovery.NewDiscoveryClientForConfig(&cfg.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewRegistry(ctx, client, refreshInterval)
+	return NewRegistry(ctx, client)
 }
 
 // NewRegistry creates a new discovery registry.
@@ -57,19 +53,13 @@ func NewDefaultRegistry(
 // by calling the server's preferred resources endpoint.
 //
 // The registry will perform the discovery upon initialization.
-func NewRegistry(ctx context.Context, client Client, refreshInterval time.Duration) (*Registry, error) {
+func NewRegistry(ctx context.Context, client Client) (*Registry, error) {
 	reg := &Registry{
-		client:          client,
-		index:           NewRegistryIndex(),
-		refreshInterval: refreshInterval,
+		client: client,
+		index:  NewRegistryIndex(),
 	}
 
-	// TODO: implement refresh loop
-	// if refreshInterval > 0 {
-	// }
-
 	// Perform initial discovery.
-	// TODO: should this be optional?
 	if err := reg.Discover(ctx); err != nil {
 		return reg, err
 	}

@@ -97,7 +97,7 @@ This command validates its inputs against a remote Grafana instance.
 				return err
 			}
 
-			reg, err := discovery.NewDefaultRegistry(ctx, cfg, 0)
+			reg, err := discovery.NewDefaultRegistry(ctx, cfg)
 			if err != nil {
 				return err
 			}
