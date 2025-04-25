@@ -7,8 +7,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/grafana/grafanactl/cmd/fail"
-	"github.com/grafana/grafanactl/cmd/io"
+	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
+	"github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources/discovery"

@@ -39,7 +39,7 @@ tests: check-binaries ## Runs the tests.
 
 .PHONY: build
 build: check-binaries ## Builds the binary into the `./bin/grafanactl`.
-	$(RUN_DEVBOX) go build -buildvcs=false -o bin/grafanactl ./cmd
+	$(RUN_DEVBOX) go build -buildvcs=false -o bin/grafanactl ./cmd/grafanactl
 
 .PHONY: install
 install: build ## Installs the binary into `$GOPATH/bin`.
@@ -59,6 +59,7 @@ clean: ## Cleans the project.
 	rm -rf bin
 	rm -rf vendor
 	rm -rf .devbox
+	rm -rf .venv
 
 .PHONY: check-binaries
 check-binaries: ## Check that the required binaries are present.

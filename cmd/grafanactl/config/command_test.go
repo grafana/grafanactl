@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/grafana/grafanactl/cmd/config"
+	"github.com/grafana/grafanactl/cmd/grafanactl/config"
 	"github.com/grafana/grafanactl/internal/testutils"
 )
 

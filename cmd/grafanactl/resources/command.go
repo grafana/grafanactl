@@ -1,7 +1,7 @@
 package resources
 
 import (
-	cmdconfig "github.com/grafana/grafanactl/cmd/config"
+	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	"github.com/spf13/cobra"
 )
 

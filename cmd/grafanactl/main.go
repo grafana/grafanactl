@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/grafana/grafanactl/cmd/fail"
-	"github.com/grafana/grafanactl/cmd/root"
+	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
+	"github.com/grafana/grafanactl/cmd/grafanactl/root"
 )
 
 var version = "SNAPSHOT"
