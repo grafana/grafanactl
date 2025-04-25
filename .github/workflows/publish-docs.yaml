@@ -1,0 +1,60 @@
+name: Publish documentation
+on:
+  workflow_dispatch: ~
+
+permissions:
+  contents: read
+  pages: write      # to deploy to Pages
+  id-token: write   # to verify the deployment originates from an appropriate source
+
+env:
+  DEVBOX_VERSION: 0.14.0
+
+# Allow only one concurrent release, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow them to complete.
+concurrency:
+  group: "release"
+  cancel-in-progress: false
+
+jobs:
+  build_docs:
+    name: Build
+    runs-on: ubuntu-latest
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@734088efddca47cf44ff8a09289c6d0e51b73218 #v0.12.0
+        with:
+          enable-cache: "true"
+          devbox-version: ${{ env.DEVBOX_VERSION }}
+
+      - name: Build documentation
+        run: make docs
+
+      - name: Upload pages artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa #v3.0.1
+        with:
+          path: ./build/documentation
+
+  publish_documentation:
+    needs: build_docs
+
+    name: Publish
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e #v4.0.5
