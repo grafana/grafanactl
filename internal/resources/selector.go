@@ -69,7 +69,7 @@ type Selector struct {
 	ResourceUIDs     []string
 }
 
-func (sel Selector) IsNamedSelector() bool {
+func (sel *Selector) IsNamedSelector() bool {
 	return len(sel.ResourceUIDs) != 0
 }
 
