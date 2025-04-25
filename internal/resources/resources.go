@@ -141,12 +141,30 @@ type Resources struct {
 // NewResources creates a new Resources collection.
 func NewResources(resources ...*Resource) *Resources {
 	r := &Resources{
-		collection: make(map[ResourceRef]*Resource),
+		collection: make(map[ResourceRef]*Resource, len(resources)),
 	}
 
 	r.Add(resources...)
 
 	return r
+}
+
+func NewResourcesFromUnstructured(resources unstructured.UnstructuredList) (*Resources, error) {
+	if len(resources.Items) == 0 {
+		return NewResources(), nil
+	}
+
+	list := make([]*Resource, 0, len(resources.Items))
+	for i := range resources.Items {
+		r, err := FromUnstructured(&resources.Items[i])
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, &r)
+	}
+
+	return NewResources(list...), nil
 }
 
 // Add adds resources to the collection.

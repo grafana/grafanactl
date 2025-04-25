@@ -11,14 +11,12 @@ func Command() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resources",
 		Short: "Manipulate Grafana resources",
-		Long: `Manipulate Grafana resources.
-
-TODO: more information.
-`,
+		Long:  "Manipulate Grafana resources.",
 	}
 
 	configOpts.BindFlags(cmd.PersistentFlags())
 
+	cmd.AddCommand(deleteCmd(configOpts))
 	cmd.AddCommand(editCmd(configOpts))
 	cmd.AddCommand(getCmd(configOpts))
 	cmd.AddCommand(listCmd(configOpts))

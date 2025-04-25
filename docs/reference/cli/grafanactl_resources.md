@@ -6,9 +6,6 @@ Manipulate Grafana resources
 
 Manipulate Grafana resources.
 
-TODO: more information.
-
-
 ### Options
 
 ```
@@ -27,6 +24,7 @@ TODO: more information.
 ### SEE ALSO
 
 * [grafanactl](grafanactl.md)	 - 
+* [grafanactl resources delete](grafanactl_resources_delete.md)	 - Delete resources from Grafana
 * [grafanactl resources edit](grafanactl_resources_edit.md)	 - Edit resources from Grafana
 * [grafanactl resources get](grafanactl_resources_get.md)	 - Get resources from Grafana
 * [grafanactl resources list](grafanactl_resources_list.md)	 - List available Grafana API resources

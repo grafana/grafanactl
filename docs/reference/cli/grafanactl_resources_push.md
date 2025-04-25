@@ -56,8 +56,8 @@ grafanactl resources push [RESOURCE_SELECTOR]... [flags]
 ### Options
 
 ```
-  -d, --directory strings    Directories on disk from which to read the resources to push. (default [./resources])
-      --dry-run              If set, the push operation will be simulated, without actually creating or updating any resources.
+  -d, --directory strings    Directories on disk from which to read the resources to push (default [./resources])
+      --dry-run              If set, the push operation will be simulated, without actually creating or updating any resources
   -h, --help                 help for push
       --max-concurrent int   Maximum number of concurrent operations (default 10)
       --overwrite            Overwrite existing resources

@@ -23,11 +23,11 @@ type pushOpts struct {
 }
 
 func (opts *pushOpts) setup(flags *pflag.FlagSet) {
-	flags.StringSliceVarP(&opts.Directories, "directory", "d", []string{defaultResourcesDir}, "Directories on disk from which to read the resources to push.")
+	flags.StringSliceVarP(&opts.Directories, "directory", "d", []string{defaultResourcesDir}, "Directories on disk from which to read the resources to push")
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pushing resources when an error occurs")
 	flags.BoolVar(&opts.OverwriteExisting, "overwrite", opts.OverwriteExisting, "Overwrite existing resources")
-	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the push operation will be simulated, without actually creating or updating any resources.")
+	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the push operation will be simulated, without actually creating or updating any resources")
 }
 
 func (opts *pushOpts) Validate() error {
