@@ -125,12 +125,11 @@ This command validates its inputs against a remote Grafana instance.
 			}
 
 			req := remote.PushRequest{
-				Resources:         resourcesList,
-				MaxConcurrency:    opts.MaxConcurrent,
-				StopOnError:       opts.StopOnError,
-				OverwriteExisting: true,
-				DryRun:            true,
-				NoPushFailureLog:  true,
+				Resources:        resourcesList,
+				MaxConcurrency:   opts.MaxConcurrent,
+				StopOnError:      opts.StopOnError,
+				DryRun:           true,
+				NoPushFailureLog: true,
 			}
 
 			summary, err := pusher.Push(ctx, req)

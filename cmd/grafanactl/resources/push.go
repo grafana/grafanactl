@@ -15,18 +15,16 @@ import (
 )
 
 type pushOpts struct {
-	Directories       []string
-	MaxConcurrent     int
-	StopOnError       bool
-	OverwriteExisting bool
-	DryRun            bool
+	Directories   []string
+	MaxConcurrent int
+	StopOnError   bool
+	DryRun        bool
 }
 
 func (opts *pushOpts) setup(flags *pflag.FlagSet) {
 	flags.StringSliceVarP(&opts.Directories, "directory", "d", []string{defaultResourcesDir}, "Directories on disk from which to read the resources to push")
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pushing resources when an error occurs")
-	flags.BoolVar(&opts.OverwriteExisting, "overwrite", opts.OverwriteExisting, "Overwrite existing resources")
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the push operation will be simulated, without actually creating or updating any resources")
 }
 
@@ -133,11 +131,10 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			req := remote.PushRequest{
-				Resources:         resourcesList,
-				MaxConcurrency:    opts.MaxConcurrent,
-				StopOnError:       opts.StopOnError,
-				OverwriteExisting: opts.OverwriteExisting,
-				DryRun:            opts.DryRun,
+				Resources:      resourcesList,
+				MaxConcurrency: opts.MaxConcurrent,
+				StopOnError:    opts.StopOnError,
+				DryRun:         opts.DryRun,
 			}
 
 			summary, err := pusher.Push(ctx, req)

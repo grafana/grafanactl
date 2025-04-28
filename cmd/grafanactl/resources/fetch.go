@@ -8,7 +8,6 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/grafana/grafanactl/internal/resources/remote"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type fetchRequest struct {
@@ -18,7 +17,7 @@ type fetchRequest struct {
 }
 
 type fetchResponse struct {
-	Resources      unstructured.UnstructuredList
+	Resources      resources.Resources
 	IsSingleTarget bool
 }
 

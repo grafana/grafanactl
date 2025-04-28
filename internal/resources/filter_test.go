@@ -43,7 +43,7 @@ func TestFilter_Matches(t *testing.T) {
 	tests := []struct {
 		name     string
 		filter   resources.Filter
-		resource resources.Resource
+		resource *resources.Resource
 		want     bool
 	}{
 		{
@@ -108,7 +108,7 @@ func TestFilter_Matches(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.filter.Matches(test.resource)
+			got := test.filter.Matches(*test.resource)
 			if got != test.want {
 				t.Errorf("got %v, want %v", got, test.want)
 			}

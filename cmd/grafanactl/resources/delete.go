@@ -99,7 +99,7 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				}
 			}
 
-			res := resources.NewResources()
+			var res resources.Resources
 
 			// Load resources by selectors only
 			if len(opts.Directories) == 0 {
@@ -111,13 +111,11 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 					return err
 				}
 
-				res, err = resources.NewResourcesFromUnstructured(fetchRes.Resources)
-				if err != nil {
-					return err
-				}
+				res = fetchRes.Resources
 			} else {
 				// Load resources from the filesystem
-				if err := loadResourcesFromDirectories(ctx, cfg, res, opts, sels); err != nil {
+				res = *resources.NewResources()
+				if err := loadResourcesFromDirectories(ctx, cfg, &res, opts, sels); err != nil {
 					return err
 				}
 			}
@@ -133,7 +131,7 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			req := remote.DeleteRequest{
-				Resources:      res,
+				Resources:      &res,
 				MaxConcurrency: opts.MaxConcurrent,
 				StopOnError:    opts.StopOnError,
 				DryRun:         opts.DryRun,

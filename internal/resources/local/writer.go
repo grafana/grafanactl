@@ -11,21 +11,21 @@ import (
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"github.com/grafana/grafanactl/internal/resources"
 )
 
-type FileNamer func(resource unstructured.Unstructured) (string, error)
+type FileNamer func(resource *resources.Resource) (string, error)
 
 // GroupResourcesByKind organizes resources by kind, writing resources in a
 // folder named after their kind.
 // File names are generated as follows: `{Kind}/{Name}.{extension}`.
 func GroupResourcesByKind(extension string) FileNamer {
-	return func(resource unstructured.Unstructured) (string, error) {
-		if resource.GetName() == "" {
+	return func(resource *resources.Resource) (string, error) {
+		if resource.Name() == "" {
 			return "", errors.New("resource has no name")
 		}
 
-		return filepath.Join(resource.GetKind(), resource.GetName()+"."+extension), nil
+		return filepath.Join(resource.Kind(), resource.Name()+"."+extension), nil
 	}
 }
 
@@ -44,33 +44,33 @@ type FSWriter struct {
 	StopOnError bool
 }
 
-func (writer *FSWriter) Write(ctx context.Context, resources unstructured.UnstructuredList) error {
-	if len(resources.Items) == 0 {
+func (writer *FSWriter) Write(ctx context.Context, resources *resources.Resources) error {
+	if resources.Len() == 0 {
 		return nil
 	}
 
 	logger := logging.FromContext(ctx).With(slog.String("directory", writer.Directory))
-	logger.Debug("Writing resources", slog.Int("resources", len(resources.Items)))
+	logger.Debug("Writing resources", slog.Int("resources", resources.Len()))
 
 	// Create the directory if it doesn't exist
 	if err := ensureDirectoryExists(writer.Directory); err != nil {
 		return err
 	}
 
-	for _, resource := range resources.Items {
+	for _, resource := range resources.AsList() {
 		if err := writer.writeSingle(resource); err != nil {
 			if writer.StopOnError {
 				return err
 			}
 
-			logger.Warn("could not write resource: skipping", slog.String("kind", resource.GetKind()), logs.Err(err))
+			logger.Warn("could not write resource: skipping", slog.String("kind", resource.Kind()), logs.Err(err))
 		}
 	}
 
 	return nil
 }
 
-func (writer *FSWriter) writeSingle(resource unstructured.Unstructured) error {
+func (writer *FSWriter) writeSingle(resource *resources.Resource) error {
 	filename, err := writer.Namer(resource)
 	if err != nil {
 		return fmt.Errorf("could not generate resource path: %w", err)
@@ -87,10 +87,15 @@ func (writer *FSWriter) writeSingle(resource unstructured.Unstructured) error {
 	}
 	defer file.Close()
 
+	obj, err := resource.ToUnstructured()
+	if err != nil {
+		return fmt.Errorf("could not convert resource to unstructured: %w", err)
+	}
+
 	// MarshalJSON() methods for [unstructured.UnstructuredList] and
 	// [unstructured.Unstructured] types are defined on pointer receivers,
 	// so we need to make sure we dereference `resource` before formatting it.
-	if err := writer.Encoder.Encode(file, &resource); err != nil {
+	if err := writer.Encoder.Encode(file, obj); err != nil {
 		return fmt.Errorf("could write resource: %w", err)
 	}
 

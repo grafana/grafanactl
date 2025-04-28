@@ -75,7 +75,7 @@ func (reader *FSReader) ReadBytes(ctx context.Context, dst *resources.Resources,
 		return err
 	}
 
-	dst.Add(&r)
+	dst.Add(r)
 
 	return nil
 }

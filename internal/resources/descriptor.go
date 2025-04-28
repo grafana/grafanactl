@@ -2,12 +2,33 @@ package resources
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Descriptors is a list of descriptors.
 type Descriptors []Descriptor
+
+// Sorted sorts the descriptors by group, version, kind, and name.
+func (d Descriptors) Sorted() Descriptors {
+	slices.SortStableFunc(d, func(a, b Descriptor) int {
+		res := strings.Compare(a.GroupVersion.Group, b.GroupVersion.Group)
+		if res != 0 {
+			return res
+		}
+
+		res = strings.Compare(a.GroupVersion.Version, b.GroupVersion.Version)
+		if res != 0 {
+			return res
+		}
+
+		return strings.Compare(a.Kind, b.Kind)
+	})
+
+	return d
+}
 
 // Descriptor describes a resource.
 type Descriptor struct {
