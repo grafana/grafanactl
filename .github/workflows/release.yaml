@@ -13,6 +13,9 @@ concurrency:
   group: "releases"
   cancel-in-progress: false
 
+permissions:
+  contents: read # to push new branches
+
 jobs:
   release:
     name: Release

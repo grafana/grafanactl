@@ -7,6 +7,9 @@ on:
 env:
   DEVBOX_VERSION: 0.14.0
 
+permissions:
+  contents: read
+
 jobs:
   linters:
     name: Linters
