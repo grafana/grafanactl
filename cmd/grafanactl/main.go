@@ -8,10 +8,17 @@ import (
 	"github.com/grafana/grafanactl/cmd/grafanactl/root"
 )
 
-var version = "SNAPSHOT"
+// Version variables which are set at build time.
+var (
+	version string
+	//nolint:gochecknoglobals
+	commit string
+	//nolint:gochecknoglobals
+	date string
+)
 
 func main() {
-	handleError(root.Command(version).Execute())
+	handleError(root.Command(formatVersion()).Execute())
 }
 
 func handleError(err error) {
@@ -29,4 +36,12 @@ func handleError(err error) {
 	}
 
 	os.Exit(exitCode)
+}
+
+func formatVersion() string {
+	if version == "" {
+		version = "SNAPSHOT"
+	}
+
+	return fmt.Sprintf("%s built from %s on %s", version, commit, date)
 }
