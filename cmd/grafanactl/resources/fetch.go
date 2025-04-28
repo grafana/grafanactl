@@ -3,7 +3,7 @@ package resources
 import (
 	"context"
 
-	"github.com/grafana/grafanactl/cmd/fail"
+	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/resources/discovery"

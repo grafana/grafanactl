@@ -5,8 +5,8 @@ import (
 	"io"
 	"time"
 
-	cmdconfig "github.com/grafana/grafanactl/cmd/config"
-	cmdio "github.com/grafana/grafanactl/cmd/io"
+	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
+	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

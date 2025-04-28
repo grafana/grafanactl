@@ -7,8 +7,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/grafana/grafana-app-sdk/logging"
-	"github.com/grafana/grafanactl/cmd/config"
-	"github.com/grafana/grafanactl/cmd/resources"
+	"github.com/grafana/grafanactl/cmd/grafanactl/config"
+	"github.com/grafana/grafanactl/cmd/grafanactl/resources"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/spf13/cobra"
 )

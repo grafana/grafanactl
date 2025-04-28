@@ -24,5 +24,5 @@ To build `grafanactl` from source you must:
 * have [`go`](https://go.dev/) v1.24 (or greater) installed
 
 ```shell
-go install github.com/grafana/grafanactl/cmd@latest
+go install github.com/grafana/grafanactl/cmd/grafanactl@latest
 ```

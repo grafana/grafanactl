@@ -3,8 +3,8 @@ package resources
 import (
 	"errors"
 
-	cmdconfig "github.com/grafana/grafanactl/cmd/config"
-	cmdio "github.com/grafana/grafanactl/cmd/io"
+	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
+	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

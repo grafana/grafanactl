@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	cmdconfig "github.com/grafana/grafanactl/cmd/config"
-	"github.com/grafana/grafanactl/cmd/fail"
-	cmdio "github.com/grafana/grafanactl/cmd/io"
+	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
+	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
+	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/resources"
