@@ -6,6 +6,7 @@ import (
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/resources/local"
+	"github.com/grafana/grafanactl/internal/resources/process"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -118,11 +119,19 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				StopOnError: opts.StopOnError,
 			}
 
-			if err := writer.Write(ctx, res.Resources); err != nil {
+			// Strip server fields from the resources.
+			// This includes fields like `resourceVersion`, `uid`, etc.
+			var proc process.ServerFieldsStripper
+			processed, err := proc.Process(&res.Resources)
+			if err != nil {
 				return err
 			}
 
-			cmdio.Success(cmd.OutOrStdout(), "%d resources pulled", len(res.Resources.Items))
+			if err := writer.Write(ctx, processed); err != nil {
+				return err
+			}
+
+			cmdio.Success(cmd.OutOrStdout(), "%d resources pulled", processed.Len())
 
 			return nil
 		},

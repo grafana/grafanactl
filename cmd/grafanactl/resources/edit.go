@@ -2,6 +2,7 @@ package resources
 
 import (
 	"bytes"
+	"fmt"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
@@ -101,7 +102,17 @@ The edition will be cancelled if no changes are written to the file or if the fi
 `)
 			}
 
-			if err := codec.Encode(buffer, res.Resources.Items[0].Object); err != nil {
+			list := res.Resources.AsList()
+			if len(list) != 1 {
+				return fmt.Errorf("expected exactly one resource, got %d", len(list))
+			}
+
+			obj, err := list[0].ToUnstructured()
+			if err != nil {
+				return err
+			}
+
+			if err := codec.Encode(buffer, obj); err != nil {
 				return err
 			}
 
@@ -123,18 +134,15 @@ The edition will be cancelled if no changes are written to the file or if the fi
 			}
 
 			tmpRes := resources.NewResources()
-			err = reader.ReadBytes(ctx, tmpRes, edited, opts.IO.OutputFormat)
-			if err != nil {
+			if err := reader.ReadBytes(ctx, tmpRes, edited, opts.IO.OutputFormat); err != nil {
 				return err
 			}
 
-			_, err = pusher.Push(ctx, remote.PushRequest{
-				Resources:         tmpRes,
-				MaxConcurrency:    1,
-				StopOnError:       true,
-				OverwriteExisting: true,
-			})
-			if err != nil {
+			if _, err := pusher.Push(ctx, remote.PushRequest{
+				Resources:      tmpRes,
+				MaxConcurrency: 1,
+				StopOnError:    true,
+			}); err != nil {
 				return err
 			}
 

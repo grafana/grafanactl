@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/grafana/grafanactl/internal/format"
+	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -18,12 +19,12 @@ func TestFSWriter_Write(t *testing.T) {
 	writer := local.FSWriter{
 		Directory: outputDir,
 		Encoder:   format.NewYAMLCodec(),
-		Namer: func(resource unstructured.Unstructured) (string, error) {
-			return resource.GetName() + ".yaml", nil
+		Namer: func(resource *resources.Resource) (string, error) {
+			return resource.Name() + ".yaml", nil
 		},
 	}
 
-	err := writer.Write(t.Context(), *testResources())
+	err := writer.Write(t.Context(), testResources())
 	req.NoError(err)
 
 	req.FileExists(filepath.Join(outputDir, "folder-uid.yaml"))
@@ -38,15 +39,15 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 		Directory:   outputDir,
 		Encoder:     format.NewYAMLCodec(),
 		StopOnError: false,
-		Namer: func(resource unstructured.Unstructured) (string, error) {
-			if resource.GetKind() == "Folder" {
+		Namer: func(resource *resources.Resource) (string, error) {
+			if resource.Kind() == "Folder" {
 				return "", errors.New("woops, folders are causing some trouble :(")
 			}
-			return resource.GetName() + ".yaml", nil
+			return resource.Name() + ".yaml", nil
 		},
 	}
 
-	err := writer.Write(t.Context(), *testResources())
+	err := writer.Write(t.Context(), testResources())
 	req.NoError(err)
 
 	req.NoFileExists(filepath.Join(outputDir, "folder-uid.yaml"), "not created because of an error somewhere")
@@ -63,7 +64,7 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 		Namer:     local.GroupResourcesByKind("json"),
 	}
 
-	err := writer.Write(t.Context(), *testResources())
+	err := writer.Write(t.Context(), testResources())
 	req.NoError(err)
 
 	req.FileExists(filepath.Join(outputDir, "Folder", "folder-uid.json"))
@@ -73,26 +74,27 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {
 	req := require.New(t)
 	outputDir := filepath.Join(t.TempDir(), "output")
-	input := &unstructured.UnstructuredList{
+	input, err := resources.NewResourcesFromUnstructured(unstructured.UnstructuredList{
 		Items: []unstructured.Unstructured{},
-	}
+	})
+	req.NoError(err)
 
 	writer := local.FSWriter{
 		Directory: outputDir,
 		Encoder:   format.NewYAMLCodec(),
-		Namer: func(resource unstructured.Unstructured) (string, error) {
-			return resource.GetName() + ".yaml", nil
+		Namer: func(resource *resources.Resource) (string, error) {
+			return resource.Name() + ".yaml", nil
 		},
 	}
 
-	err := writer.Write(t.Context(), *input)
+	err = writer.Write(t.Context(), input)
 	req.NoError(err)
 
 	req.NoDirExists(outputDir)
 }
 
-func testResources() *unstructured.UnstructuredList {
-	return &unstructured.UnstructuredList{
+func testResources() *resources.Resources {
+	res, err := resources.NewResourcesFromUnstructured(unstructured.UnstructuredList{
 		Items: []unstructured.Unstructured{
 			{
 				Object: map[string]any{
@@ -121,5 +123,11 @@ func testResources() *unstructured.UnstructuredList {
 				},
 			},
 		},
+	})
+
+	if err != nil {
+		panic(err)
 	}
+
+	return res
 }

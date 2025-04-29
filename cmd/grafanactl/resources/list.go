@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"slices"
-	"strings"
 	"text/tabwriter"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
@@ -69,22 +67,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			// TODO: refactor this to return a k8s object list,
 			// e.g. APIResourceList, or unstructured.UnstructuredList.
 			// That way we can use the same code for rendering as for `resources get`.
-			res := reg.SupportedResources()
-
-			slices.SortStableFunc(res, func(a, b resources.Descriptor) int {
-				res := strings.Compare(a.GroupVersion.Group, b.GroupVersion.Group)
-				if res != 0 {
-					return res
-				}
-
-				res = strings.Compare(a.GroupVersion.Version, b.GroupVersion.Version)
-				if res != 0 {
-					return res
-				}
-
-				return strings.Compare(a.Kind, b.Kind)
-			})
-
+			res := reg.SupportedResources().Sorted()
 			return codec.Encode(cmd.OutOrStdout(), res)
 		},
 	}

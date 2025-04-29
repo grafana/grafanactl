@@ -73,24 +73,34 @@ type PullRequest struct {
 	StopOnError bool
 
 	// Destination list for the pulled resources.
-	Resources *unstructured.UnstructuredList
+	Resources *resources.Resources
 }
 
 // Pull pulls resources from Grafana.
 func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
-	// hack: we need to refactor this better, since there's a bunch of code duplication.
-	// but we want to expose a nice minimalistic API to the user.
-	if req.Filters.IsEmpty() {
-		return p.pullAll(ctx, req)
+	filters := req.Filters
+
+	// If no filters are provided, we need to pull all available resources.
+	if filters.IsEmpty() {
+		// When pulling all resources, we need to use preferred versions.
+		preferred := p.registry.PreferredResources()
+
+		filters = make(resources.Filters, 0, len(preferred))
+		for _, r := range preferred {
+			filters = append(filters, resources.Filter{
+				Type:       resources.FilterTypeAll,
+				Descriptor: r,
+			})
+		}
 	}
 
 	logger := logging.FromContext(ctx)
 	logger.Debug("Pulling resources")
 
 	errg, ctx := errgroup.WithContext(ctx)
-	partialRes := make([][]unstructured.Unstructured, len(req.Filters))
+	partialRes := make([][]unstructured.Unstructured, len(filters))
 
-	for idx, filt := range req.Filters {
+	for idx, filt := range filters {
 		errg.Go(func() error {
 			switch filt.Type {
 			case resources.FilterTypeAll:
@@ -132,48 +142,16 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 		return err
 	}
 
-	req.Resources.Items = make([]unstructured.Unstructured, 0, len(partialRes))
+	req.Resources.Clear()
 	for _, r := range partialRes {
-		req.Resources.Items = append(req.Resources.Items, r...)
-	}
-
-	return nil
-}
-
-func (p *Puller) pullAll(ctx context.Context, req PullRequest) error {
-	logger := logging.FromContext(ctx)
-	logger.Debug("Pulling all resources")
-
-	resources := p.registry.PreferredResources()
-
-	errg, ctx := errgroup.WithContext(ctx)
-	cmdRes := make([][]unstructured.Unstructured, len(resources))
-
-	for i, r := range resources {
-		errg.Go(func() error {
-			res, err := p.client.List(ctx, r, metav1.ListOptions{})
-			if err == nil {
-				cmdRes[i] = res.Items
-			}
-
+		for _, item := range r {
+			res, err := resources.FromUnstructured(&item)
 			if err != nil {
-				if req.StopOnError {
-					return err
-				}
-				logger.Warn("Could not pull resources", logs.Err(err), slog.String("kind", r.String()))
+				return err
 			}
 
-			return nil
-		})
-	}
-
-	if err := errg.Wait(); err != nil {
-		return err
-	}
-
-	req.Resources.Items = make([]unstructured.Unstructured, 0, len(cmdRes))
-	for _, r := range cmdRes {
-		req.Resources.Items = append(req.Resources.Items, r...)
+			req.Resources.Add(res)
+		}
 	}
 
 	return nil

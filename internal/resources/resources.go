@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"golang.org/x/sync/errgroup"
@@ -23,13 +25,13 @@ type Resource struct {
 
 // MustFromObject creates a new Resource from an object.
 // If the object is not a valid Grafana resource, it will panic.
-func MustFromObject(obj map[string]any) Resource {
+func MustFromObject(obj map[string]any) *Resource {
 	return MustFromUnstructured(&unstructured.Unstructured{Object: obj})
 }
 
 // MustFromUnstructured creates a new Resource from an unstructured object.
 // If the object is not a valid Grafana resource, it will panic.
-func MustFromUnstructured(obj *unstructured.Unstructured) Resource {
+func MustFromUnstructured(obj *unstructured.Unstructured) *Resource {
 	r, err := FromUnstructured(obj)
 	if err != nil {
 		panic(err)
@@ -38,12 +40,12 @@ func MustFromUnstructured(obj *unstructured.Unstructured) Resource {
 }
 
 // FromUnstructured creates a new Resource from an unstructured object.
-func FromUnstructured(obj *unstructured.Unstructured) (Resource, error) {
+func FromUnstructured(obj *unstructured.Unstructured) (*Resource, error) {
 	metaAccessor, err := utils.MetaAccessor(obj)
 	if err != nil {
-		return Resource{}, err
+		return nil, err
 	}
-	return Resource{Raw: metaAccessor}, nil
+	return &Resource{Raw: metaAccessor}, nil
 }
 
 // ToUnstructured converts the resource to an unstructured object.
@@ -140,15 +142,19 @@ type Resources struct {
 
 // NewResources creates a new Resources collection.
 func NewResources(resources ...*Resource) *Resources {
-	r := &Resources{
-		collection: make(map[ResourceRef]*Resource, len(resources)),
-	}
-
+	r := MakeResources(len(resources))
 	r.Add(resources...)
-
 	return r
 }
 
+// MakeResources makes a new empty Resources collection of the given size.
+func MakeResources(size int) *Resources {
+	return &Resources{
+		collection: make(map[ResourceRef]*Resource, size),
+	}
+}
+
+// NewResourcesFromUnstructured creates a new Resources collection from an unstructured list.
 func NewResourcesFromUnstructured(resources unstructured.UnstructuredList) (*Resources, error) {
 	if len(resources.Items) == 0 {
 		return NewResources(), nil
@@ -161,10 +167,16 @@ func NewResourcesFromUnstructured(resources unstructured.UnstructuredList) (*Res
 			return nil, err
 		}
 
-		list = append(list, &r)
+		list = append(list, r)
 	}
 
 	return NewResources(list...), nil
+}
+
+// Clear removes all resources from the collection by resetting the underlying map.
+// The new map will have the same capacity as the old one.
+func (r *Resources) Clear() {
+	r.collection = make(map[ResourceRef]*Resource, len(r.collection))
 }
 
 // Add adds resources to the collection.
@@ -263,4 +275,49 @@ func (r *Resources) GroupByKind() map[string]*Resources {
 	})
 
 	return resourceByKind
+}
+
+// ToUnstructuredList converts the resources to an unstructured list.
+func (r *Resources) ToUnstructuredList() unstructured.UnstructuredList {
+	res := unstructured.UnstructuredList{
+		Items: make([]unstructured.Unstructured, 0, r.Len()),
+	}
+
+	if err := r.ForEach(func(r *Resource) error {
+		obj, err := r.ToUnstructured()
+		if err != nil {
+			return err
+		}
+		res.Items = append(res.Items, *obj)
+		return nil
+	}); err != nil {
+		return unstructured.UnstructuredList{}
+	}
+
+	return res
+}
+
+// SortUnstructured sorts a list of unstructured objects by group, version, kind, and name.
+func SortUnstructured(items []unstructured.Unstructured) {
+	slices.SortStableFunc(items, func(a, b unstructured.Unstructured) int {
+		gva := a.GroupVersionKind()
+		gvb := b.GroupVersionKind()
+
+		res := strings.Compare(gva.Group, gvb.Group)
+		if res != 0 {
+			return res
+		}
+
+		res = strings.Compare(gva.Version, gvb.Version)
+		if res != 0 {
+			return res
+		}
+
+		res = strings.Compare(gva.Kind, gvb.Kind)
+		if res != 0 {
+			return res
+		}
+
+		return strings.Compare(a.GetName(), b.GetName())
+	})
 }

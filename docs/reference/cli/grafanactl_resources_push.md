@@ -60,7 +60,6 @@ grafanactl resources push [RESOURCE_SELECTOR]... [flags]
       --dry-run              If set, the push operation will be simulated, without actually creating or updating any resources
   -h, --help                 help for push
       --max-concurrent int   Maximum number of concurrent operations (default 10)
-      --overwrite            Overwrite existing resources
       --stop-on-error        Stop pushing resources when an error occurs
 ```
 

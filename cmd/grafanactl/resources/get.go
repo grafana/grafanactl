@@ -8,6 +8,7 @@ import (
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/format"
+	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,26 +109,29 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
+			output := res.Resources.ToUnstructuredList()
+			resources.SortUnstructured(output.Items)
+
 			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
 				// Avoid printing a list of results if a single resource is being pulled,
 				// and we are not using the table output format.
-				if res.IsSingleTarget && len(res.Resources.Items) == 1 {
-					return codec.Encode(cmd.OutOrStdout(), res.Resources.Items[0].Object)
+				if res.IsSingleTarget && len(output.Items) == 1 {
+					return codec.Encode(cmd.OutOrStdout(), output.Items[0].Object)
 				}
 
 				// For JSON / YAML output we don't want to have "object" keys in the output,
 				// so use the custom printItems type instead.
-				output := printItems{
-					Items: make([]map[string]any, len(res.Resources.Items)),
+				formatted := printItems{
+					Items: make([]map[string]any, len(output.Items)),
 				}
-				for i, item := range res.Resources.Items {
-					output.Items[i] = item.Object
+				for i, item := range output.Items {
+					formatted.Items[i] = item.Object
 				}
 
-				return codec.Encode(cmd.OutOrStdout(), output)
+				return codec.Encode(cmd.OutOrStdout(), formatted)
 			}
 
-			return codec.Encode(cmd.OutOrStdout(), res.Resources)
+			return codec.Encode(cmd.OutOrStdout(), output)
 		},
 	}
 

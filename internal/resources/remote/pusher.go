@@ -78,11 +78,6 @@ type PushRequest struct {
 	// Whether the operation should stop upon encountering an error.
 	StopOnError bool
 
-	// Whether to overwrite existing resources.
-	// If false, the resource will be skipped if it already exists and is a newer version,
-	// compared to the resource passed in the request.
-	OverwriteExisting bool
-
 	// If set to true, the pusher will use the server-side dry-run feature to simulate the push operations.
 	// This will not actually create or update any resources,
 	// but will ensure the requests are valid and perform server-side validations.
@@ -151,7 +146,7 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 				return nil
 			}
 
-			if err := p.upsertResource(ctx, desc, name, res, request.OverwriteExisting, request.DryRun, logger); err != nil {
+			if err := p.upsertResource(ctx, desc, name, res, request.DryRun, logger); err != nil {
 				summary.recordFailure(res, err)
 
 				if request.StopOnError {
@@ -174,13 +169,7 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 }
 
 func (p *Pusher) upsertResource(
-	ctx context.Context,
-	desc resources.Descriptor,
-	name string,
-	src *resources.Resource,
-	overwrite bool,
-	dryRun bool,
-	logger logging.Logger,
+	ctx context.Context, desc resources.Descriptor, name string, src *resources.Resource, dryRun bool, log logging.Logger,
 ) error {
 	var dryRunOpts []string
 	if dryRun {
@@ -188,25 +177,8 @@ func (p *Pusher) upsertResource(
 	}
 
 	// Check if the resource already exists.
-	dst, err := p.client.Get(ctx, desc, name, metav1.GetOptions{})
-	//nolint:nestif
+	_, err := p.client.Get(ctx, desc, name, metav1.GetOptions{})
 	if err == nil {
-		// If the resource already exists, check if it is a newer version.
-		// If it is, and overwrite is not set, skip the resource.
-		if dst.GetResourceVersion() != src.Raw.GetResourceVersion() {
-			if !overwrite {
-				return fmt.Errorf(
-					"resource `%s/%s` already exists with a different resource version: %s",
-					desc.GroupVersionKind(), name, dst.GetResourceVersion(),
-				)
-			}
-
-			// Force the resource version to be the same as the destination resource version.
-			// This effectively means that we will overwrite the resource in the API with local data.
-			// This will lead to data loss but that's what we want since the overwrite flag is set to true.
-			src.Raw.SetResourceVersion(dst.GetResourceVersion())
-		}
-
 		unstructuredObj, err := src.ToUnstructured()
 		if err != nil {
 			return err
@@ -223,7 +195,7 @@ func (p *Pusher) upsertResource(
 			return err
 		}
 
-		logger.Info("Resource updated")
+		log.Info("Resource updated")
 		return nil
 	}
 
@@ -240,7 +212,7 @@ func (p *Pusher) upsertResource(
 			return err
 		}
 
-		logger.Info("Resource created")
+		log.Info("Resource created")
 		return nil
 	}
 
