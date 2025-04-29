@@ -82,12 +82,12 @@ func (reader *FSReader) ReadBytes(ctx context.Context, dst *resources.Resources,
 
 // Read reads all resources from the filesystem and returns them as an unstructured list.
 func (reader *FSReader) Read(
-	ctx context.Context, dst *resources.Resources, filters resources.Filters, directories []string,
+	ctx context.Context, dst *resources.Resources, filters resources.Filters, paths []string,
 ) error {
 	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
 
-	if len(directories) == 0 {
-		logger.Debug("no directories or resources to read")
+	if len(paths) == 0 {
+		logger.Debug("no paths or resources to read")
 		return nil
 	}
 
@@ -103,8 +103,30 @@ func (reader *FSReader) Read(
 	gr.Go(func() error {
 		defer close(pathCh)
 
-		for _, dir := range directories {
-			if err := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
+		for _, path := range paths {
+			info, err := os.Stat(path)
+			if err != nil {
+				if reader.StopOnError {
+					return err
+				}
+
+				logger.Warn("Failed to stat path", slog.String("path", path), logs.Err(err))
+				continue
+			}
+
+			// If the path exists and it's not a directory we don't need to traverse it,
+			// and instead we can just send the path for reading.
+			if !info.IsDir() {
+				select {
+				case <-ctx.Done():
+					return nil
+				case pathCh <- path:
+				}
+
+				continue
+			}
+
+			if err := filepath.WalkDir(path, func(path string, info os.DirEntry, err error) error {
 				// Early return if context is cancelled
 				if ctx.Err() != nil {
 					return filepath.SkipAll

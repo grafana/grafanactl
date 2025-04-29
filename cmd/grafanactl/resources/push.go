@@ -15,22 +15,22 @@ import (
 )
 
 type pushOpts struct {
-	Directories   []string
+	Paths         []string
 	MaxConcurrent int
 	StopOnError   bool
 	DryRun        bool
 }
 
 func (opts *pushOpts) setup(flags *pflag.FlagSet) {
-	flags.StringSliceVarP(&opts.Directories, "directory", "d", []string{defaultResourcesDir}, "Directories on disk from which to read the resources to push")
+	flags.StringSliceVarP(&opts.Paths, "path", "p", []string{defaultResourcesPath}, "Paths on disk from which to read the resources to push")
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pushing resources when an error occurs")
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the push operation will be simulated, without actually creating or updating any resources")
 }
 
 func (opts *pushOpts) Validate() error {
-	if len(opts.Directories) == 0 {
-		return errors.New("at least one directory is required")
+	if len(opts.Paths) == 0 {
+		return errors.New("at least one path is required")
 	}
 
 	if opts.MaxConcurrent < 1 {
@@ -121,7 +121,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			resourcesList := resources.NewResources()
 
-			if err := reader.Read(ctx, resourcesList, filters, opts.Directories); err != nil {
+			if err := reader.Read(ctx, resourcesList, filters, opts.Paths); err != nil {
 				return err
 			}
 

@@ -22,7 +22,7 @@ type deleteOpts struct {
 	Force         bool
 	MaxConcurrent int
 	DryRun        bool
-	Directories   []string
+	Path          []string
 }
 
 func (opts *deleteOpts) setup(flags *pflag.FlagSet) {
@@ -30,7 +30,7 @@ func (opts *deleteOpts) setup(flags *pflag.FlagSet) {
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.Force, "force", opts.Force, "Delete all resources of the specified resource types")
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the delete operation will be simulated")
-	flags.StringSliceVarP(&opts.Directories, "directory", "d", nil, "Directories on disk containing the resources to delete")
+	flags.StringSliceVarP(&opts.Path, "path", "p", nil, "Path on disk containing the resources to delete")
 }
 
 func (opts *deleteOpts) Validate(args []string) error {
@@ -38,8 +38,8 @@ func (opts *deleteOpts) Validate(args []string) error {
 		return errors.New("max-concurrent must be greater than zero")
 	}
 
-	if len(args) == 0 && len(opts.Directories) == 0 {
-		return errors.New("either --directory or resource selectors need to be specified")
+	if len(args) == 0 && len(opts.Path) == 0 {
+		return errors.New("either --path or resource selectors need to be specified")
 	}
 
 	return nil
@@ -67,10 +67,10 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	grafanactl resources delete dashboards --force
 
 	# Delete every resource defined in the given directory
-	grafanactl resources delete -d ./unwanted-resources/
+	grafanactl resources delete -p ./unwanted-resources/
 
 	# Delete every dashboard defined in the given directory
-	grafanactl resources delete -d ./unwanted-resources/ dashboard
+	grafanactl resources delete -p ./unwanted-resources/ dashboard
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -102,7 +102,7 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			var res resources.Resources
 
 			// Load resources by selectors only
-			if len(opts.Directories) == 0 {
+			if len(opts.Path) == 0 {
 				fetchRes, err := fetchResources(ctx, fetchRequest{
 					Config:      cfg,
 					StopOnError: opts.StopOnError,
@@ -179,5 +179,5 @@ func loadResourcesFromDirectories(ctx context.Context, cfg config.NamespacedREST
 		return err
 	}
 
-	return reader.Read(ctx, res, filters, opts.Directories)
+	return reader.Read(ctx, res, filters, opts.Path)
 }
