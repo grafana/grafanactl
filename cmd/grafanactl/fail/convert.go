@@ -163,6 +163,18 @@ func convertFSErrors(err error) (*DetailedError, bool) {
 		}, true
 	}
 
+	if errors.Is(err, os.ErrInvalid) && errors.As(err, &pathErr) {
+		return &DetailedError{
+			Summary: "Invalid path",
+			Details: fmt.Sprintf("path '%s' is not valid", pathErr.Path),
+			Parent:  err,
+			Suggestions: []string{
+				"Make sure that you are passing in a valid path",
+				"If you are pulling resources make sure that the path is a directory",
+			},
+		}, true
+	}
+
 	if errors.Is(err, os.ErrPermission) && errors.As(err, &pathErr) {
 		return &DetailedError{
 			Summary: "Permission denied",

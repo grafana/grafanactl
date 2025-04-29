@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -103,15 +104,21 @@ func (writer *FSWriter) writeSingle(resource *resources.Resource) error {
 }
 
 func ensureDirectoryExists(directory string) error {
-	if _, err := os.Stat(directory); err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(directory, 0755)
-			if err != nil {
-				return err
-			}
-		}
+	info, err := os.Stat(directory)
+	if os.IsNotExist(err) {
+		return os.MkdirAll(directory, 0755)
+	}
 
+	if err != nil {
 		return err
+	}
+
+	if !info.IsDir() {
+		return &fs.PathError{
+			Op:   "mkdir",
+			Path: directory,
+			Err:  os.ErrInvalid,
+		}
 	}
 
 	return nil
