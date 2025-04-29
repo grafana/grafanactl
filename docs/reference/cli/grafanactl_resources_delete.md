@@ -27,21 +27,21 @@ grafanactl resources delete [RESOURCE_SELECTOR]... [flags]
 	grafanactl resources delete dashboards --force
 
 	# Delete every resource defined in the given directory
-	grafanactl resources delete -d ./unwanted-resources/
+	grafanactl resources delete -p ./unwanted-resources/
 
 	# Delete every dashboard defined in the given directory
-	grafanactl resources delete -d ./unwanted-resources/ dashboard
+	grafanactl resources delete -p ./unwanted-resources/ dashboard
 
 ```
 
 ### Options
 
 ```
-  -d, --directory strings    Directories on disk containing the resources to delete
       --dry-run              If set, the delete operation will be simulated
       --force                Delete all resources of the specified resource types
   -h, --help                 help for delete
       --max-concurrent int   Maximum number of concurrent operations (default 10)
+  -p, --path strings         Path on disk containing the resources to delete
       --stop-on-error        Stop pulling resources when an error occurs
 ```
 
