@@ -37,9 +37,18 @@ lint: check-binaries ## Lints the code base.
 tests: check-binaries ## Runs the tests.
 	$(RUN_DEVBOX) go test -v ./...
 
+GIT_REVISION  ?= $(shell git rev-parse --short HEAD)
+GIT_VERSION   ?= $(shell git describe --tags --exact-match 2>/dev/null || echo "")
+BUILD_DATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+VERSION_FLAGS := -X main.version=${GIT_VERSION} -X main.commit=${GIT_REVISION} -X main.date=${BUILD_DATE}
+
 .PHONY: build
 build: check-binaries ## Builds the binary into the `./bin/grafanactl`.
-	$(RUN_DEVBOX) go build -buildvcs=false -o bin/grafanactl ./cmd/grafanactl
+	$(RUN_DEVBOX) go build \
+		-buildvcs=false \
+		-ldflags="${VERSION_FLAGS}" \
+		-o bin/grafanactl \
+		./cmd/grafanactl
 
 .PHONY: install
 install: build ## Installs the binary into `$GOPATH/bin`.
