@@ -7,6 +7,9 @@ on:
 env:
   DEVBOX_VERSION: 0.14.0
 
+permissions:
+  contents: read
+
 jobs:
   linters:
     name: Linters
@@ -14,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Restore go vendors
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 #v4.2.3
@@ -40,6 +45,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Restore go vendors
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 #4.2.3
@@ -66,6 +73,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install devbox
         uses: jetify-com/devbox-install-action@734088efddca47cf44ff8a09289c6d0e51b73218 #v0.12.0
