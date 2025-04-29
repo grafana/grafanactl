@@ -17,8 +17,8 @@ func TestFSWriter_Write(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := local.FSWriter{
-		Directory: outputDir,
-		Encoder:   format.NewYAMLCodec(),
+		Path:    outputDir,
+		Encoder: format.NewYAMLCodec(),
 		Namer: func(resource *resources.Resource) (string, error) {
 			return resource.Name() + ".yaml", nil
 		},
@@ -36,7 +36,7 @@ func TestFSWriter_Write_continueOnError(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := local.FSWriter{
-		Directory:   outputDir,
+		Path:        outputDir,
 		Encoder:     format.NewYAMLCodec(),
 		StopOnError: false,
 		Namer: func(resource *resources.Resource) (string, error) {
@@ -59,9 +59,9 @@ func TestFSWriter_Write_groupedByKind(t *testing.T) {
 	outputDir := filepath.Join(t.TempDir(), "output")
 
 	writer := local.FSWriter{
-		Directory: outputDir,
-		Encoder:   format.NewJSONCodec(),
-		Namer:     local.GroupResourcesByKind("json"),
+		Path:    outputDir,
+		Encoder: format.NewJSONCodec(),
+		Namer:   local.GroupResourcesByKind("json"),
 	}
 
 	err := writer.Write(t.Context(), testResources())
@@ -80,8 +80,8 @@ func TestFSWriter_Write_doesNothingWithNoResources(t *testing.T) {
 	req.NoError(err)
 
 	writer := local.FSWriter{
-		Directory: outputDir,
-		Encoder:   format.NewYAMLCodec(),
+		Path:    outputDir,
+		Encoder: format.NewYAMLCodec(),
 		Namer: func(resource *resources.Resource) (string, error) {
 			return resource.Name() + ".yaml", nil
 		},

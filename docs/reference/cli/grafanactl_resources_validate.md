@@ -37,10 +37,10 @@ grafanactl resources validate [RESOURCE_SELECTOR]... [flags]
 ### Options
 
 ```
-  -d, --directory strings    Directories on disk from which to read the resources. (default [./resources])
   -h, --help                 help for validate
       --max-concurrent int   Maximum number of concurrent operations (default 10)
   -o, --output string        Output format. One of: json, text, yaml (default "text")
+  -p, --path strings         Paths on disk from which to read the resources. (default [./resources])
       --stop-on-error        Stop validating resources when an error occurs
 ```
 

@@ -56,10 +56,10 @@ grafanactl resources pull [RESOURCE_SELECTOR]... [flags]
 ### Options
 
 ```
-  -d, --directory string   Directory on disk in which the resources will be written. (default "./resources")
-  -h, --help               help for pull
-  -o, --output string      Output format. One of: json, yaml (default "json")
-      --stop-on-error      Stop pulling resources when an error occurs
+  -h, --help            help for pull
+  -o, --output string   Output format. One of: json, yaml (default "json")
+  -p, --path string     Path on disk in which the resources will be written. (default "./resources")
+      --stop-on-error   Stop pulling resources when an error occurs
 ```
 
 ### Options inherited from parent commands

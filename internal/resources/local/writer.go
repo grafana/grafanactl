@@ -30,8 +30,8 @@ func GroupResourcesByKind(extension string) FileNamer {
 }
 
 type FSWriter struct {
-	// Directory on the filesystem where resources should be written.
-	Directory string
+	// Path on the filesystem where resources should be written.
+	Path string
 	// Namer is a function mapping a resource to a path on the filesystem
 	// (relative to Directory).
 	// The naming strategy used here directly controls the file hierarchy created
@@ -49,11 +49,11 @@ func (writer *FSWriter) Write(ctx context.Context, resources *resources.Resource
 		return nil
 	}
 
-	logger := logging.FromContext(ctx).With(slog.String("directory", writer.Directory))
+	logger := logging.FromContext(ctx).With(slog.String("path", writer.Path))
 	logger.Debug("Writing resources", slog.Int("resources", resources.Len()))
 
 	// Create the directory if it doesn't exist
-	if err := ensureDirectoryExists(writer.Directory); err != nil {
+	if err := ensureDirectoryExists(writer.Path); err != nil {
 		return err
 	}
 
@@ -76,7 +76,7 @@ func (writer *FSWriter) writeSingle(resource *resources.Resource) error {
 		return fmt.Errorf("could not generate resource path: %w", err)
 	}
 
-	fullFileName := filepath.Join(writer.Directory, filename)
+	fullFileName := filepath.Join(writer.Path, filename)
 	if err := ensureDirectoryExists(filepath.Dir(fullFileName)); err != nil {
 		return fmt.Errorf("could ensure resource directory exists: %w", err)
 	}

@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	defaultResourcesDir = "./resources"
+	defaultResourcesPath = "./resources"
 )
 
 type pullOpts struct {
 	IO          cmdio.Options
 	StopOnError bool
-	Directory   string
+	Path        string
 }
 
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
@@ -26,7 +26,7 @@ func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
-	flags.StringVarP(&opts.Directory, "directory", "d", defaultResourcesDir, "Directory on disk in which the resources will be written.")
+	flags.StringVarP(&opts.Path, "path", "p", defaultResourcesPath, "Path on disk in which the resources will be written.")
 }
 
 func (opts *pullOpts) Validate() error {
@@ -34,8 +34,8 @@ func (opts *pullOpts) Validate() error {
 		return err
 	}
 
-	if opts.Directory == "" {
-		return errors.New("--directory is required")
+	if opts.Path == "" {
+		return errors.New("--path is required")
 	}
 
 	return nil
@@ -113,7 +113,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			writer := local.FSWriter{
-				Directory:   opts.Directory,
+				Path:        opts.Path,
 				Namer:       local.GroupResourcesByKind(opts.IO.OutputFormat),
 				Encoder:     codec,
 				StopOnError: opts.StopOnError,
