@@ -9,8 +9,8 @@ import (
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
-	"github.com/grafana/grafanactl/internal/resources/client"
 	"github.com/grafana/grafanactl/internal/resources/discovery"
+	"github.com/grafana/grafanactl/internal/resources/dynamic"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -46,7 +46,7 @@ type Pusher struct {
 // NewDefaultPusher creates a new Pusher.
 // It uses the default namespaced dynamic client to push resources to Grafana.
 func NewDefaultPusher(ctx context.Context, cfg config.NamespacedRESTConfig) (*Pusher, error) {
-	client, err := client.NewDefaultNamespacedDynamicClient(cfg)
+	client, err := dynamic.NewDefaultNamespacedClient(cfg)
 	if err != nil {
 		return nil, err
 	}
