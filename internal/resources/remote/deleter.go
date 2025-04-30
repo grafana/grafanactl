@@ -8,21 +8,21 @@ import (
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
-	"github.com/grafana/grafanactl/internal/resources/client"
 	"github.com/grafana/grafanactl/internal/resources/discovery"
+	"github.com/grafana/grafanactl/internal/resources/dynamic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // Deleter takes care of deleting resources from Grafana.
 type Deleter struct {
-	client   *client.NamespacedDynamicClient
+	client   *dynamic.NamespacedClient
 	registry PushRegistry
 }
 
 // NewDeleter creates a new Deleter.
 func NewDeleter(ctx context.Context, cfg config.NamespacedRESTConfig) (*Deleter, error) {
-	cli, err := client.NewDefaultNamespacedDynamicClient(cfg)
+	cli, err := dynamic.NewDefaultNamespacedClient(cfg)
 	if err != nil {
 		return nil, err
 	}

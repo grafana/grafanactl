@@ -8,8 +8,8 @@ import (
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
-	"github.com/grafana/grafanactl/internal/resources/client"
 	"github.com/grafana/grafanactl/internal/resources/discovery"
+	"github.com/grafana/grafanactl/internal/resources/dynamic"
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,7 +43,7 @@ type Puller struct {
 
 // NewDefaultPuller creates a new Puller.
 func NewDefaultPuller(ctx context.Context, restConfig config.NamespacedRESTConfig) (*Puller, error) {
-	client, err := client.NewDefaultNamespacedDynamicClient(restConfig)
+	client, err := dynamic.NewDefaultVersionedClient(restConfig)
 	if err != nil {
 		return nil, err
 	}
