@@ -308,7 +308,9 @@ func checkCmd(configOpts *Options) *cobra.Command {
 
 func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 	stdout := cmd.OutOrStdout()
-	title := "Context: " + io.Bold(gCtx.Name)
+	title := "Context: "
+	titleLen := len(title) + len(gCtx.Name)
+	title += io.Bold(gCtx.Name)
 
 	summarizeError := func(err error) string {
 		detailedErr := fail.ErrorToDetailedError(err)
@@ -328,7 +330,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 	}
 
 	cmd.Println(io.Yellow(title))
-	cmd.Println(io.Yellow(strings.Repeat("=", len(title))))
+	cmd.Println(io.Yellow(strings.Repeat("=", titleLen)))
 
 	if err := gCtx.Validate(); err != nil {
 		io.Error(stdout, "Configuration: %s", io.Red(summarizeError(err)))
