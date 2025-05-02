@@ -2,14 +2,11 @@ package resources
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 )
@@ -57,20 +54,7 @@ func (e editor) Open(ctx context.Context, file string) error {
 		return err
 	}
 
-	args := make([]string, len(e.shellArgs)+1)
-	copy(args, e.shellArgs)
-
-	args[len(e.shellArgs)] = fmt.Sprintf("%s %q", e.editorName, absPath)
-
-	logger.Debug("Starting editor", slog.String("command", strings.Join(args, " ")))
-	//nolint:gosec
-	cmd := exec.Command(args[0], args[1:]...)
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	return cmd.Run()
+	return e.openEditor(ctx, absPath)
 }
 
 func (e editor) OpenInTempFile(ctx context.Context, buffer io.Reader, format string) (func(), []byte, error) {
