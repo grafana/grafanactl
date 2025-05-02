@@ -206,7 +206,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 	templates = templates.Funcs(template.FuncMap{
 		"kindHasProxy": func(kind string) bool {
 			for _, handler := range s.resourceHandlers {
-				if handler.ResourceType().Kind == kind {
+				if handler.ResourceType().Kind == kind && handler.ProxyURL("foo") != "" {
 					return true
 				}
 			}
