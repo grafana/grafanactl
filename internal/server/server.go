@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -62,7 +63,7 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 
-	s.subpath = u.Path
+	s.subpath = strings.TrimSuffix(u.Path, "/")
 	s.proxy = &httputil.ReverseProxy{
 		Transport: httputils.NewTransport(s.context),
 		Rewrite: func(r *httputil.ProxyRequest) {
@@ -227,6 +228,7 @@ func (s *Server) mockHandler(response string) http.HandlerFunc {
 		httputils.Write(r, w, []byte(response))
 	}
 }
+
 func (s *Server) iframeHandler(w http.ResponseWriter, r *http.Request) {
 	group := chi.URLParam(r, "group")
 	version := chi.URLParam(r, "version")
