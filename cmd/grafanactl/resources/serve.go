@@ -206,7 +206,6 @@ func executeWatchScript(ctx context.Context, command string) ([]byte, error) {
 
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		// TODO: test on windows
 		cmd = exec.Command("cmd", "/c", command)
 	} else {
 		cmd = exec.Command("sh", "-c", command)
