@@ -88,15 +88,11 @@ func (writer *FSWriter) writeSingle(resource *resources.Resource) error {
 	}
 	defer file.Close()
 
-	obj, err := resource.ToUnstructured()
-	if err != nil {
-		return fmt.Errorf("could not convert resource to unstructured: %w", err)
-	}
-
+	obj := resource.ToUnstructured()
 	// MarshalJSON() methods for [unstructured.UnstructuredList] and
 	// [unstructured.Unstructured] types are defined on pointer receivers,
 	// so we need to make sure we dereference `resource` before formatting it.
-	if err := writer.Encoder.Encode(file, obj); err != nil {
+	if err := writer.Encoder.Encode(file, &obj); err != nil {
 		return fmt.Errorf("could write resource: %w", err)
 	}
 

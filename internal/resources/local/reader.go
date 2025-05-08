@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -11,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana-app-sdk/logging"
-	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/grafana/grafanactl/internal/resources"
@@ -54,30 +54,6 @@ type FSReader struct {
 	// MaxConcurrentReads is the maximum number of concurrent file reads.
 	// If not set, the default is 1.
 	MaxConcurrentReads int
-}
-
-func (reader *FSReader) ReadBytes(ctx context.Context, dst *resources.Resources, raw []byte, inputFormat string) error {
-	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
-	logger.Debug("Parsing bytes", slog.String("format", inputFormat))
-
-	decoder, err := reader.decoderForFormat(inputFormat)
-	if err != nil {
-		return err
-	}
-
-	object := &unstructured.Unstructured{}
-	if err := decoder.Decode(bytes.NewBuffer(raw), object); err != nil {
-		return ParseError{Err: err}
-	}
-
-	r, err := resources.FromUnstructured(object)
-	if err != nil {
-		return err
-	}
-
-	dst.Add(r)
-
-	return nil
 }
 
 // Read reads all resources from the filesystem and returns them as an unstructured list.
@@ -242,39 +218,65 @@ func (reader *FSReader) Read(
 	return gr.Wait()
 }
 
-func (reader *FSReader) ReadFile(ctx context.Context, result *resources.Resource, file string) error {
-	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"), slog.String("file", file))
+// ReadFile reads a resource from a file.
+// It expects that the file only contains a single resource.
+func (reader *FSReader) ReadFile(ctx context.Context, result *resources.Resource, filePath string) error {
+	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"), slog.String("file", filePath))
 
-	decoder, err := reader.decoderForFormat(strings.TrimPrefix(path.Ext(file), "."))
+	decoder, err := reader.decoderForFormat(strings.TrimPrefix(path.Ext(filePath), "."))
 	if err != nil {
 		return err
 	}
 
-	logger.Debug("Parsing file", slog.String("file", file), slog.String("codec", string(decoder.Format())))
+	logger.Debug("Parsing file", slog.String("file", filePath), slog.String("codec", string(decoder.Format())))
 
-	f, err := os.Open(file)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer file.Close()
 
+	return reader.readRaw(decoder, file, filePath, result)
+}
+
+// ReadBytes reads a resource from a byte slice.
+func (reader *FSReader) ReadBytes(
+	ctx context.Context, dst *resources.Resources, raw []byte, inputFormat string,
+) error {
+	logger := logging.FromContext(ctx).With(slog.String("component", "fs_reader"))
+	logger.Debug("Parsing bytes", slog.String("format", inputFormat))
+
+	decoder, err := reader.decoderForFormat(inputFormat)
+	if err != nil {
+		return err
+	}
+
+	res := &resources.Resource{}
+	if err := reader.readRaw(decoder, bytes.NewBuffer(raw), "", res); err != nil {
+		return err
+	}
+	dst.Add(res)
+
+	return nil
+}
+
+func (reader *FSReader) readRaw(
+	decoder format.Codec, src io.Reader, path string, dst *resources.Resource,
+) error {
 	object := &unstructured.Unstructured{}
 
-	if err := decoder.Decode(f, object); err != nil {
-		return ParseError{File: file, Err: err}
+	if err := decoder.Decode(src, object); err != nil {
+		return ParseError{Err: err}
 	}
 
-	metaAccessor, err := utils.MetaAccessor(object)
-	if err != nil {
+	if err := dst.SetUnstructured(object); err != nil {
 		return err
 	}
 
-	properties, _ := metaAccessor.GetSourceProperties()
-	properties.Path = fmt.Sprintf("%s://%s", string(decoder.Format()), file)
-
-	metaAccessor.SetSourceProperties(properties)
-
-	result.Raw = metaAccessor
+	dst.SetSource(resources.SourceInfo{
+		Path:   path,
+		Format: decoder.Format(),
+	})
 
 	return nil
 }

@@ -56,11 +56,13 @@ grafanactl resources push [RESOURCE_SELECTOR]... [flags]
 ### Options
 
 ```
-      --dry-run              If set, the push operation will be simulated, without actually creating or updating any resources
-  -h, --help                 help for push
-      --max-concurrent int   Maximum number of concurrent operations (default 10)
-  -p, --path strings         Paths on disk from which to read the resources to push (default [./resources])
-      --stop-on-error        Stop pushing resources when an error occurs
+      --dry-run               If set, the push operation will be simulated, without actually creating or updating any resources
+  -h, --help                  help for push
+      --include-managed       If set, resources managed by other tools will be included in the push operation
+      --max-concurrent int    Maximum number of concurrent operations (default 10)
+      --omit-manager-fields   If set, the manager fields will not be appended to the resources
+  -p, --path strings          Paths on disk from which to read the resources to push (default [./resources])
+      --stop-on-error         Stop pushing resources when an error occurs
 ```
 
 ### Options inherited from parent commands

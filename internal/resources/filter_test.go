@@ -27,7 +27,7 @@ func TestFilter_Matches(t *testing.T) {
 		"spec": map[string]any{
 			"uid": "test-1",
 		},
-	})
+	}, resources.SourceInfo{})
 
 	folder := resources.MustFromObject(map[string]any{
 		"apiVersion": "folder.grafana.app/v1",
@@ -38,7 +38,7 @@ func TestFilter_Matches(t *testing.T) {
 		"spec": map[string]any{
 			"title": "test-3",
 		},
-	})
+	}, resources.SourceInfo{})
 
 	tests := []struct {
 		name     string

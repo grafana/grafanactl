@@ -72,6 +72,9 @@ type PushRequest struct {
 	// A list of resources to push.
 	Resources *resources.Resources
 
+	// Processors to apply to resources before pushing them.
+	Processors []Processor
+
 	// The maximum number of concurrent pushes.
 	MaxConcurrency int
 
@@ -86,6 +89,9 @@ type PushRequest struct {
 	// Disable log emission for push failures. Callers will have to rely on the PushSummary
 	// returned by the Push() function to explore and report failures.
 	NoPushFailureLog bool
+
+	// Whether to include resources managed by other tools.
+	IncludeManaged bool
 }
 
 type PushFailure struct {
@@ -146,6 +152,27 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 				return nil
 			}
 
+			for _, processor := range request.Processors {
+				if err := processor.Process(res); err != nil {
+					summary.recordFailure(res, err)
+
+					if request.StopOnError {
+						return err
+					}
+
+					if !request.NoPushFailureLog {
+						logger.Warn("Failed to process resource", logs.Err(err))
+					}
+
+					return nil
+				}
+			}
+
+			if !res.IsManaged() && !request.IncludeManaged {
+				logger.Info(fmt.Sprintf("Skipping resource managed by %s", res.GetManagerKind()))
+				return nil
+			}
+
 			if err := p.upsertResource(ctx, desc, name, res, request.DryRun, logger); err != nil {
 				summary.recordFailure(res, err)
 
@@ -179,17 +206,14 @@ func (p *Pusher) upsertResource(
 	// Check if the resource already exists.
 	_, err := p.client.Get(ctx, desc, name, metav1.GetOptions{})
 	if err == nil {
-		unstructuredObj, err := src.ToUnstructured()
-		if err != nil {
-			return err
-		}
+		obj := src.ToUnstructured()
 
 		// Otherwise, update the resource.
 		// TODO: double-check if we need to do some resource version shenanigans here.
 		// (most likely yes)
 		// Something like – take existing resource, replace the annotations, labels, spec, etc.
 		// and then push it back.
-		if _, err := p.client.Update(ctx, desc, unstructuredObj, metav1.UpdateOptions{
+		if _, err := p.client.Update(ctx, desc, &obj, metav1.UpdateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
 			return err
@@ -201,12 +225,8 @@ func (p *Pusher) upsertResource(
 
 	// If the resource does not exist, create it.
 	if apierrors.IsNotFound(err) {
-		unstructuredObj, err := src.ToUnstructured()
-		if err != nil {
-			return err
-		}
-
-		if _, err := p.client.Create(ctx, desc, unstructuredObj, metav1.CreateOptions{
+		obj := src.ToUnstructured()
+		if _, err := p.client.Create(ctx, desc, &obj, metav1.CreateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
 			return err

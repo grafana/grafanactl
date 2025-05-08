@@ -13,7 +13,9 @@ import (
 type fetchRequest struct {
 	Config             config.NamespacedRESTConfig
 	StopOnError        bool
+	ExcludeManaged     bool
 	ExpectSingleTarget bool
+	Processors         []remote.Processor
 }
 
 type fetchResponse struct {
@@ -54,9 +56,11 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 	}
 
 	req := remote.PullRequest{
-		Filters:     filters,
-		StopOnError: opts.StopOnError || sels.IsSingleTarget(),
-		Resources:   &res.Resources,
+		Filters:        filters,
+		Resources:      &res.Resources,
+		Processors:     opts.Processors,
+		ExcludeManaged: opts.ExcludeManaged,
+		StopOnError:    opts.StopOnError || sels.IsSingleTarget(),
 	}
 
 	if err := pull.Pull(ctx, req); err != nil {

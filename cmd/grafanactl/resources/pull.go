@@ -7,6 +7,7 @@ import (
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/grafana/grafanactl/internal/resources/process"
+	"github.com/grafana/grafanactl/internal/resources/remote"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -16,9 +17,10 @@ const (
 )
 
 type pullOpts struct {
-	IO          cmdio.Options
-	StopOnError bool
-	Path        string
+	IO             cmdio.Options
+	StopOnError    bool
+	IncludeManaged bool
+	Path           string
 }
 
 func (opts *pullOpts) setup(flags *pflag.FlagSet) {
@@ -26,7 +28,13 @@ func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
-	flags.StringVarP(&opts.Path, "path", "p", defaultResourcesPath, "Path on disk in which the resources will be written.")
+	flags.StringVarP(&opts.Path, "path", "p", defaultResourcesPath, "Path on disk in which the resources will be written")
+	flags.BoolVar(
+		&opts.IncludeManaged,
+		"include-managed",
+		opts.IncludeManaged,
+		"Include resources managed by tools other than grafanactl",
+	)
 }
 
 func (opts *pullOpts) Validate() error {
@@ -105,8 +113,14 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			res, err := fetchResources(cmd.Context(), fetchRequest{
-				Config:      cfg,
-				StopOnError: opts.StopOnError,
+				Config: cfg,
+				// Strip server fields from the resources.
+				// This includes fields like `resourceVersion`, `uid`, etc.
+				Processors: []remote.Processor{
+					&process.ServerFieldsStripper{},
+				},
+				ExcludeManaged: !opts.IncludeManaged,
+				StopOnError:    opts.StopOnError,
 			}, args)
 			if err != nil {
 				return err
@@ -119,19 +133,11 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				StopOnError: opts.StopOnError,
 			}
 
-			// Strip server fields from the resources.
-			// This includes fields like `resourceVersion`, `uid`, etc.
-			var proc process.ServerFieldsStripper
-			processed, err := proc.Process(&res.Resources)
-			if err != nil {
+			if err := writer.Write(ctx, &res.Resources); err != nil {
 				return err
 			}
 
-			if err := writer.Write(ctx, processed); err != nil {
-				return err
-			}
-
-			cmdio.Success(cmd.OutOrStdout(), "%d resources pulled", processed.Len())
+			cmdio.Success(cmd.OutOrStdout(), "%d resources pulled", res.Resources.Len())
 
 			return nil
 		},

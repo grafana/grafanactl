@@ -202,7 +202,7 @@ func (c *DashboardProxy) dashboardJSONPostHandler() http.HandlerFunc {
 		defer file.Close()
 
 		var codec format.Encoder = format.NewJSONCodec()
-		if resource.SourceFormat() == "yaml" {
+		if resource.SourceFormat() == format.YAML {
 			codec = format.NewYAMLCodec()
 		}
 
