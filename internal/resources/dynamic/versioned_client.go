@@ -144,7 +144,7 @@ func getStoredVersion(obj *unstructured.Unstructured) (string, error) {
 
 	stat, err := acc.GetStatus()
 	if err != nil {
-		return "", err
+		return "", nil
 	}
 
 	statm, ok := stat.(map[string]any)
