@@ -11,12 +11,12 @@ require (
 	github.com/goccy/go-yaml v1.17.1
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a
-	github.com/grafana/grafana-app-sdk/logging v0.38.0
+	github.com/grafana/grafana-app-sdk/logging v0.38.1
 	github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250423121358-ed27d76d7fb9
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/sync v0.13.0
+	golang.org/x/sync v0.14.0
 	k8s.io/apimachinery v0.33.0
 	k8s.io/cli-runtime v0.33.0
 	k8s.io/client-go v0.33.0
