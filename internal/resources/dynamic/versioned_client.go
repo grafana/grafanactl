@@ -75,11 +75,7 @@ func (c *VersionedClient) Get(
 		return nil, err
 	}
 
-	storedVersion, err := getStoredVersion(obj)
-	if err != nil {
-		return nil, err
-	}
-
+	storedVersion := getStoredVersion(obj)
 	if storedVersion == "" {
 		return obj, nil
 	}
@@ -99,11 +95,7 @@ func (c *VersionedClient) getMultipleCorrectVersions(
 	// Iterate over all objects and check if they need to be re-fetched using the stored version.
 	// Group the objects by the new descriptor.
 	for _, obj := range src {
-		storedVersion, err := getStoredVersion(&obj)
-		if err != nil {
-			return nil, err
-		}
-
+		storedVersion := getStoredVersion(&obj)
 		if storedVersion == "" {
 			res = append(res, obj)
 			continue
@@ -136,41 +128,41 @@ func (c *VersionedClient) getMultipleCorrectVersions(
 	return res, nil
 }
 
-func getStoredVersion(obj *unstructured.Unstructured) (string, error) {
+func getStoredVersion(obj *unstructured.Unstructured) string {
 	acc, err := utils.MetaAccessor(obj)
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	stat, err := acc.GetStatus()
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	statm, ok := stat.(map[string]any)
 	if !ok {
-		return "", nil
+		return ""
 	}
 
 	conv, ok := statm["conversion"]
 	if !ok {
-		return "", nil
+		return ""
 	}
 
 	convm, ok := conv.(map[string]any)
 	if !ok {
-		return "", nil
+		return ""
 	}
 
 	v, ok := convm["storedVersion"]
 	if !ok {
-		return "", nil
+		return ""
 	}
 
 	storedVersion, ok := v.(string)
 	if !ok {
-		return "", nil
+		return ""
 	}
 
-	return storedVersion, nil
+	return storedVersion
 }
