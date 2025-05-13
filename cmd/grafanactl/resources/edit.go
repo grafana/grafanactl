@@ -107,12 +107,8 @@ The edition will be cancelled if no changes are written to the file or if the fi
 				return fmt.Errorf("expected exactly one resource, got %d", len(list))
 			}
 
-			obj, err := list[0].ToUnstructured()
-			if err != nil {
-				return err
-			}
-
-			if err := codec.Encode(buffer, obj); err != nil {
+			obj := list[0].ToUnstructured()
+			if err := codec.Encode(buffer, &obj); err != nil {
 				return err
 			}
 

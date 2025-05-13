@@ -69,11 +69,17 @@ type PullRequest struct {
 	// Which resources to pull.
 	Filters resources.Filters
 
-	// Whether the operation should stop upon encountering an error.
-	StopOnError bool
+	// Processors to apply to resources after they are pulled.
+	Processors []Processor
 
 	// Destination list for the pulled resources.
 	Resources *resources.Resources
+
+	// Whether to include resources managed by other tools.
+	ExcludeManaged bool
+
+	// Whether the operation should stop upon encountering an error.
+	StopOnError bool
 }
 
 // Pull pulls resources from Grafana.
@@ -150,7 +156,31 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 				return err
 			}
 
-			req.Resources.Add(res)
+			// TODO: this should be replaced by a more generic mechanism,
+			// e.g. label & annotation filters.
+			if !res.IsManaged() && req.ExcludeManaged {
+				continue
+			}
+
+			if err := p.process(res, req.Processors); err != nil {
+				if req.StopOnError {
+					return err
+				}
+
+				logger.Warn("Failed to process resource", logs.Err(err))
+			} else {
+				req.Resources.Add(res)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (p *Puller) process(res *resources.Resource, processors []Processor) error {
+	for _, processor := range processors {
+		if err := processor.Process(res); err != nil {
+			return err
 		}
 	}
 

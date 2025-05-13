@@ -2,17 +2,20 @@ package resources
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/url"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
+	"github.com/grafana/grafanactl/internal/format"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+const (
+	// TODO: change once we have a proper manager kind for grafanactl.
+	ResourceManagerKind = utils.ManagerKindKubectl
 )
 
 // ResourceRef is a unique identifier for a resource.
@@ -20,13 +23,17 @@ type ResourceRef string
 
 // Resource is a resource in the Grafana API.
 type Resource struct {
-	Raw utils.GrafanaMetaAccessor
+	Raw    utils.GrafanaMetaAccessor
+	Object unstructured.Unstructured
+	Source SourceInfo
 }
 
 // MustFromObject creates a new Resource from an object.
 // If the object is not a valid Grafana resource, it will panic.
-func MustFromObject(obj map[string]any) *Resource {
-	return MustFromUnstructured(&unstructured.Unstructured{Object: obj})
+func MustFromObject(obj map[string]any, source SourceInfo) *Resource {
+	res := MustFromUnstructured(&unstructured.Unstructured{Object: obj})
+	res.SetSource(source)
+	return res
 }
 
 // MustFromUnstructured creates a new Resource from an unstructured object.
@@ -41,97 +48,127 @@ func MustFromUnstructured(obj *unstructured.Unstructured) *Resource {
 
 // FromUnstructured creates a new Resource from an unstructured object.
 func FromUnstructured(obj *unstructured.Unstructured) (*Resource, error) {
-	metaAccessor, err := utils.MetaAccessor(obj)
+	meta, err := utils.MetaAccessor(obj)
 	if err != nil {
 		return nil, err
 	}
-	return &Resource{Raw: metaAccessor}, nil
+
+	return &Resource{
+		Raw:    meta,
+		Object: *obj,
+	}, nil
+}
+
+// IsEmpty returns true if the resource is empty.
+func (r *Resource) IsEmpty() bool {
+	return r.Raw == nil
+}
+
+// SetUnstructured sets the resource to the given unstructured object.
+func (r *Resource) SetUnstructured(obj *unstructured.Unstructured) error {
+	metaAccessor, err := utils.MetaAccessor(obj)
+	if err != nil {
+		return err
+	}
+
+	r.Raw = metaAccessor
+	r.Object = *obj
+
+	return nil
 }
 
 // ToUnstructured converts the resource to an unstructured object.
-func (r Resource) ToUnstructured() (*unstructured.Unstructured, error) {
-	runtimeObj, ok := r.Raw.GetRuntimeObject()
-	if !ok {
-		return nil, errors.New("failed converting resource to runtime object")
-	}
-	unstructuredObj, ok := runtimeObj.(*unstructured.Unstructured)
-	if !ok {
-		return nil, errors.New("failed converting resource to unstructured object")
-	}
-
-	return unstructuredObj, nil
+func (r *Resource) ToUnstructured() unstructured.Unstructured {
+	return r.Object
 }
 
 // Ref returns a unique identifier for the resource.
-func (r Resource) Ref() ResourceRef {
+func (r *Resource) Ref() ResourceRef {
 	return ResourceRef(
 		fmt.Sprintf("%s/%s-%s", r.GroupVersionKind().String(), r.Namespace(), r.Name()),
 	)
 }
 
 // GroupVersionKind returns the GroupVersionKind of the resource.
-func (r Resource) GroupVersionKind() schema.GroupVersionKind {
+func (r *Resource) GroupVersionKind() schema.GroupVersionKind {
 	return r.Raw.GetGroupVersionKind()
 }
 
 // Namespace returns the namespace of the resource.
-func (r Resource) Namespace() string {
+func (r *Resource) Namespace() string {
 	return r.Raw.GetNamespace()
 }
 
 // Name returns the name of the resource.
-func (r Resource) Name() string {
+func (r *Resource) Name() string {
 	return r.Raw.GetName()
 }
 
+// Labels returns the labels of the resource.
+func (r *Resource) Labels() map[string]string {
+	return r.Raw.GetLabels()
+}
+
+// Annotations returns the annotations of the resource.
+func (r *Resource) Annotations() map[string]string {
+	return r.Raw.GetAnnotations()
+}
+
+// Spec returns the spec of the resource.
+func (r *Resource) Spec() (any, error) {
+	return r.Raw.GetSpec()
+}
+
 // Group returns the group of the resource.
-func (r Resource) Group() string {
+func (r *Resource) Group() string {
 	return r.Raw.GetGroupVersionKind().Group
 }
 
 // Kind returns the kind of the resource.
-func (r Resource) Kind() string {
+func (r *Resource) Kind() string {
 	return r.Raw.GetGroupVersionKind().Kind
 }
 
 // Version returns the version of the resource.
-func (r Resource) Version() string {
+func (r *Resource) Version() string {
 	return r.Raw.GetGroupVersionKind().Version
 }
 
 // APIVersion returns the API version of the resource.
-func (r Resource) APIVersion() string {
+func (r *Resource) APIVersion() string {
 	return r.Group() + "/" + r.Version()
 }
 
+// SetSource sets the source of the resource.
+func (r *Resource) SetSource(source SourceInfo) {
+	r.Source = source
+}
+
 // SourcePath returns the source path of the resource.
-func (r Resource) SourcePath() string {
-	properties, _ := r.Raw.GetSourceProperties()
-	if properties.Path == "" {
-		return ""
-	}
-
-	u, err := url.Parse(properties.Path)
-	if err != nil {
-		return ""
-	}
-
-	return filepath.Join(u.Host, u.Path)
+func (r *Resource) SourcePath() string {
+	return r.Source.Path
 }
 
 // SourceFormat returns the source format of the resource.
-func (r Resource) SourceFormat() string {
-	properties, _ := r.Raw.GetSourceProperties()
-	if properties.Path == "" {
-		return ""
+func (r *Resource) SourceFormat() format.Format {
+	return r.Source.Format
+}
+
+// IsManaged returns true if the resource is managed by grafanactl.
+func (r *Resource) IsManaged() bool {
+	return r.GetManagerKind() == ResourceManagerKind
+}
+
+// GetManagerKind returns the kind of the manager that manages the resource.
+func (r *Resource) GetManagerKind() utils.ManagerKind {
+	m, ok := r.Raw.GetManagerProperties()
+	if !ok {
+		// If the manager properties are not set,
+		// we assume the resource will be managed by grafanactl.
+		return ResourceManagerKind
 	}
 
-	u, err := url.Parse(properties.Path)
-	if err != nil {
-		return ""
-	}
-
-	return u.Scheme
+	return m.Kind
 }
 
 // Resources is a collection of resources.
@@ -284,11 +321,7 @@ func (r *Resources) ToUnstructuredList() unstructured.UnstructuredList {
 	}
 
 	if err := r.ForEach(func(r *Resource) error {
-		obj, err := r.ToUnstructured()
-		if err != nil {
-			return err
-		}
-		res.Items = append(res.Items, *obj)
+		res.Items = append(res.Items, r.ToUnstructured())
 		return nil
 	}); err != nil {
 		return unstructured.UnstructuredList{}
@@ -320,4 +353,14 @@ func SortUnstructured(items []unstructured.Unstructured) {
 
 		return strings.Compare(a.GetName(), b.GetName())
 	})
+}
+
+// SourceInfo is information about the source of a resource.
+type SourceInfo struct {
+	Path   string
+	Format format.Format
+}
+
+func (s *SourceInfo) String() string {
+	return "file://" + s.Path
 }

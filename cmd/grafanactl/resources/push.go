@@ -9,16 +9,19 @@ import (
 	"github.com/grafana/grafanactl/internal/resources"
 	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/grafana/grafanactl/internal/resources/local"
+	"github.com/grafana/grafanactl/internal/resources/process"
 	"github.com/grafana/grafanactl/internal/resources/remote"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 type pushOpts struct {
-	Paths         []string
-	MaxConcurrent int
-	StopOnError   bool
-	DryRun        bool
+	Paths             []string
+	MaxConcurrent     int
+	StopOnError       bool
+	DryRun            bool
+	OmitManagerFields bool
+	IncludeManaged    bool
 }
 
 func (opts *pushOpts) setup(flags *pflag.FlagSet) {
@@ -26,6 +29,8 @@ func (opts *pushOpts) setup(flags *pflag.FlagSet) {
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pushing resources when an error occurs")
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the push operation will be simulated, without actually creating or updating any resources")
+	flags.BoolVar(&opts.OmitManagerFields, "omit-manager-fields", opts.OmitManagerFields, "If set, the manager fields will not be appended to the resources")
+	flags.BoolVar(&opts.IncludeManaged, "include-managed", opts.IncludeManaged, "If set, resources managed by other tools will be included in the push operation")
 }
 
 func (opts *pushOpts) Validate() error {
@@ -130,11 +135,18 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
+			procs := []remote.Processor{}
+			if !opts.OmitManagerFields {
+				procs = append(procs, &process.ManagerFieldsAppender{})
+			}
+
 			req := remote.PushRequest{
 				Resources:      resourcesList,
 				MaxConcurrency: opts.MaxConcurrent,
 				StopOnError:    opts.StopOnError,
 				DryRun:         opts.DryRun,
+				Processors:     procs,
+				IncludeManaged: opts.IncludeManaged,
 			}
 
 			summary, err := pusher.Push(ctx, req)
