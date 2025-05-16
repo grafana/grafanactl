@@ -38,6 +38,14 @@ func CommandOutputContains(expected string) CommandAssertion {
 	}
 }
 
+func CommandOutputEquals(expected string) CommandAssertion {
+	return func(t *testing.T, result CommandResult) {
+		t.Helper()
+
+		require.Equal(t, expected, result.Stdout)
+	}
+}
+
 type CommandResult struct {
 	Err    error
 	Stdout string

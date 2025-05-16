@@ -38,17 +38,18 @@ func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...c
 		// If Grafana-related env variables are set, use them to configure the
 		// current context and Grafana config.
 		func(cfg *config.Config) error {
-			grafanaCfg := config.GrafanaConfig{}
-
-			if err := env.Parse(&grafanaCfg); err != nil {
-				return err
+			if cfg.CurrentContext == "" {
+				cfg.CurrentContext = config.DefaultContextName
 			}
 
-			if !grafanaCfg.IsEmpty() {
-				cfg.SetContext(config.DefaultContextName, true, config.Context{
-					Name:    config.DefaultContextName,
-					Grafana: &grafanaCfg,
-				})
+			if !cfg.HasContext(cfg.CurrentContext) {
+				cfg.SetContext(cfg.CurrentContext, true, config.Context{})
+			}
+
+			grafanaCfg := cfg.Contexts[cfg.CurrentContext]
+
+			if err := env.Parse(grafanaCfg); err != nil {
+				return err
 			}
 
 			return nil
