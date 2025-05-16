@@ -264,3 +264,26 @@ current-context: dev`),
 	}
 	viewCmd.Run(t)
 }
+
+func Test_ViewCommand_withEnvironmentVariables(t *testing.T) {
+	testCase := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--config", "testdata/partial-config.yaml", "--minify", "--raw"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputEquals(`contexts:
+  prod:
+    grafana:
+      server: https://grafana.example.com/
+      token: token
+      org-id: 42
+current-context: prod
+`),
+		},
+		Env: map[string]string{
+			"GRAFANA_TOKEN": "token",
+		},
+	}
+
+	testCase.Run(t)
+}

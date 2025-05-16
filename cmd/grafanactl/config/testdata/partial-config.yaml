@@ -1,0 +1,11 @@
+contexts:
+  local:
+    grafana:
+      server: http://localhost:3000/
+      token: local_token
+  prod:
+    grafana:
+      server: https://grafana.example.com/
+      org-id: 42
+      #token: missing on purpose
+current-context: prod
