@@ -9,9 +9,10 @@ import (
 )
 
 func NewTransport(gCtx *config.Context) *http.Transport {
-	tlsSkipVerify := false
+	//nolint:gosec
+	tlsConfig := &tls.Config{InsecureSkipVerify: false}
 	if gCtx.Grafana != nil && gCtx.Grafana.TLS != nil {
-		tlsSkipVerify = gCtx.Grafana.TLS.Insecure
+		tlsConfig = gCtx.Grafana.TLS.ToStdTLSConfig()
 	}
 
 	return &http.Transport{
@@ -21,8 +22,7 @@ func NewTransport(gCtx *config.Context) *http.Transport {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		//nolint:gosec
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: tlsSkipVerify},
+		TLSClientConfig:       tlsConfig,
 	}
 }
 

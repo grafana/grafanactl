@@ -11,6 +11,7 @@ import (
 	"github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
+	"github.com/grafana/grafanactl/internal/grafana"
 	"github.com/grafana/grafanactl/internal/resources/discovery"
 	"github.com/grafana/grafanactl/internal/secrets"
 	"github.com/spf13/cobra"
@@ -335,7 +336,8 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	if err := gCtx.Validate(); err != nil {
 		io.Error(stdout, "Configuration: %s", io.Red(summarizeError(err)))
-		io.Warning(stdout, "Connectivity: %s", io.Yellow("skipped")+"\n")
+		io.Warning(stdout, "Connectivity: %s", io.Yellow("skipped"))
+		io.Warning(stdout, "Grafana version: %s", io.Yellow("skipped")+"\n")
 
 		printSuggestions(err)
 		return
@@ -344,12 +346,26 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 	io.Success(stdout, "Configuration: %s", io.Green("valid"))
 
 	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx)); err != nil {
-		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err))+"\n")
+		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err)))
+		io.Warning(stdout, "Grafana version: %s", io.Yellow("skipped")+"\n")
 		printSuggestions(err)
 		return
 	}
 
-	io.Success(stdout, "Connectivity: %s", io.Green("online")+"\n")
+	io.Success(stdout, "Connectivity: %s", io.Green("online"))
+
+	version, err := grafana.GetVersion(gCtx)
+	if err != nil {
+		io.Error(stdout, "Grafana version: %s", io.Red(summarizeError(err))+"\n")
+		return
+	}
+
+	if version.Major() < 12 {
+		io.Error(stdout, "Grafana version: %s", io.Red(version.String()+" (Grafana >= 12.0.0 is required)")+"\n")
+		return
+	}
+
+	io.Success(stdout, "Grafana version: %s", io.Green(version.String())+"\n")
 }
 
 func useContextCmd(configOpts *Options) *cobra.Command {
