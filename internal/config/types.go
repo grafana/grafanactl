@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 )
@@ -142,17 +143,14 @@ type TLS struct {
 	ServerName string `json:"server-name,omitempty" yaml:"server-name,omitempty"`
 
 	// CertData holds PEM-encoded bytes (typically read from a client certificate file).
-	// CertData takes precedence over CertFile
 	// Note: this value is base64-encoded in the config file and will be
 	// automatically decoded.
 	CertData []byte `json:"cert-data,omitempty" yaml:"cert-data,omitempty"`
 	// KeyData holds PEM-encoded bytes (typically read from a client certificate key file).
-	// KeyData takes precedence over KeyFile
 	// Note: this value is base64-encoded in the config file and will be
 	// automatically decoded.
 	KeyData []byte `datapolicy:"secret" json:"key-data,omitempty" yaml:"key-data,omitempty"`
 	// CAData holds PEM-encoded bytes (typically read from a root certificates bundle).
-	// CAData takes precedence over CAFile
 	// Note: this value is base64-encoded in the config file and will be
 	// automatically decoded.
 	CAData []byte `json:"ca-data,omitempty" yaml:"ca-data,omitempty"`
@@ -162,6 +160,16 @@ type TLS struct {
 	// To indicate to the server http/1.1 is preferred over http/2, set to ["http/1.1", "h2"] (though the server is free to ignore that preference).
 	// To use only http/1.1, set to ["http/1.1"].
 	NextProtos []string `json:"next-protos,omitempty" yaml:"next-protos,omitempty"`
+}
+
+func (cfg *TLS) ToStdTLSConfig() *tls.Config {
+	// TODO: CertData, KeyData, CAData
+	return &tls.Config{
+		//nolint:gosec
+		InsecureSkipVerify: cfg.Insecure,
+		ServerName:         cfg.ServerName,
+		NextProtos:         cfg.NextProtos,
+	}
 }
 
 // Minify returns a trimmed down version of the given configuration containing
