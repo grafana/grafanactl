@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	folderv1beta1 "github.com/grafana/grafana/apps/folder/pkg/apis/folder/v1beta1"
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"github.com/grafana/grafanactl/internal/format"
 	"golang.org/x/sync/errgroup"
@@ -169,6 +170,12 @@ func (r *Resource) GetManagerKind() utils.ManagerKind {
 	}
 
 	return m.Kind
+}
+
+// IsFolder returns true if the resource is a folder.
+func (r *Resource) IsFolder() bool {
+	return r.GroupVersionKind().Group == folderv1beta1.FolderKind().Group() &&
+		r.GroupVersionKind().Kind == folderv1beta1.FolderKind().Kind()
 }
 
 // Resources is a collection of resources.

@@ -118,6 +118,8 @@ func (summary *PushSummary) recordFailure(resource *resources.Resource, err erro
 }
 
 // Push pushes resources to Grafana.
+// It pushes folders first, then other resources.
+// This is to ensure that folders are created before other resources that depend on them.
 func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, error) {
 	summary := &PushSummary{}
 	supported := p.supportedDescriptors()
@@ -126,73 +128,109 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 		request.MaxConcurrency = 1
 	}
 
-	err := request.Resources.ForEachConcurrently(
+	// First loop: push all folder resources
+	if err := request.Resources.ForEachConcurrently(
 		ctx, request.MaxConcurrency, func(ctx context.Context, res *resources.Resource) error {
-			name := res.Name()
-			gvk := res.GroupVersionKind()
-
-			logger := logging.FromContext(ctx).With(
-				"gvk", gvk,
-				"name", name,
-				"dryRun", request.DryRun,
-			)
-
-			desc, ok := supported[gvk]
-			if !ok {
-				err := fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-				summary.recordFailure(res, err)
-
-				if request.StopOnError {
-					return err
-				}
-
-				if !request.NoPushFailureLog {
-					logger.Warn("Skipping resource not supported by the API")
-				}
+			if !res.IsFolder() {
 				return nil
 			}
 
-			for _, processor := range request.Processors {
-				if err := processor.Process(res); err != nil {
-					summary.recordFailure(res, err)
-
-					if request.StopOnError {
-						return err
-					}
-
-					if !request.NoPushFailureLog {
-						logger.Warn("Failed to process resource", logs.Err(err))
-					}
-
-					return nil
-				}
-			}
-
-			if !res.IsManaged() && !request.IncludeManaged {
-				logger.Info(fmt.Sprintf("Skipping resource managed by %s", res.GetManagerKind()))
-				return nil
-			}
-
-			if err := p.upsertResource(ctx, desc, name, res, request.DryRun, logger); err != nil {
-				summary.recordFailure(res, err)
-
-				if request.StopOnError {
-					return err
-				}
-
-				if !request.NoPushFailureLog {
-					logger.Warn("Failed to push resource", logs.Err(err))
-				}
-				return nil
-			}
-
-			logger.Info("Resource pushed")
-			summary.PushedCount++
-			return nil
+			return p.pushSingleResource(ctx, res, supported, summary, request)
 		},
+	); err != nil {
+		return summary, err
+	}
+
+	// If all resources were folders, we're done
+	if summary.PushedCount == request.Resources.Len() {
+		return summary, nil
+	}
+
+	// Second loop: push all other resources
+	if err := request.Resources.ForEachConcurrently(
+		ctx, request.MaxConcurrency, func(ctx context.Context, res *resources.Resource) error {
+			if res.IsFolder() {
+				return nil
+			}
+
+			return p.pushSingleResource(ctx, res, supported, summary, request)
+		},
+	); err != nil {
+		return summary, err
+	}
+
+	return summary, nil
+}
+
+// pushSingleResource pushes a single resource and handles common error scenarios.
+func (p *Pusher) pushSingleResource(
+	ctx context.Context,
+	res *resources.Resource,
+	supported map[schema.GroupVersionKind]resources.Descriptor,
+	summary *PushSummary,
+	request PushRequest,
+) error {
+	name := res.Name()
+	gvk := res.GroupVersionKind()
+
+	logger := logging.FromContext(ctx).With(
+		"gvk", gvk,
+		"name", name,
+		"dryRun", request.DryRun,
 	)
 
-	return summary, err
+	desc, ok := supported[gvk]
+	if !ok {
+		err := fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
+		summary.recordFailure(res, err)
+
+		if request.StopOnError {
+			return err
+		}
+
+		if !request.NoPushFailureLog {
+			logger.Warn("Skipping resource not supported by the API")
+		}
+		return nil
+	}
+
+	for _, processor := range request.Processors {
+		if err := processor.Process(res); err != nil {
+			summary.recordFailure(res, err)
+
+			if request.StopOnError {
+				return err
+			}
+
+			if !request.NoPushFailureLog {
+				logger.Warn("Failed to process resource", logs.Err(err))
+			}
+
+			return nil
+		}
+	}
+
+	if !res.IsManaged() && !request.IncludeManaged {
+		logger.Info(fmt.Sprintf("Skipping resource managed by %s", res.GetManagerKind()))
+		return nil
+	}
+
+	if err := p.upsertResource(ctx, desc, name, res, request.DryRun, logger); err != nil {
+		summary.recordFailure(res, err)
+
+		if request.StopOnError {
+			return err
+		}
+
+		if !request.NoPushFailureLog {
+			logger.Warn("Failed to push resource", logs.Err(err))
+		}
+		return nil
+	}
+
+	logger.Info("Resource pushed")
+	summary.PushedCount++
+	return nil
 }
 
 func (p *Pusher) upsertResource(
