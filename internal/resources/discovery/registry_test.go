@@ -20,7 +20,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:      "lookup with resource returns preferred version",
+			name:      "lookup with resource returns all supported versions",
 			discovery: getMixedVersionsDiscovery,
 			selectors: resources.Selectors{
 				{
@@ -32,6 +32,19 @@ func TestRegistry_MakeFilters(t *testing.T) {
 				},
 			},
 			want: resources.Filters{
+				{
+					Type:         resources.FilterTypeMultiple,
+					ResourceUIDs: []string{"foo", "bar"},
+					Descriptor: resources.Descriptor{
+						GroupVersion: schema.GroupVersion{
+							Group:   "dashboard.grafana.app",
+							Version: "v1",
+						},
+						Kind:     "Dashboard",
+						Plural:   "dashboards",
+						Singular: "dashboard",
+					},
+				},
 				{
 					Type:         resources.FilterTypeMultiple,
 					ResourceUIDs: []string{"foo", "bar"},
@@ -63,7 +76,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "lookup with single filter type",
+			name:      "lookup with single filter type returns all versions",
 			discovery: getMixedVersionsDiscovery,
 			selectors: resources.Selectors{
 				{
@@ -81,6 +94,19 @@ func TestRegistry_MakeFilters(t *testing.T) {
 					Descriptor: resources.Descriptor{
 						GroupVersion: schema.GroupVersion{
 							Group:   "dashboard.grafana.app",
+							Version: "v1",
+						},
+						Kind:     "Dashboard",
+						Plural:   "dashboards",
+						Singular: "dashboard",
+					},
+				},
+				{
+					Type:         resources.FilterTypeSingle,
+					ResourceUIDs: []string{"single-dashboard"},
+					Descriptor: resources.Descriptor{
+						GroupVersion: schema.GroupVersion{
+							Group:   "dashboard.grafana.app",
 							Version: "v2",
 						},
 						Kind:     "Dashboard",
@@ -92,7 +118,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "lookup with all filter type",
+			name:      "lookup with all filter type returns all versions",
 			discovery: getMixedVersionsDiscovery,
 			selectors: resources.Selectors{
 				{
@@ -119,7 +145,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "lookup with specific group and version",
+			name:      "lookup with specific group and version returns only that version",
 			discovery: getMixedVersionsDiscovery,
 			selectors: resources.Selectors{
 				{
@@ -148,7 +174,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "lookup with multiple selectors",
+			name:      "lookup with multiple selectors returns all versions for each",
 			discovery: getMixedVersionsDiscovery,
 			selectors: resources.Selectors{
 				{
@@ -166,6 +192,19 @@ func TestRegistry_MakeFilters(t *testing.T) {
 				},
 			},
 			want: resources.Filters{
+				{
+					Type:         resources.FilterTypeSingle,
+					ResourceUIDs: []string{"dashboard-1"},
+					Descriptor: resources.Descriptor{
+						GroupVersion: schema.GroupVersion{
+							Group:   "dashboard.grafana.app",
+							Version: "v1",
+						},
+						Kind:     "Dashboard",
+						Plural:   "dashboards",
+						Singular: "dashboard",
+					},
+				},
 				{
 					Type:         resources.FilterTypeSingle,
 					ResourceUIDs: []string{"dashboard-1"},
@@ -195,7 +234,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "lookup with kind instead of resource",
+			name:      "lookup with kind instead of resource returns all versions",
 			discovery: getMixedVersionsDiscovery,
 			selectors: resources.Selectors{
 				{
@@ -206,6 +245,18 @@ func TestRegistry_MakeFilters(t *testing.T) {
 				},
 			},
 			want: resources.Filters{
+				{
+					Type: resources.FilterTypeAll,
+					Descriptor: resources.Descriptor{
+						GroupVersion: schema.GroupVersion{
+							Group:   "dashboard.grafana.app",
+							Version: "v1",
+						},
+						Kind:     "Dashboard",
+						Plural:   "dashboards",
+						Singular: "dashboard",
+					},
+				},
 				{
 					Type: resources.FilterTypeAll,
 					Descriptor: resources.Descriptor{
@@ -241,7 +292,7 @@ func TestRegistry_MakeFilters(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, test.want, got)
+			assert.ElementsMatch(t, test.want, got)
 		})
 	}
 }
