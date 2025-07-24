@@ -67,19 +67,16 @@ func NewRegistry(ctx context.Context, client Client) (*Registry, error) {
 	return reg, nil
 }
 
-// MakeFilters creates a set of filters for the given selectors.
 func (r *Registry) MakeFilters(selectors resources.Selectors) (resources.Filters, error) {
-	filters := make(resources.Filters, len(selectors))
+	var filters resources.Filters
 
-	for i, selector := range selectors {
-		desc, ok := r.index.LookupPartialGVK(selector.GroupVersionKind)
-		if !ok {
-			return nil, resources.InvalidSelectorError{Command: selector.String(), Err: "the server does not support this resource"}
+	for _, selector := range selectors {
+		selectorFilters, err := r.makeFiltersForSelector(selector)
+		if err != nil {
+			return nil, err
 		}
 
-		filters[i].Type = selector.Type
-		filters[i].ResourceUIDs = selector.ResourceUIDs
-		filters[i].Descriptor = desc
+		filters = append(filters, selectorFilters...)
 	}
 
 	return filters, nil
@@ -110,6 +107,47 @@ func (r *Registry) Discover(ctx context.Context) error {
 	}
 
 	return r.index.Update(ctx, apiGroups, apiResources)
+}
+
+func (r *Registry) makeFiltersForSelector(selector resources.Selector) (resources.Filters, error) {
+	// Check if a specific version is provided
+	if selector.GroupVersionKind.Version != "" {
+		// Version is specified, use single descriptor lookup
+		desc, ok := r.index.LookupPartialGVK(selector.GroupVersionKind)
+		if !ok {
+			return nil, resources.InvalidSelectorError{
+				Command: selector.String(),
+				Err:     "the server does not support this resource",
+			}
+		}
+
+		return resources.Filters{{
+			Type:         selector.Type,
+			ResourceUIDs: selector.ResourceUIDs,
+			Descriptor:   desc,
+		}}, nil
+	}
+
+	// No version specified, get all supported versions
+	descs, ok := r.index.LookupAllVersionsForPartialGVK(selector.GroupVersionKind)
+	if !ok {
+		return nil, resources.InvalidSelectorError{
+			Command: selector.String(),
+			Err:     "the server does not support this resource",
+		}
+	}
+
+	// Create a filter for each supported version
+	filters := make(resources.Filters, 0, len(descs))
+	for _, desc := range descs {
+		filters = append(filters, resources.Filter{
+			Type:         selector.Type,
+			ResourceUIDs: selector.ResourceUIDs,
+			Descriptor:   desc,
+		})
+	}
+
+	return filters, nil
 }
 
 // FilterDiscoveryResults filters the discovery results to exclude ignored resource groups.
