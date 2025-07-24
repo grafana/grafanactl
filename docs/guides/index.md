@@ -16,7 +16,7 @@ title: Usage
 
     Backup, restore and migrate resources.
 
--   :material-code-block-tags:{ .lg .middle } __[Dashboards as code](#)__
+-   :material-code-block-tags:{ .lg .middle } __[Dashboards as code](./dashboards-as-code.md)__
 
     ---
 
