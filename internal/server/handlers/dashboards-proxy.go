@@ -61,6 +61,11 @@ func (c *DashboardProxy) Endpoints(_ *httputil.ReverseProxy) []HTTPEndpoint {
 		},
 		{
 			Method:  http.MethodGet,
+			URL:     "/api/dashboards/uid/{name}",
+			Handler: c.serveDashboard(),
+		},
+		{
+			Method:  http.MethodGet,
 			URL:     "/apis/dashboard.grafana.app/{version}/namespaces/{namespace}/dashboards/{name}/dto",
 			Handler: c.dashboardJSONGetHandler(),
 		},
@@ -87,6 +92,51 @@ func (c *DashboardProxy) StaticEndpoints() StaticProxyConfig {
 			"/api/annotations":                 "[]",
 			"/api/access-control/user/actions": `{"dashboards:write": true}`,
 		},
+	}
+}
+
+func (c *DashboardProxy) serveDashboard() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resource := c.dashboardFromRequest(w, r)
+		if resource == nil {
+			return
+		}
+
+		accessConfig := map[string]any{
+			"slug":      "slug",
+			"url":       "/d/" + resource.Name() + "/slug",
+			"canSave":   true,
+			"canEdit":   true,
+			"canAdmin":  false,
+			"canStar":   false,
+			"canDelete": false,
+			"annotationsPermissions": map[string]any{
+				"dashboard": map[string]any{
+					"canAdd":    false,
+					"canEdit":   true,
+					"canDelete": false,
+				},
+				"organization": map[string]any{
+					"canAdd":    false,
+					"canEdit":   true,
+					"canDelete": false,
+				},
+			},
+		}
+
+		spec, err := resource.Raw.GetSpec()
+		if err != nil {
+			err := errors.New("could not get resource spec")
+			httputils.Error(r, w, err.Error(), err, http.StatusInternalServerError)
+			return
+		}
+
+		object := map[string]any{
+			"meta":      accessConfig,
+			"dashboard": spec,
+		}
+
+		httputils.WriteJSON(r, w, object)
 	}
 }
 
