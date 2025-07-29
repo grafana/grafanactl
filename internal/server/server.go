@@ -248,8 +248,8 @@ func (s *Server) iframeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	msg := fmt.Sprintf("Could not find handler for group=%s, version=%s, kind=%s", group, version, kind)
 	if handler == nil {
+		msg := fmt.Sprintf("Could not find handler for group=%s, version=%s, kind=%s", group, version, kind)
 		httputils.Error(r, w, msg, errors.New(msg), http.StatusInternalServerError)
 		return
 	}
