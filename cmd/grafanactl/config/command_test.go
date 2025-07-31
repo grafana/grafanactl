@@ -287,3 +287,26 @@ current-context: prod
 
 	testCase.Run(t)
 }
+
+func Test_ViewCommand_withEnvironmentVariablesAndNoConfig(t *testing.T) {
+	testCase := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--minify", "--raw"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputEquals(`contexts:
+  default:
+    grafana:
+      server: https://grafana.example.com/
+      token: token
+current-context: default
+`),
+		},
+		Env: map[string]string{
+			"GRAFANA_SERVER": "https://grafana.example.com/",
+			"GRAFANA_TOKEN":  "token",
+		},
+	}
+
+	testCase.Run(t)
+}
