@@ -39,7 +39,8 @@ func NewNamespacedClient(namespace string, client dynamic.Interface) *Namespaced
 func (c *NamespacedClient) List(
 	ctx context.Context, desc resources.Descriptor, opts metav1.ListOptions,
 ) (*unstructured.UnstructuredList, error) {
-	return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).List(ctx, opts)
+	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).List(ctx, opts)
+	return res, ParseStatusError(err)
 }
 
 // GetMultiple gets multiple resources from the server.
@@ -54,7 +55,7 @@ func (c *NamespacedClient) GetMultiple(
 ) ([]unstructured.Unstructured, error) {
 	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).List(ctx, opts)
 	if err != nil {
-		return nil, err
+		return nil, ParseStatusError(err)
 	}
 
 	filtered := make([]unstructured.Unstructured, 0, len(res.Items))
@@ -73,33 +74,38 @@ func (c *NamespacedClient) GetMultiple(
 func (c *NamespacedClient) Get(
 	ctx context.Context, desc resources.Descriptor, name string, opts metav1.GetOptions,
 ) (*unstructured.Unstructured, error) {
-	return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Get(ctx, name, opts)
+	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Get(ctx, name, opts)
+	return res, ParseStatusError(err)
 }
 
 // Create creates a resource on the server.
 func (c *NamespacedClient) Create(
 	ctx context.Context, desc resources.Descriptor, obj *unstructured.Unstructured, opts metav1.CreateOptions,
 ) (*unstructured.Unstructured, error) {
-	return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Create(ctx, obj, opts)
+	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Create(ctx, obj, opts)
+	return res, ParseStatusError(err)
 }
 
 // Update updates a resource on the server.
 func (c *NamespacedClient) Update(
 	ctx context.Context, desc resources.Descriptor, obj *unstructured.Unstructured, opts metav1.UpdateOptions,
 ) (*unstructured.Unstructured, error) {
-	return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Update(ctx, obj, opts)
+	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Update(ctx, obj, opts)
+	return res, ParseStatusError(err)
 }
 
 // Delete deletes a resource on the server.
 func (c *NamespacedClient) Delete(
 	ctx context.Context, desc resources.Descriptor, name string, opts metav1.DeleteOptions,
 ) error {
-	return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Delete(ctx, name, opts)
+	err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Delete(ctx, name, opts)
+	return ParseStatusError(err)
 }
 
 // Apply applies a resource on the server.
 func (c *NamespacedClient) Apply(
 	ctx context.Context, desc resources.Descriptor, name string, obj *unstructured.Unstructured, opts metav1.ApplyOptions,
 ) (*unstructured.Unstructured, error) {
-	return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Apply(ctx, name, obj, opts)
+	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).Apply(ctx, name, obj, opts)
+	return res, ParseStatusError(err)
 }
