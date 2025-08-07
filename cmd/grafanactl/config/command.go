@@ -47,9 +47,13 @@ func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...c
 				cfg.SetContext(cfg.CurrentContext, true, config.Context{})
 			}
 
-			grafanaCfg := cfg.Contexts[cfg.CurrentContext]
+			curCtx := cfg.Contexts[cfg.CurrentContext]
 
-			if err := env.Parse(grafanaCfg); err != nil {
+			if curCtx.Grafana == nil {
+				curCtx.Grafana = &config.GrafanaConfig{}
+			}
+
+			if err := env.Parse(curCtx); err != nil {
 				return err
 			}
 
