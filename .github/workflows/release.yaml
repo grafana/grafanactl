@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore go vendors
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # zizmor: ignore[cache-poisoning] this is actually fine #v4.2.3 
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # zizmor: ignore[cache-poisoning] this is actually fine #v4.2.4
         with:
           path: |
             ~/go/pkg/mod
@@ -41,7 +41,7 @@ jobs:
             go-deps-${{ runner.os }}
 
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@734088efddca47cf44ff8a09289c6d0e51b73218 #v0.12.0
+        uses: jetify-com/devbox-install-action@22b0f5500b14df4ea357ce673fbd4ced940ed6a1 #v0.13.0
         with:
           enable-cache: "true"
           devbox-version: ${{ env.DEVBOX_VERSION }}
@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
 
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@734088efddca47cf44ff8a09289c6d0e51b73218 #v0.12.0
+        uses: jetify-com/devbox-install-action@22b0f5500b14df4ea357ce673fbd4ced940ed6a1 #v0.13.0
         with:
           enable-cache: "true"
           devbox-version: ${{ env.DEVBOX_VERSION }}
