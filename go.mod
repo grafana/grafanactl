@@ -13,7 +13,7 @@ require (
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a
-	github.com/grafana/grafana-app-sdk/logging v0.40.3
+	github.com/grafana/grafana-app-sdk/logging v0.41.0
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20250516123951-83fcd32d7bbe
 	github.com/grafana/grafana/apps/folder v0.0.0-20250724095330-d852bde2a5fb
 	github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250514132646-acbc7b54ed9e
