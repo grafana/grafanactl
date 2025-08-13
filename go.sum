@@ -73,8 +73,8 @@ github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a h1:8tdo5kxYe
 github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a/go.mod h1:qeWYbnWzaYGl88JlL9+DsP1GT2Cudm58rLtx13fKZdw=
 github.com/grafana/grafana-app-sdk v0.40.0 h1:KilbCFMYox2cnIi1W6ql7W+n9kms/NvWlBPM1m4Q4mg=
 github.com/grafana/grafana-app-sdk v0.40.0/go.mod h1:fn943JEM0CR3mY/Gd3816MUcpob5xnKc8MoojnbMjYY=
-github.com/grafana/grafana-app-sdk/logging v0.40.3 h1:2VXsXXEQiqAavRP8wusRDB6rDqf5lufP7A6NfjELqPE=
-github.com/grafana/grafana-app-sdk/logging v0.40.3/go.mod h1:otUD9XpJD7A5sCLb8mcs9hIXGdeV6lnhzVwe747g4RU=
+github.com/grafana/grafana-app-sdk/logging v0.41.0 h1:LZ/ywUygLvbR34cQbpcHrrm5RUQ5FGXVWX4w99pX6Ms=
+github.com/grafana/grafana-app-sdk/logging v0.41.0/go.mod h1:otUD9XpJD7A5sCLb8mcs9hIXGdeV6lnhzVwe747g4RU=
 github.com/grafana/grafana-openapi-client-go v0.0.0-20250516123951-83fcd32d7bbe h1:OdLLQKwEBVVhe9wHAncGp+Ff1N5aDl7erDIBdO9xBmA=
 github.com/grafana/grafana-openapi-client-go v0.0.0-20250516123951-83fcd32d7bbe/go.mod h1:hiZnMmXc9KXNUlvkV2BKFsiWuIFF/fF4wGgYWEjBitI=
 github.com/grafana/grafana/apps/folder v0.0.0-20250724095330-d852bde2a5fb h1:zSofiAfVqzoHYLRl9eumUm2sIfY9ovGn4krvQQIB/yM=
