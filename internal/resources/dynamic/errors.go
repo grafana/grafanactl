@@ -9,6 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var _ apierrors.APIStatus = (*APIError)(nil)
+
 // APIError is an error that wraps a Kubernetes API status.
 // It formats the error message in a more readable format
 // (since Kubernetes natively will only log the message, which could sometimes be simply "unknown").
