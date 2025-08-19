@@ -6,11 +6,13 @@ import (
 	"path"
 
 	"github.com/fatih/color"
+	"github.com/go-logr/logr"
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/cmd/grafanactl/config"
 	"github.com/grafana/grafanactl/cmd/grafanactl/resources"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
 )
 
 func Command(version string) *cobra.Command {
@@ -29,13 +31,20 @@ func Command(version string) *cobra.Command {
 
 			logLevel := new(slog.LevelVar)
 			logLevel.Set(slog.LevelWarn)
-			logger := logging.NewSLogLogger(logs.NewHandler(os.Stderr, &logs.Options{
-				Level: logLevel,
-			}))
-
 			// Multiplying the number of occurrences of the `-v` flag by 4 (gap between log levels in slog)
 			// allows us to increase the logger's verbosity.
 			logLevel.Set(logLevel.Level() - slog.Level(min(verbosity, 3)*4))
+
+			logHandler := logs.NewHandler(os.Stderr, &logs.Options{
+				Level: logLevel,
+			})
+			logger := logging.NewSLogLogger(logHandler)
+
+			// Also set klog logger (used by k8s/client-go).
+			klog.SetLoggerWithOptions(
+				logr.FromSlogHandler(logHandler),
+				klog.ContextualLogger(true),
+			)
 
 			cmd.SetContext(logging.Context(cmd.Context(), logger))
 		},

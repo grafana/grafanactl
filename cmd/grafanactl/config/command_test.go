@@ -288,10 +288,12 @@ current-context: prod
 	testCase.Run(t)
 }
 
-func Test_ViewCommand_withEnvironmentVariablesAndNoConfig(t *testing.T) {
+func Test_ViewCommand_withEnvironmentVariablesAndEmptyConfig(t *testing.T) {
+	configFile := testutils.CreateTempFile(t, "contexts:")
+
 	testCase := testutils.CommandTestCase{
 		Cmd:     config.Command(),
-		Command: []string{"view", "--minify", "--raw"},
+		Command: []string{"view", "--config", configFile, "--minify", "--raw"},
 		Assertions: []testutils.CommandAssertion{
 			testutils.CommandSuccess(),
 			testutils.CommandOutputEquals(`contexts:
