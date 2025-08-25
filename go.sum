@@ -73,8 +73,8 @@ github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a h1:8tdo5kxYe
 github.com/grafana/authlib/types v0.0.0-20250422131730-e8482efe6b8a/go.mod h1:qeWYbnWzaYGl88JlL9+DsP1GT2Cudm58rLtx13fKZdw=
 github.com/grafana/grafana-app-sdk v0.40.0 h1:KilbCFMYox2cnIi1W6ql7W+n9kms/NvWlBPM1m4Q4mg=
 github.com/grafana/grafana-app-sdk v0.40.0/go.mod h1:fn943JEM0CR3mY/Gd3816MUcpob5xnKc8MoojnbMjYY=
-github.com/grafana/grafana-app-sdk/logging v0.41.0 h1:LZ/ywUygLvbR34cQbpcHrrm5RUQ5FGXVWX4w99pX6Ms=
-github.com/grafana/grafana-app-sdk/logging v0.41.0/go.mod h1:otUD9XpJD7A5sCLb8mcs9hIXGdeV6lnhzVwe747g4RU=
+github.com/grafana/grafana-app-sdk/logging v0.41.1 h1:7oQVEIMornxK/MLZO8tgPEL2Ozy54/JctJCrjzDpH8w=
+github.com/grafana/grafana-app-sdk/logging v0.41.1/go.mod h1:otUD9XpJD7A5sCLb8mcs9hIXGdeV6lnhzVwe747g4RU=
 github.com/grafana/grafana-openapi-client-go v0.0.0-20250516123951-83fcd32d7bbe h1:OdLLQKwEBVVhe9wHAncGp+Ff1N5aDl7erDIBdO9xBmA=
 github.com/grafana/grafana-openapi-client-go v0.0.0-20250516123951-83fcd32d7bbe/go.mod h1:hiZnMmXc9KXNUlvkV2BKFsiWuIFF/fF4wGgYWEjBitI=
 github.com/grafana/grafana/apps/folder v0.0.0-20250724095330-d852bde2a5fb h1:zSofiAfVqzoHYLRl9eumUm2sIfY9ovGn4krvQQIB/yM=
@@ -138,8 +138,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
 github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
-github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
-github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.11.0 h1:ib4sjIrwZKxE5u/Japgo/7SJV3PvgjGiRNAvTVGqQl8=
+github.com/stretchr/testify v1.11.0/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
