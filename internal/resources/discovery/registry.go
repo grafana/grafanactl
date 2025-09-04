@@ -67,11 +67,21 @@ func NewRegistry(ctx context.Context, client Client) (*Registry, error) {
 	return reg, nil
 }
 
-func (r *Registry) MakeFilters(selectors resources.Selectors) (resources.Filters, error) {
+// MakeFiltersOptions contains options for creating filters from selectors.
+type MakeFiltersOptions struct {
+	// Which selectors to create filters from.
+	Selectors resources.Selectors
+
+	// Whether to only return the preferred version of the resource.
+	PreferredVersionOnly bool
+}
+
+// MakeFilters creates filters from selectors with the given options.
+func (r *Registry) MakeFilters(opts MakeFiltersOptions) (resources.Filters, error) {
 	var filters resources.Filters
 
-	for _, selector := range selectors {
-		selectorFilters, err := r.makeFiltersForSelector(selector)
+	for _, selector := range opts.Selectors {
+		selectorFilters, err := r.makeFiltersForSelector(selector, opts.PreferredVersionOnly)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +119,7 @@ func (r *Registry) Discover(ctx context.Context) error {
 	return r.index.Update(ctx, apiGroups, apiResources)
 }
 
-func (r *Registry) makeFiltersForSelector(selector resources.Selector) (resources.Filters, error) {
+func (r *Registry) makeFiltersForSelector(selector resources.Selector, preferredVersionOnly bool) (resources.Filters, error) {
 	// Check if a specific version is provided
 	if selector.GroupVersionKind.Version != "" {
 		// Version is specified, use single descriptor lookup
@@ -128,7 +138,24 @@ func (r *Registry) makeFiltersForSelector(selector resources.Selector) (resource
 		}}, nil
 	}
 
-	// No version specified, get all supported versions
+	// No version specified and preferred version only is requested
+	if preferredVersionOnly {
+		desc, ok := r.index.LookupPartialGVK(selector.GroupVersionKind)
+		if !ok {
+			return nil, resources.InvalidSelectorError{
+				Command: selector.String(),
+				Err:     "the server does not support this resource",
+			}
+		}
+
+		return resources.Filters{{
+			Type:         selector.Type,
+			ResourceUIDs: selector.ResourceUIDs,
+			Descriptor:   desc,
+		}}, nil
+	}
+
+	// No version specified and we want all supported versions
 	descs, ok := r.index.LookupAllVersionsForPartialGVK(selector.GroupVersionKind)
 	if !ok {
 		return nil, resources.InvalidSelectorError{

@@ -2,13 +2,16 @@ package dynamic
 
 import (
 	"context"
-	"slices"
+	"fmt"
 
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/resources"
+	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/tools/pager"
 )
 
 // NamespacedClient is a dynamic client with a namespace and a discovery registry.
@@ -36,11 +39,32 @@ func NewNamespacedClient(namespace string, client dynamic.Interface) *Namespaced
 }
 
 // List lists resources from the server.
+// It automatically handles pagination to return all resources using the client-go pager.
 func (c *NamespacedClient) List(
 	ctx context.Context, desc resources.Descriptor, opts metav1.ListOptions,
 ) (*unstructured.UnstructuredList, error) {
-	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).List(ctx, opts)
-	return res, ParseStatusError(err)
+	pager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+		return c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).List(ctx, opts)
+	})
+
+	res := unstructured.UnstructuredList{
+		Items: make([]unstructured.Unstructured, 0),
+	}
+
+	if err := pager.EachListItemWithAlloc(ctx, opts, func(obj runtime.Object) error {
+		item, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("expected *unstructured.Unstructured, got %T", obj)
+		}
+
+		res.Items = append(res.Items, *item)
+
+		return nil
+	}); err != nil {
+		return nil, ParseStatusError(err)
+	}
+
+	return &res, nil
 }
 
 // GetMultiple gets multiple resources from the server.
@@ -51,23 +75,35 @@ func (c *NamespacedClient) List(
 // Ideally we'd like to use field selectors,
 // but Kubernetes does not support set-based operators in field selectors (only in labels).
 func (c *NamespacedClient) GetMultiple(
-	ctx context.Context, desc resources.Descriptor, names []string, opts metav1.ListOptions,
+	ctx context.Context, desc resources.Descriptor, names []string, opts metav1.GetOptions,
 ) ([]unstructured.Unstructured, error) {
-	res, err := c.client.Resource(desc.GroupVersionResource()).Namespace(c.namespace).List(ctx, opts)
-	if err != nil {
-		return nil, ParseStatusError(err)
+	g, ctx := errgroup.WithContext(ctx)
+
+	// TODO: consider using a limit
+	// g.SetLimit(maxConcurrentGetRequests)
+
+	res := make([]unstructured.Unstructured, len(names))
+
+	for i, it := range names {
+		g.Go(func() error {
+			item, err := c.Get(ctx, desc, it, opts)
+			if err != nil {
+				return err
+			}
+
+			// NB: it's important to set via the index,
+			// because `append`ing would create a race condition.
+			res[i] = *item
+
+			return nil
+		})
 	}
 
-	filtered := make([]unstructured.Unstructured, 0, len(res.Items))
-	for _, item := range res.Items {
-		// TODO: worth using a map index for this?
-		// (on small lists the performance difference is negligible)
-		if slices.Contains(names, item.GetName()) {
-			filtered = append(filtered, item)
-		}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
-	return filtered, nil
+	return res, nil
 }
 
 // Get gets a resource from the server.
