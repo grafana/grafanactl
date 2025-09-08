@@ -41,7 +41,10 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 		return nil, err
 	}
 
-	filters, err := reg.MakeFilters(sels)
+	filters, err := reg.MakeFilters(discovery.MakeFiltersOptions{
+		Selectors:            sels,
+		PreferredVersionOnly: true,
+	})
 	if err != nil {
 		return nil, err
 	}

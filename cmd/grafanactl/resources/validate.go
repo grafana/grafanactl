@@ -102,7 +102,9 @@ This command validates its inputs against a remote Grafana instance.
 				return err
 			}
 
-			filters, err := reg.MakeFilters(sels)
+			filters, err := reg.MakeFilters(discovery.MakeFiltersOptions{
+				Selectors: sels,
+			})
 			if err != nil {
 				return err
 			}

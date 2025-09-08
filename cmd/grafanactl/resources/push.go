@@ -113,7 +113,9 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			filters, err := reg.MakeFilters(sels)
+			filters, err := reg.MakeFilters(discovery.MakeFiltersOptions{
+				Selectors: sels,
+			})
 			if err != nil {
 				return err
 			}

@@ -56,14 +56,16 @@ func (c *VersionedClient) List(
 // GetMultiple gets multiple resources from the server.
 // It will automatically re-fetch resources which need to be fetched using the stored version.
 func (c *VersionedClient) GetMultiple(
-	ctx context.Context, desc resources.Descriptor, names []string, opts metav1.ListOptions,
+	ctx context.Context, desc resources.Descriptor, names []string, opts metav1.GetOptions,
 ) ([]unstructured.Unstructured, error) {
 	objs, err := c.NamespacedClient.GetMultiple(ctx, desc, names, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.getMultipleCorrectVersions(ctx, desc, objs, opts)
+	return c.getMultipleCorrectVersions(ctx, desc, objs, metav1.ListOptions{
+		ResourceVersion: opts.ResourceVersion,
+	})
 }
 
 // Get gets a resource from the server.
@@ -117,7 +119,9 @@ func (c *VersionedClient) getMultipleCorrectVersions(
 	// Iterate over all descriptors we need to re-fetch,
 	// fetch them using GetMultiple and append the results to the result list.
 	for desc, names := range versioned {
-		objs, err := c.GetMultiple(ctx, desc, names, opts)
+		objs, err := c.NamespacedClient.GetMultiple(ctx, desc, names, metav1.GetOptions{
+			ResourceVersion: opts.ResourceVersion,
+		})
 		if err != nil {
 			return nil, err
 		}
