@@ -78,6 +78,7 @@ func (c *DashboardProxy) StaticEndpoints() StaticProxyConfig {
 			"/api/datasources/proxy/*",
 			"/api/datasources/*",
 			"/api/plugins/*",
+			"/bootdata",
 		},
 		ProxyPost: []string{
 			"/api/datasources/proxy/*",
