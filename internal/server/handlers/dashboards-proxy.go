@@ -82,6 +82,7 @@ func (c *DashboardProxy) StaticEndpoints() StaticProxyConfig {
 		},
 		ProxyPost: []string{
 			"/api/datasources/proxy/*",
+			"/apis/query.grafana.app/*",
 			"/api/ds/query",
 		},
 		MockGet: map[string]string{
@@ -150,6 +151,12 @@ func (c *DashboardProxy) dashboardJSONGetHandler() http.HandlerFunc {
 			httputils.Error(r, w, err.Error(), err, http.StatusInternalServerError)
 			return
 		}
+
+		generation := resource.Raw.GetGeneration()
+		if generation < 1 {
+			generation = 1
+		}
+
 		object := map[string]any{
 			"kind":       "DashboardWithAccessInfo",
 			"apiVersion": resource.APIVersion(),
@@ -157,6 +164,7 @@ func (c *DashboardProxy) dashboardJSONGetHandler() http.HandlerFunc {
 			"metadata": map[string]any{
 				"name":        resource.Name(),
 				"namespace":   resource.Namespace(),
+				"generation":  generation,
 				"labels":      resource.Raw.GetLabels(),
 				"annotations": resource.Raw.GetAnnotations(),
 			},
@@ -194,6 +202,14 @@ func (c *DashboardProxy) dashboardJSONPostHandler() http.HandlerFunc {
 			Version: chi.URLParam(r, "version"),
 			Kind:    "Dashboard",
 		})
+
+		// Delete the annotation that the UI always sets.
+		ans := object.GetAnnotations()
+		delete(ans, resources.AnnotationSavedFromUI)
+		object.SetAnnotations(ans)
+
+		// Reset the generation to 0.
+		object.SetGeneration(0)
 
 		file, err := os.OpenFile(resource.SourcePath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {

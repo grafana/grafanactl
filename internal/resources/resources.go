@@ -17,6 +17,8 @@ import (
 const (
 	// TODO: change once we have a proper manager kind for grafanactl.
 	ResourceManagerKind = utils.ManagerKindKubectl
+	// TODO: move this to grafana/grafana.
+	AnnotationSavedFromUI = "grafana.app/saved-from-ui"
 )
 
 // ResourceRef is a unique identifier for a resource.
