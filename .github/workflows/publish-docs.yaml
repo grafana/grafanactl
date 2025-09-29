@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@22b0f5500b14df4ea357ce673fbd4ced940ed6a1 #v0.13.0
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
         with:
           enable-cache: "true"
           devbox-version: ${{ env.DEVBOX_VERSION }}
