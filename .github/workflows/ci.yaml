@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore go vendors
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 #v4.2.4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #v4.3.0
         with:
           path: |
             ~/go/pkg/mod
@@ -31,7 +31,7 @@ jobs:
             go-deps-${{ runner.os }}
 
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@22b0f5500b14df4ea357ce673fbd4ced940ed6a1 #v0.13.0
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
         with:
           enable-cache: 'true'
           devbox-version: ${{ env.DEVBOX_VERSION }}
@@ -49,7 +49,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore go vendors
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 #4.2.4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 #4.3.0
         with:
           path: |
             ~/go/pkg/mod
@@ -59,7 +59,7 @@ jobs:
             go-deps-${{ runner.os }}
 
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@22b0f5500b14df4ea357ce673fbd4ced940ed6a1 #v0.13.0
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
         with:
           enable-cache: 'true'
           devbox-version: ${{ env.DEVBOX_VERSION }}
@@ -77,7 +77,7 @@ jobs:
           persist-credentials: false
 
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@22b0f5500b14df4ea357ce673fbd4ced940ed6a1 #v0.13.0
+        uses: jetify-com/devbox-install-action@a0d2d53632934ae004f878c840055956d9f741b0 #v0.14.0
         with:
           enable-cache: 'true'
           devbox-version: ${{ env.DEVBOX_VERSION }}
