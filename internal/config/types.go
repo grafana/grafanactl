@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -113,14 +114,27 @@ func (grafana GrafanaConfig) Validate(contextName string) error {
 		}
 	}
 
-	if grafana.OrgID == 0 && grafana.StackID == 0 {
-		return ValidationError{
-			Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
-			Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
-			Suggestions: []string{
-				"Specify the Grafana Org ID for on-prem Grafana",
-				"Specify the Grafana Cloud Stack ID for Grafana Cloud",
-			},
+	if grafana.OrgID == 0 {
+		discoveredStackId, ok, err := discoverStackId(context.Background(), grafana)
+		if (!ok || err != nil) && grafana.StackID == 0 {
+			return ValidationError{
+				Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
+				Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
+				Suggestions: []string{
+					"Specify the Grafana Org ID for on-prem Grafana",
+					"Specify the Grafana Cloud Stack ID for Grafana Cloud",
+				},
+			}
+		}
+
+		if grafana.StackID != 0 && discoveredStackId != grafana.StackID {
+			return ValidationError{
+				Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
+				Message: fmt.Sprintf("mismatched contexts.%[1]s.stack-id, discovered %d - was %d in config", contextName, discoveredStackId, grafana.StackID),
+				Suggestions: []string{
+					"Specify the correct Grafana Cloud Stack ID for Grafana Cloud or omit the stack-id param",
+				},
+			}
 		}
 	}
 

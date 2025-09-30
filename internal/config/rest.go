@@ -1,6 +1,8 @@
 package config
 
 import (
+	"context"
+
 	authlib "github.com/grafana/authlib/types"
 	"k8s.io/client-go/rest"
 )
@@ -50,10 +52,18 @@ func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
 
 	// Namespace
 	var namespace string
-	if cfg.Grafana.OrgID != 0 {
-		namespace = authlib.OrgNamespaceFormatter(cfg.Grafana.OrgID)
+
+	discoveredStackID, ok, err := discoverStackId(context.Background(), *cfg.Grafana)
+
+	if err == nil && ok {
+		// even if cfg.Grafana.OrgID was set - we ignore it, discoveredStackID takes precedent
+		namespace = authlib.CloudNamespaceFormatter(discoveredStackID)
 	} else {
-		namespace = authlib.CloudNamespaceFormatter(cfg.Grafana.StackID)
+		if cfg.Grafana.OrgID != 0 {
+			namespace = authlib.OrgNamespaceFormatter(cfg.Grafana.OrgID)
+		} else {
+			namespace = authlib.CloudNamespaceFormatter(cfg.Grafana.StackID)
+		}
 	}
 
 	return NamespacedRESTConfig{

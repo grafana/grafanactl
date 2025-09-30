@@ -25,10 +25,6 @@ Optionally, set the following values depending on your authentication method wit
 * A [token](./reference/environment-variables/index.md#grafana_token) if using a [Grafana service account](https://grafana.com/docs/grafana/latest/administration/service-accounts/) (recommended)
 * A [username](./reference/environment-variables/index.md#grafana_user) and [password](./reference/environment-variables/index.md#grafana_password) if using basic authentication
 
-!!! warning
-
-    * When using Grafana Cloud, you should use the `GRAFANA_STACK_ID` (or `stack-id` in the configuration file) configuration variable instead of the `GRAFANA_ORG_ID`. You can find your instance ID by visiting https://grafana.com, navigating to stack details page and clicking the "Details" button under Grafana.
-
 Next, consider [creating a context](#defining-contexts) to persist this configuration.
 
 Once you have configured your authentication method, you are ready to use the Grafana CLI.
@@ -46,6 +42,8 @@ Configure the `default` context:
 
 ```shell
 grafanactl config set contexts.default.grafana.server http://localhost:3000
+
+# Set org-id when using OSS/Enterprise - skip when targeting Grafana Cloud
 grafanactl config set contexts.default.grafana.org-id 1
 
 # Authenticate with a service account token
