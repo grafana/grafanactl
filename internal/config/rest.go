@@ -53,9 +53,9 @@ func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
 	// Namespace
 	var namespace string
 
-	discoveredStackID, ok, err := discoverStackId(context.Background(), *cfg.Grafana)
+	discoveredStackID, err := discoverStackId(context.Background(), *cfg.Grafana)
 
-	if err == nil && ok {
+	if err == nil {
 		// even if cfg.Grafana.OrgID was set - we ignore it, discoveredStackID takes precedent
 		namespace = authlib.CloudNamespaceFormatter(discoveredStackID)
 	} else {

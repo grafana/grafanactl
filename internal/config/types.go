@@ -108,8 +108,8 @@ func (grafana GrafanaConfig) validateNamespace(contextName string) error {
 		return nil
 	}
 
-	discoveredStackId, ok, err := discoverStackId(context.Background(), grafana)
-	discoveryFailed := !ok || err != nil
+	discoveredStackId, err := discoverStackId(context.Background(), grafana)
+	discoveryFailed := err != nil
 
 	if grafana.StackID == 0 {
 		if discoveryFailed {

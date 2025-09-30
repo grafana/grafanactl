@@ -17,27 +17,27 @@ var errBootdataNonOK = errors.New("bootdata request failed")
 
 // discoverStackId attempts to discover a Grafana Cloud stack namespace via the /bootdata endpoint.
 // It returns the parsed stack ID when the response matches the expected format.
-func discoverStackId(ctx context.Context, cfg GrafanaConfig) (stackID int64, ok bool, err error) {
+func discoverStackId(ctx context.Context, cfg GrafanaConfig) (stackID int64, err error) {
 	bootdataURL, err := buildBootdataURL(cfg.Server)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 
 	client := newBootdataHTTPClient(cfg)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, bootdataURL.String(), nil)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return 0, false, fmt.Errorf("%w: status %d", errBootdataNonOK, resp.StatusCode)
+		return 0, fmt.Errorf("%w: status %d", errBootdataNonOK, resp.StatusCode)
 	}
 
 	var payload struct {
@@ -47,24 +47,24 @@ func discoverStackId(ctx context.Context, cfg GrafanaConfig) (stackID int64, ok 
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return 0, false, err
+		return 0, err
 	}
 
 	namespace := strings.TrimSpace(payload.Settings.Namespace)
 	if namespace == "" {
-		return 0, false, nil
+		return 0, fmt.Errorf("empty namespace")
 	}
 
 	ns, err := authlib.ParseNamespace(namespace)
 	if err != nil {
-		return 0, false, nil
+		return 0, err
 	}
 
 	if ns.StackID == 0 {
-		return 0, false, nil
+		return 0, fmt.Errorf("discovered stack id is 0")
 	}
 
-	return ns.StackID, true, nil
+	return ns.StackID, nil
 }
 
 func buildBootdataURL(server string) (*url.URL, error) {
