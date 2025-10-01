@@ -67,8 +67,8 @@ func (context *Context) Validate() error {
 }
 
 // ToRESTConfig returns a REST config for the context.
-func (context *Context) ToRESTConfig() NamespacedRESTConfig {
-	return NewNamespacedRESTConfig(*context)
+func (context *Context) ToRESTConfig(ctx context.Context) NamespacedRESTConfig {
+	return NewNamespacedRESTConfig(ctx, *context)
 }
 
 type GrafanaConfig struct {
@@ -108,11 +108,10 @@ func (grafana GrafanaConfig) validateNamespace(contextName string) error {
 		return nil
 	}
 
-	discoveredStackId, err := discoverStackId(context.Background(), grafana)
-	discoveryFailed := err != nil
+	discoveredStackID, discoveryErr := DiscoverStackID(context.Background(), grafana)
 
 	if grafana.StackID == 0 {
-		if discoveryFailed {
+		if discoveryErr != nil {
 			return ValidationError{
 				Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
 				Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
@@ -126,15 +125,16 @@ func (grafana GrafanaConfig) validateNamespace(contextName string) error {
 		return nil
 	}
 
-	if discoveryFailed {
-		// discovery failed - but grafana.StackID is set so we proceed
+	// If discovery failed but grafana.StackID is set, we proceed with the configured StackID
+	//nolint:nilerr // We intentionally ignore the error when StackID is configured
+	if discoveryErr != nil {
 		return nil
 	}
 
-	if discoveredStackId != grafana.StackID {
+	if discoveredStackID != grafana.StackID {
 		return ValidationError{
 			Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
-			Message: fmt.Sprintf("mismatched contexts.%[1]s.stack-id, discovered %d - was %d in config", contextName, discoveredStackId, grafana.StackID),
+			Message: fmt.Sprintf("mismatched contexts.%[1]s.stack-id, discovered %d - was %d in config", contextName, discoveredStackID, grafana.StackID),
 			Suggestions: []string{
 				"Specify the correct Grafana Cloud Stack ID for Grafana Cloud or omit the stack-id param",
 			},

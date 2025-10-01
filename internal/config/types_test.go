@@ -37,7 +37,7 @@ func TestGrafanaConfig_IsEmpty(t *testing.T) {
 func TestGrafanaConfig_Validate_AllowsDiscoveredStackID(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"settings": map[string]any{
 				"namespace": "stacks-12345",
@@ -54,7 +54,7 @@ func TestGrafanaConfig_Validate_AllowsDiscoveredStackID(t *testing.T) {
 func TestGrafanaConfig_Validate_AllowsDiscoveredStackIDAndSuppliedStackID(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"settings": map[string]any{
 				"namespace": "stacks-12345",
@@ -73,7 +73,7 @@ func TestGrafanaConfig_Validate_AllowsDiscoveredStackIDAndSuppliedStackID(t *tes
 func TestGrafanaConfig_Validate_AllowsOrgId(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"settings": map[string]any{
 				"namespace": "stacks-12345",
@@ -92,7 +92,7 @@ func TestGrafanaConfig_Validate_AllowsOrgId(t *testing.T) {
 func TestGrafanaConfig_Validate_AllowsOrgIdWhenDiscoveryFails(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()
@@ -107,7 +107,7 @@ func TestGrafanaConfig_Validate_AllowsOrgIdWhenDiscoveryFails(t *testing.T) {
 func TestGrafanaConfig_Validate_MismatchedStackID(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"settings": map[string]any{
 				"namespace": "stacks-12345",
@@ -129,7 +129,7 @@ func TestGrafanaConfig_Validate_MismatchedStackID(t *testing.T) {
 func TestGrafanaConfig_Validate_MissingStackWhenBootdataUnavailable(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()
@@ -144,7 +144,7 @@ func TestGrafanaConfig_Validate_MissingStackWhenBootdataUnavailable(t *testing.T
 func TestGrafanaConfig_Validate_BootdataUnavailableAndSuppliedStackId(t *testing.T) {
 	req := require.New(t)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()

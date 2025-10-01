@@ -15,7 +15,7 @@ type NamespacedRESTConfig struct {
 }
 
 // NewNamespacedRESTConfig creates a new namespaced REST config.
-func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
+func NewNamespacedRESTConfig(ctx context.Context, cfg Context) NamespacedRESTConfig {
 	rcfg := rest.Config{
 		// TODO add user agent
 		// UserAgent: cfg.UserAgent.ValueString(),
@@ -53,7 +53,7 @@ func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
 	// Namespace
 	var namespace string
 
-	discoveredStackID, err := discoverStackId(context.Background(), *cfg.Grafana)
+	discoveredStackID, err := DiscoverStackID(ctx, *cfg.Grafana)
 
 	if err == nil {
 		// even if cfg.Grafana.OrgID was set - we ignore it, discoveredStackID takes precedent

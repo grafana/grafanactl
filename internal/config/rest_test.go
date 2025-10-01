@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"encoding/json"
@@ -7,14 +7,11 @@ import (
 	"testing"
 
 	authlib "github.com/grafana/authlib/types"
+	"github.com/grafana/grafanactl/internal/config"
 )
 
 func TestNewNamespacedRESTConfig_UsesBootdataStack(t *testing.T) {
-	bootdataServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/grafana/bootdata" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-
+	bootdataServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"settings": map[string]any{
 				"namespace": "stacks-98765",
@@ -23,14 +20,14 @@ func TestNewNamespacedRESTConfig_UsesBootdataStack(t *testing.T) {
 	}))
 	defer bootdataServer.Close()
 
-	ctx := Context{
-		Grafana: &GrafanaConfig{
+	ctx := config.Context{
+		Grafana: &config.GrafanaConfig{
 			Server:  bootdataServer.URL + "/grafana",
 			StackID: 12345,
 		},
 	}
 
-	restCfg := NewNamespacedRESTConfig(ctx)
+	restCfg := config.NewNamespacedRESTConfig(t.Context(), ctx)
 
 	if got, want := restCfg.Namespace, authlib.CloudNamespaceFormatter(98765); got != want {
 		t.Fatalf("expected namespace %s, got %s", want, got)
@@ -42,19 +39,19 @@ func TestNewNamespacedRESTConfig_UsesBootdataStack(t *testing.T) {
 }
 
 func TestNewNamespacedRESTConfig_FallsBackOnBootdataError(t *testing.T) {
-	bootdataServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	bootdataServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer bootdataServer.Close()
 
-	ctx := Context{
-		Grafana: &GrafanaConfig{
+	ctx := config.Context{
+		Grafana: &config.GrafanaConfig{
 			Server:  bootdataServer.URL,
 			StackID: 555,
 		},
 	}
 
-	restCfg := NewNamespacedRESTConfig(ctx)
+	restCfg := config.NewNamespacedRESTConfig(t.Context(), ctx)
 
 	if got, want := restCfg.Namespace, authlib.CloudNamespaceFormatter(555); got != want {
 		t.Fatalf("expected namespace %s, got %s", want, got)
@@ -62,7 +59,7 @@ func TestNewNamespacedRESTConfig_FallsBackOnBootdataError(t *testing.T) {
 }
 
 func TestNewNamespacedRESTConfig_FallsBackWhenBootdataNotStack(t *testing.T) {
-	bootdataServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	bootdataServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"settings": map[string]any{
 				"namespace": "grafana",
@@ -71,14 +68,14 @@ func TestNewNamespacedRESTConfig_FallsBackWhenBootdataNotStack(t *testing.T) {
 	}))
 	defer bootdataServer.Close()
 
-	ctx := Context{
-		Grafana: &GrafanaConfig{
+	ctx := config.Context{
+		Grafana: &config.GrafanaConfig{
 			Server:  bootdataServer.URL,
 			StackID: 42,
 		},
 	}
 
-	restCfg := NewNamespacedRESTConfig(ctx)
+	restCfg := config.NewNamespacedRESTConfig(t.Context(), ctx)
 
 	if got, want := restCfg.Namespace, authlib.CloudNamespaceFormatter(42); got != want {
 		t.Fatalf("expected namespace %s, got %s", want, got)

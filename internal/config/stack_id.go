@@ -15,9 +15,9 @@ import (
 
 var errBootdataNonOK = errors.New("bootdata request failed")
 
-// discoverStackId attempts to discover a Grafana Cloud stack namespace via the /bootdata endpoint.
+// DiscoverStackID attempts to discover a Grafana Cloud stack namespace via the /bootdata endpoint.
 // It returns the parsed stack ID when the response matches the expected format.
-func discoverStackId(ctx context.Context, cfg GrafanaConfig) (stackID int64, err error) {
+func DiscoverStackID(ctx context.Context, cfg GrafanaConfig) (int64, error) {
 	bootdataURL, err := buildBootdataURL(cfg.Server)
 	if err != nil {
 		return 0, err
@@ -52,7 +52,7 @@ func discoverStackId(ctx context.Context, cfg GrafanaConfig) (stackID int64, err
 
 	namespace := strings.TrimSpace(payload.Settings.Namespace)
 	if namespace == "" {
-		return 0, fmt.Errorf("empty namespace")
+		return 0, errors.New("empty namespace")
 	}
 
 	ns, err := authlib.ParseNamespace(namespace)
@@ -61,7 +61,7 @@ func discoverStackId(ctx context.Context, cfg GrafanaConfig) (stackID int64, err
 	}
 
 	if ns.StackID == 0 {
-		return 0, fmt.Errorf("discovered stack id is 0")
+		return 0, errors.New("discovered stack id is 0")
 	}
 
 	return ns.StackID, nil
