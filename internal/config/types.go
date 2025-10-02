@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -66,8 +67,8 @@ func (context *Context) Validate() error {
 }
 
 // ToRESTConfig returns a REST config for the context.
-func (context *Context) ToRESTConfig() NamespacedRESTConfig {
-	return NewNamespacedRESTConfig(*context)
+func (context *Context) ToRESTConfig(ctx context.Context) NamespacedRESTConfig {
+	return NewNamespacedRESTConfig(ctx, *context)
 }
 
 type GrafanaConfig struct {
@@ -102,6 +103,47 @@ type GrafanaConfig struct {
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 }
 
+func (grafana GrafanaConfig) validateNamespace(contextName string) error {
+	if grafana.OrgID != 0 {
+		return nil
+	}
+
+	discoveredStackID, discoveryErr := DiscoverStackID(context.Background(), grafana)
+
+	if grafana.StackID == 0 {
+		if discoveryErr != nil {
+			return ValidationError{
+				Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
+				Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
+				Suggestions: []string{
+					"Specify the Grafana Org ID for on-prem Grafana",
+					"Specify the Grafana Cloud Stack ID for Grafana Cloud",
+				},
+			}
+		}
+
+		return nil
+	}
+
+	// If discovery failed but grafana.StackID is set, we proceed with the configured StackID
+	//nolint:nilerr // We intentionally ignore the error when StackID is configured
+	if discoveryErr != nil {
+		return nil
+	}
+
+	if discoveredStackID != grafana.StackID {
+		return ValidationError{
+			Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
+			Message: fmt.Sprintf("mismatched contexts.%[1]s.stack-id, discovered %d - was %d in config", contextName, discoveredStackID, grafana.StackID),
+			Suggestions: []string{
+				"Specify the correct Grafana Cloud Stack ID for Grafana Cloud or omit the stack-id param",
+			},
+		}
+	}
+
+	return nil
+}
+
 func (grafana GrafanaConfig) Validate(contextName string) error {
 	if grafana.Server == "" {
 		return ValidationError{
@@ -113,15 +155,8 @@ func (grafana GrafanaConfig) Validate(contextName string) error {
 		}
 	}
 
-	if grafana.OrgID == 0 && grafana.StackID == 0 {
-		return ValidationError{
-			Path:    fmt.Sprintf("$.contexts.'%s'.grafana", contextName),
-			Message: fmt.Sprintf("missing contexts.%[1]s.org-id or contexts.%[1]s.stack-id", contextName),
-			Suggestions: []string{
-				"Specify the Grafana Org ID for on-prem Grafana",
-				"Specify the Grafana Cloud Stack ID for Grafana Cloud",
-			},
-		}
+	if err := grafana.validateNamespace(contextName); err != nil {
+		return err
 	}
 
 	return nil

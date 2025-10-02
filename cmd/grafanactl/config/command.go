@@ -97,7 +97,7 @@ func (opts *Options) LoadRESTConfig(ctx context.Context) (config.NamespacedRESTC
 		return config.NamespacedRESTConfig{}, err
 	}
 
-	return cfg.GetCurrentContext().ToRESTConfig(), nil
+	return cfg.GetCurrentContext().ToRESTConfig(ctx), nil
 }
 
 func (opts *Options) configSource() config.Source {
@@ -349,7 +349,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	io.Success(stdout, "Configuration: %s", io.Green("valid"))
 
-	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx)); err != nil {
+	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(cmd.Context(), *gCtx)); err != nil {
 		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err)))
 		io.Warning(stdout, "Grafana version: %s", io.Yellow("skipped")+"\n")
 		printSuggestions(err)
