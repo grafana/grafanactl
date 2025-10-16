@@ -260,10 +260,10 @@ func TestPusher_Push_NestedFolders(t *testing.T) {
 	//        └─ grandchild-folder (parent: child-folder-1)
 	//   └─ child-folder-2 (parent: root-folder)
 	testResources := resources.NewResources(
-		createFolderWithParent("root-folder", "v1", ""),
-		createFolderWithParent("child-folder-1", "v1", "root-folder"),
-		createFolderWithParent("child-folder-2", "v1", "root-folder"),
-		createFolderWithParent("grandchild-folder", "v1", "child-folder-1"),
+		createFolderWithParent("root-folder", ""),
+		createFolderWithParent("child-folder-1", "root-folder"),
+		createFolderWithParent("child-folder-2", "root-folder"),
+		createFolderWithParent("grandchild-folder", "child-folder-1"),
 	)
 
 	mockClient := &mockPushClient{
@@ -299,13 +299,14 @@ func TestPusher_Push_NestedFolders(t *testing.T) {
 	// Build a position map
 	positions := make(map[string]int)
 	for i, op := range mockClient.operations {
-		if contains(op, "root-folder") {
+		switch {
+		case contains(op, "root-folder"):
 			positions["root-folder"] = i
-		} else if contains(op, "child-folder-1") {
+		case contains(op, "child-folder-1"):
 			positions["child-folder-1"] = i
-		} else if contains(op, "child-folder-2") {
+		case contains(op, "child-folder-2"):
 			positions["child-folder-2"] = i
-		} else if contains(op, "grandchild-folder") {
+		case contains(op, "grandchild-folder"):
 			positions["grandchild-folder"] = i
 		}
 	}
@@ -328,10 +329,10 @@ func TestPusher_Push_MultipleFolderTrees(t *testing.T) {
 	// tree-b-root
 	//   └─ tree-b-child
 	testResources := resources.NewResources(
-		createFolderWithParent("tree-a-root", "v1", ""),
-		createFolderWithParent("tree-a-child", "v1", "tree-a-root"),
-		createFolderWithParent("tree-b-root", "v1", ""),
-		createFolderWithParent("tree-b-child", "v1", "tree-b-root"),
+		createFolderWithParent("tree-a-root", ""),
+		createFolderWithParent("tree-a-child", "tree-a-root"),
+		createFolderWithParent("tree-b-root", ""),
+		createFolderWithParent("tree-b-child", "tree-b-root"),
 	)
 
 	mockClient := &mockPushClient{
@@ -366,13 +367,14 @@ func TestPusher_Push_MultipleFolderTrees(t *testing.T) {
 	// Verify ordering within each tree
 	positions := make(map[string]int)
 	for i, op := range mockClient.operations {
-		if contains(op, "tree-a-root") {
+		switch {
+		case contains(op, "tree-a-root"):
 			positions["tree-a-root"] = i
-		} else if contains(op, "tree-a-child") {
+		case contains(op, "tree-a-child"):
 			positions["tree-a-child"] = i
-		} else if contains(op, "tree-b-root") {
+		case contains(op, "tree-b-root"):
 			positions["tree-b-root"] = i
-		} else if contains(op, "tree-b-child") {
+		case contains(op, "tree-b-child"):
 			positions["tree-b-child"] = i
 		}
 	}
@@ -389,7 +391,7 @@ func TestPusher_Push_OrphanedFolder(t *testing.T) {
 
 	// Create a folder that references a non-existent parent
 	testResources := resources.NewResources(
-		createFolderWithParent("orphan-folder", "v1", "non-existent-parent"),
+		createFolderWithParent("orphan-folder", "non-existent-parent"),
 	)
 
 	mockClient := &mockPushClient{
@@ -448,7 +450,7 @@ func createFolderResource(name, version string) *resources.Resource {
 	}, resources.SourceInfo{})
 }
 
-func createFolderWithParent(name, version, parentUID string) *resources.Resource {
+func createFolderWithParent(name, parentUID string) *resources.Resource {
 	metadata := map[string]any{
 		"name":      name,
 		"namespace": "default",
@@ -462,7 +464,7 @@ func createFolderWithParent(name, version, parentUID string) *resources.Resource
 	}
 
 	return resources.MustFromObject(map[string]any{
-		"apiVersion": "folder.grafana.app/" + version,
+		"apiVersion": "folder.grafana.app/v1",
 		"kind":       "Folder",
 		"metadata":   metadata,
 		"spec": map[string]any{

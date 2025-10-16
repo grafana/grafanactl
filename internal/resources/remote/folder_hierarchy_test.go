@@ -10,11 +10,11 @@ import (
 
 func TestSortFoldersByDependency(t *testing.T) {
 	tests := []struct {
-		name             string
-		folders          []*resources.Resource
-		expectError      bool
-		expectedLevels   int
-		validateLevels   func(t *testing.T, levels [][]*resources.Resource)
+		name           string
+		folders        []*resources.Resource
+		expectError    bool
+		expectedLevels int
+		validateLevels func(t *testing.T, levels [][]*resources.Resource)
 	}{
 		{
 			name:           "empty list",
@@ -22,17 +22,19 @@ func TestSortFoldersByDependency(t *testing.T) {
 			expectError:    false,
 			expectedLevels: 0,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				require.Nil(t, levels)
 			},
 		},
 		{
 			name: "single folder",
 			folders: []*resources.Resource{
-				createFolderWithParent("root", "v1", ""),
+				createFolderWithParent("root", ""),
 			},
 			expectError:    false,
 			expectedLevels: 1,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				require.Len(t, levels[0], 1)
 				require.Equal(t, "root", levels[0][0].Name())
 			},
@@ -40,26 +42,28 @@ func TestSortFoldersByDependency(t *testing.T) {
 		{
 			name: "flat hierarchy - all folders at root level",
 			folders: []*resources.Resource{
-				createFolderWithParent("folder-1", "v1", ""),
-				createFolderWithParent("folder-2", "v1", ""),
-				createFolderWithParent("folder-3", "v1", ""),
+				createFolderWithParent("folder-1", ""),
+				createFolderWithParent("folder-2", ""),
+				createFolderWithParent("folder-3", ""),
 			},
 			expectError:    false,
 			expectedLevels: 1,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				require.Len(t, levels[0], 3)
 			},
 		},
 		{
 			name: "two level hierarchy - root -> child-1, child-2",
 			folders: []*resources.Resource{
-				createFolderWithParent("root", "v1", ""),
-				createFolderWithParent("child-1", "v1", "root"),
-				createFolderWithParent("child-2", "v1", "root"),
+				createFolderWithParent("root", ""),
+				createFolderWithParent("child-1", "root"),
+				createFolderWithParent("child-2", "root"),
 			},
 			expectError:    false,
 			expectedLevels: 2,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				// Level 0: root folder
 				require.Len(t, levels[0], 1)
 				require.Equal(t, "root", levels[0][0].Name())
@@ -74,13 +78,14 @@ func TestSortFoldersByDependency(t *testing.T) {
 		{
 			name: "three level hierarchy - root -> child -> grandchild",
 			folders: []*resources.Resource{
-				createFolderWithParent("root", "v1", ""),
-				createFolderWithParent("child", "v1", "root"),
-				createFolderWithParent("grandchild", "v1", "child"),
+				createFolderWithParent("root", ""),
+				createFolderWithParent("child", "root"),
+				createFolderWithParent("grandchild", "child"),
 			},
 			expectError:    false,
 			expectedLevels: 3,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				// Level 0: root
 				require.Len(t, levels[0], 1)
 				require.Equal(t, "root", levels[0][0].Name())
@@ -97,14 +102,15 @@ func TestSortFoldersByDependency(t *testing.T) {
 		{
 			name: "multiple independent trees",
 			folders: []*resources.Resource{
-				createFolderWithParent("tree-a-root", "v1", ""),
-				createFolderWithParent("tree-a-child", "v1", "tree-a-root"),
-				createFolderWithParent("tree-b-root", "v1", ""),
-				createFolderWithParent("tree-b-child", "v1", "tree-b-root"),
+				createFolderWithParent("tree-a-root", ""),
+				createFolderWithParent("tree-a-child", "tree-a-root"),
+				createFolderWithParent("tree-b-root", ""),
+				createFolderWithParent("tree-b-child", "tree-b-root"),
 			},
 			expectError:    false,
 			expectedLevels: 2,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				// Level 0: both root folders
 				require.Len(t, levels[0], 2)
 				rootNames := []string{levels[0][0].Name(), levels[0][1].Name()}
@@ -121,11 +127,12 @@ func TestSortFoldersByDependency(t *testing.T) {
 		{
 			name: "orphaned folder - references non-existent parent",
 			folders: []*resources.Resource{
-				createFolderWithParent("orphan", "v1", "non-existent-parent"),
+				createFolderWithParent("orphan", "non-existent-parent"),
 			},
 			expectError:    false,
 			expectedLevels: 1,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				// Orphaned folder should be treated as root
 				require.Len(t, levels[0], 1)
 				require.Equal(t, "orphan", levels[0][0].Name())
@@ -140,16 +147,17 @@ func TestSortFoldersByDependency(t *testing.T) {
 				//   └─ child-1-2
 				// root-2
 				//   └─ child-2-1
-				createFolderWithParent("root-1", "v1", ""),
-				createFolderWithParent("child-1-1", "v1", "root-1"),
-				createFolderWithParent("child-1-2", "v1", "root-1"),
-				createFolderWithParent("grandchild-1-1-1", "v1", "child-1-1"),
-				createFolderWithParent("root-2", "v1", ""),
-				createFolderWithParent("child-2-1", "v1", "root-2"),
+				createFolderWithParent("root-1", ""),
+				createFolderWithParent("child-1-1", "root-1"),
+				createFolderWithParent("child-1-2", "root-1"),
+				createFolderWithParent("grandchild-1-1-1", "child-1-1"),
+				createFolderWithParent("root-2", ""),
+				createFolderWithParent("child-2-1", "root-2"),
 			},
 			expectError:    false,
 			expectedLevels: 3,
 			validateLevels: func(t *testing.T, levels [][]*resources.Resource) {
+				t.Helper()
 				// Level 0: root folders
 				require.Len(t, levels[0], 2)
 				rootNames := []string{levels[0][0].Name(), levels[0][1].Name()}
