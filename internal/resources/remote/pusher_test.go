@@ -251,6 +251,178 @@ func TestPusher_Push_FolderCreationError(t *testing.T) {
 	req.Equal("folder-1", summary.Failures[0].Resource.Name())
 }
 
+func TestPusher_Push_NestedFolders(t *testing.T) {
+	req := require.New(t)
+
+	// Create a 3-level folder hierarchy:
+	// root-folder (no parent)
+	//   └─ child-folder-1 (parent: root-folder)
+	//        └─ grandchild-folder (parent: child-folder-1)
+	//   └─ child-folder-2 (parent: root-folder)
+	testResources := resources.NewResources(
+		createFolderWithParent("root-folder", "v1", ""),
+		createFolderWithParent("child-folder-1", "v1", "root-folder"),
+		createFolderWithParent("child-folder-2", "v1", "root-folder"),
+		createFolderWithParent("grandchild-folder", "v1", "child-folder-1"),
+	)
+
+	mockClient := &mockPushClient{
+		operations: []string{},
+		mu:         sync.Mutex{},
+	}
+
+	mockRegistry := &mockPushRegistry{
+		supportedResources: []resources.Descriptor{
+			{
+				GroupVersion: schema.GroupVersion{Group: "folder.grafana.app", Version: "v1"},
+				Kind:         "Folder",
+				Singular:     "folder",
+				Plural:       "folders",
+			},
+		},
+	}
+
+	pusher := remote.NewPusher(mockClient, mockRegistry)
+
+	summary, err := pusher.Push(t.Context(), remote.PushRequest{
+		Resources:      testResources,
+		MaxConcurrency: 2,
+		IncludeManaged: true,
+	})
+
+	req.NoError(err)
+	req.Equal(4, summary.PushedCount)
+	req.Equal(0, summary.FailedCount)
+	req.Len(mockClient.operations, 4)
+
+	// Verify that parent folders are pushed before child folders
+	// Build a position map
+	positions := make(map[string]int)
+	for i, op := range mockClient.operations {
+		if contains(op, "root-folder") {
+			positions["root-folder"] = i
+		} else if contains(op, "child-folder-1") {
+			positions["child-folder-1"] = i
+		} else if contains(op, "child-folder-2") {
+			positions["child-folder-2"] = i
+		} else if contains(op, "grandchild-folder") {
+			positions["grandchild-folder"] = i
+		}
+	}
+
+	// Verify ordering: parent must come before children
+	req.Less(positions["root-folder"], positions["child-folder-1"],
+		"root-folder must be pushed before child-folder-1")
+	req.Less(positions["root-folder"], positions["child-folder-2"],
+		"root-folder must be pushed before child-folder-2")
+	req.Less(positions["child-folder-1"], positions["grandchild-folder"],
+		"child-folder-1 must be pushed before grandchild-folder")
+}
+
+func TestPusher_Push_MultipleFolderTrees(t *testing.T) {
+	req := require.New(t)
+
+	// Create two independent folder trees:
+	// tree-a-root
+	//   └─ tree-a-child
+	// tree-b-root
+	//   └─ tree-b-child
+	testResources := resources.NewResources(
+		createFolderWithParent("tree-a-root", "v1", ""),
+		createFolderWithParent("tree-a-child", "v1", "tree-a-root"),
+		createFolderWithParent("tree-b-root", "v1", ""),
+		createFolderWithParent("tree-b-child", "v1", "tree-b-root"),
+	)
+
+	mockClient := &mockPushClient{
+		operations: []string{},
+		mu:         sync.Mutex{},
+	}
+
+	mockRegistry := &mockPushRegistry{
+		supportedResources: []resources.Descriptor{
+			{
+				GroupVersion: schema.GroupVersion{Group: "folder.grafana.app", Version: "v1"},
+				Kind:         "Folder",
+				Singular:     "folder",
+				Plural:       "folders",
+			},
+		},
+	}
+
+	pusher := remote.NewPusher(mockClient, mockRegistry)
+
+	summary, err := pusher.Push(t.Context(), remote.PushRequest{
+		Resources:      testResources,
+		MaxConcurrency: 2,
+		IncludeManaged: true,
+	})
+
+	req.NoError(err)
+	req.Equal(4, summary.PushedCount)
+	req.Equal(0, summary.FailedCount)
+	req.Len(mockClient.operations, 4)
+
+	// Verify ordering within each tree
+	positions := make(map[string]int)
+	for i, op := range mockClient.operations {
+		if contains(op, "tree-a-root") {
+			positions["tree-a-root"] = i
+		} else if contains(op, "tree-a-child") {
+			positions["tree-a-child"] = i
+		} else if contains(op, "tree-b-root") {
+			positions["tree-b-root"] = i
+		} else if contains(op, "tree-b-child") {
+			positions["tree-b-child"] = i
+		}
+	}
+
+	// Verify ordering: parent must come before children in each tree
+	req.Less(positions["tree-a-root"], positions["tree-a-child"],
+		"tree-a-root must be pushed before tree-a-child")
+	req.Less(positions["tree-b-root"], positions["tree-b-child"],
+		"tree-b-root must be pushed before tree-b-child")
+}
+
+func TestPusher_Push_OrphanedFolder(t *testing.T) {
+	req := require.New(t)
+
+	// Create a folder that references a non-existent parent
+	testResources := resources.NewResources(
+		createFolderWithParent("orphan-folder", "v1", "non-existent-parent"),
+	)
+
+	mockClient := &mockPushClient{
+		operations: []string{},
+		mu:         sync.Mutex{},
+	}
+
+	mockRegistry := &mockPushRegistry{
+		supportedResources: []resources.Descriptor{
+			{
+				GroupVersion: schema.GroupVersion{Group: "folder.grafana.app", Version: "v1"},
+				Kind:         "Folder",
+				Singular:     "folder",
+				Plural:       "folders",
+			},
+		},
+	}
+
+	pusher := remote.NewPusher(mockClient, mockRegistry)
+
+	// Orphaned folders should still be pushed (treated as root folders)
+	summary, err := pusher.Push(t.Context(), remote.PushRequest{
+		Resources:      testResources,
+		MaxConcurrency: 2,
+		IncludeManaged: true,
+	})
+
+	req.NoError(err)
+	req.Equal(1, summary.PushedCount)
+	req.Equal(0, summary.FailedCount)
+	req.Len(mockClient.operations, 1)
+}
+
 // Helper functions
 
 func createTestResources() *resources.Resources {
@@ -270,6 +442,29 @@ func createFolderResource(name, version string) *resources.Resource {
 			"name":      name,
 			"namespace": "default",
 		},
+		"spec": map[string]any{
+			"title": "Test Folder " + name,
+		},
+	}, resources.SourceInfo{})
+}
+
+func createFolderWithParent(name, version, parentUID string) *resources.Resource {
+	metadata := map[string]any{
+		"name":      name,
+		"namespace": "default",
+	}
+
+	// Add parent annotation if parentUID is not empty
+	if parentUID != "" {
+		metadata["annotations"] = map[string]any{
+			"grafana.app/folder": parentUID,
+		}
+	}
+
+	return resources.MustFromObject(map[string]any{
+		"apiVersion": "folder.grafana.app/" + version,
+		"kind":       "Folder",
+		"metadata":   metadata,
 		"spec": map[string]any{
 			"title": "Test Folder " + name,
 		},
