@@ -49,7 +49,10 @@ func (m *ServerFieldsStripper) Process(r *resources.Resource) error {
 			"apiVersion": r.APIVersion(),
 			"kind":       r.Kind(),
 			"metadata": map[string]any{
-				"name":        r.Name(),
+				"name": r.Name(),
+				// Preserve the original namespace for inspection.
+				// When pushing, the NamespaceOverrider processor will override
+				// this with the target context's namespace.
 				"namespace":   r.Namespace(),
 				"annotations": annotations,
 				"labels":      labels,
