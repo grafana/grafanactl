@@ -129,3 +129,45 @@ config-reference-drift: config-reference ## Checks for drift in the generated co
 .PHONY: serve-docs
 serve-docs: check-binaries ## Serves the documentation and watches for changes.
 	$(RUN_DEVBOX) mkdocs serve -f mkdocs.yml
+
+
+##@ Integration Testing
+
+.PHONY: test-env-up
+test-env-up: ## Starts the docker-compose test environment (Grafana + MySQL).
+	@echo "Starting test environment..."
+	@docker-compose up -d
+	@echo "Waiting for services to be healthy..."
+	@for i in {1..30}; do \
+		if docker-compose ps | grep -q "healthy"; then \
+			echo "Services are healthy!"; \
+			echo ""; \
+			echo "Grafana is available at: http://localhost:3000"; \
+			echo "Credentials: admin/admin"; \
+			echo ""; \
+			echo "Test with: make test-env-status"; \
+			exit 0; \
+		fi; \
+		echo -n "."; \
+		sleep 1; \
+	done; \
+	echo ""; \
+	echo "Warning: Services may still be starting up. Check with: docker-compose ps"
+
+.PHONY: test-env-down
+test-env-down: ## Stops and removes the docker-compose test environment.
+	@echo "Stopping test environment..."
+	@docker-compose down
+
+.PHONY: test-env-clean
+test-env-clean: ## Stops the test environment and removes all volumes.
+	@echo "Stopping test environment and removing volumes..."
+	@docker-compose down -v
+
+.PHONY: test-env-status
+test-env-status: ## Shows the status of the test environment services.
+	@docker-compose ps
+
+.PHONY: test-env-logs
+test-env-logs: ## Shows logs from the test environment (Grafana and MySQL).
+	@docker-compose logs -f
