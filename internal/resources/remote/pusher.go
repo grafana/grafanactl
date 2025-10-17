@@ -118,8 +118,9 @@ func (summary *PushSummary) recordFailure(resource *resources.Resource, err erro
 }
 
 // Push pushes resources to Grafana.
-// It pushes folders first, then other resources.
-// This is to ensure that folders are created before other resources that depend on them.
+// It pushes folders first (respecting parent-child hierarchy), then other resources.
+// This ensures that parent folders are created before their children,
+// and all folders are created before other resources that depend on them.
 func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, error) {
 	summary := &PushSummary{}
 	supported := p.supportedDescriptors()
@@ -128,25 +129,17 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 		request.MaxConcurrency = 1
 	}
 
-	// First loop: push all folder resources
-	if err := request.Resources.ForEachConcurrently(
-		ctx, request.MaxConcurrency, func(ctx context.Context, res *resources.Resource) error {
-			if !res.IsFolder() {
-				return nil
-			}
-
-			return p.pushSingleResource(ctx, res, supported, summary, request)
-		},
-	); err != nil {
+	// Phase 1: Push folders in hierarchical order
+	if err := p.pushFolders(ctx, request, supported, summary); err != nil {
 		return summary, err
 	}
 
 	// If all resources were folders, we're done
-	if summary.PushedCount == request.Resources.Len() {
+	if summary.PushedCount+summary.FailedCount >= request.Resources.Len() {
 		return summary, nil
 	}
 
-	// Second loop: push all other resources
+	// Phase 2: Push all other (non-folder) resources
 	if err := request.Resources.ForEachConcurrently(
 		ctx, request.MaxConcurrency, func(ctx context.Context, res *resources.Resource) error {
 			if res.IsFolder() {
@@ -160,6 +153,46 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 	}
 
 	return summary, nil
+}
+
+// pushFolders pushes folder resources in hierarchical order (parent before child).
+// Folders are grouped by dependency level and pushed level-by-level.
+// All folders at the same level can be pushed concurrently.
+func (p *Pusher) pushFolders(
+	ctx context.Context,
+	request PushRequest,
+	supported map[schema.GroupVersionKind]resources.Descriptor,
+	summary *PushSummary,
+) error {
+	// Collect all folder resources
+	var folders []*resources.Resource
+	_ = request.Resources.ForEach(func(res *resources.Resource) error {
+		if res.IsFolder() {
+			folders = append(folders, res)
+		}
+		return nil
+	})
+
+	// Sort folders by dependency levels (parent folders before children)
+	folderLevels, err := SortFoldersByDependency(folders)
+	if err != nil {
+		return err
+	}
+
+	// Push folders level by level
+	// All folders at the same level can be pushed concurrently
+	for _, levelFolders := range folderLevels {
+		levelResources := resources.NewResources(levelFolders...)
+		if err := levelResources.ForEachConcurrently(
+			ctx, request.MaxConcurrency, func(ctx context.Context, res *resources.Resource) error {
+				return p.pushSingleResource(ctx, res, supported, summary, request)
+			},
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // pushSingleResource pushes a single resource and handles common error scenarios.

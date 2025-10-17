@@ -180,6 +180,12 @@ func (r *Resource) IsFolder() bool {
 		r.GroupVersionKind().Kind == folderv1beta1.FolderKind().Kind()
 }
 
+// GetFolder returns the parent folder UID from the annotation.
+// Returns empty string if the folder has no parent (is a root folder).
+func (r *Resource) GetFolder() string {
+	return r.Raw.GetFolder()
+}
+
 // Resources is a collection of resources.
 type Resources struct {
 	collection    map[ResourceRef]*Resource
