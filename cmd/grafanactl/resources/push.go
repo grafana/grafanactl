@@ -137,7 +137,12 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			procs := []remote.Processor{}
+			procs := []remote.Processor{
+				// Override namespace to match the target context.
+				// This ensures resources are pushed to the current context's namespace
+				// regardless of the namespace stored in the resource files.
+				process.NewNamespaceOverrider(cfg.Namespace),
+			}
 			if !opts.OmitManagerFields {
 				procs = append(procs, &process.ManagerFieldsAppender{})
 			}
