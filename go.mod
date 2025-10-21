@@ -13,7 +13,7 @@ require (
 	github.com/go-openapi/strfmt v0.24.0
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/grafana/authlib/types v0.0.0-20250710201142-9542f2f28d43
+	github.com/grafana/authlib/types v0.0.0-20250930082137-a40e2c2b094f
 	github.com/grafana/grafana-app-sdk/logging v0.46.0
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20250925215610-d92957c70d5c
 	github.com/grafana/grafana/apps/folder v0.0.0-20250724095330-d852bde2a5fb
