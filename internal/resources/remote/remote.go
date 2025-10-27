@@ -2,6 +2,11 @@ package remote
 
 import "github.com/grafana/grafanactl/internal/resources"
 
+// Registry is a registry of resources supported by the Grafana API.
+type Registry interface {
+	SupportedResources() resources.Descriptors
+}
+
 // Processor can be used to modify a resource in-place,
 // before it is written or after it is read from local sources.
 //

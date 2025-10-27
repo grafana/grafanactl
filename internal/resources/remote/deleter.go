@@ -14,14 +14,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// Deleter takes care of deleting resources from Grafana.
-type Deleter struct {
-	client   *dynamic.NamespacedClient
-	registry PushRegistry
+// DeleteClient is a client that can delete resources from Grafana.
+type DeleteClient interface {
+	Delete(
+		ctx context.Context, desc resources.Descriptor, name string, opts metav1.DeleteOptions,
+	) error
 }
 
-// NewDeleter creates a new Deleter.
-func NewDeleter(ctx context.Context, cfg config.NamespacedRESTConfig) (*Deleter, error) {
+// Deleter takes care of deleting resources from Grafana.
+type Deleter struct {
+	client   DeleteClient
+	registry Registry
+}
+
+// NewDefaultDeleter creates a new Deleter.
+// It uses the default namespaced dynamic client to delete resources from Grafana.
+func NewDefaultDeleter(ctx context.Context, cfg config.NamespacedRESTConfig) (*Deleter, error) {
 	cli, err := dynamic.NewDefaultNamespacedClient(cfg)
 	if err != nil {
 		return nil, err
@@ -32,10 +40,15 @@ func NewDeleter(ctx context.Context, cfg config.NamespacedRESTConfig) (*Deleter,
 		return nil, err
 	}
 
+	return NewDeleter(cli, registry), nil
+}
+
+// NewDeleter creates a new Deleter.
+func NewDeleter(client DeleteClient, registry Registry) *Deleter {
 	return &Deleter{
-		client:   cli,
+		client:   client,
 		registry: registry,
-	}, nil
+	}
 }
 
 // DeleteRequest is a request for deleting resources from Grafana.
@@ -118,14 +131,16 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (Dele
 }
 
 func (deleter *Deleter) deleteResource(ctx context.Context, descriptor resources.Descriptor, res *resources.Resource, dryRun bool) error {
-	var dryRunOpts []string
+	// When dry-run is enabled, skip the actual delete operation.
+	// This is a client-side dry-run because the k8s.io/client-go dynamic client
+	// sends DeleteOptions in the HTTP body (not as query parameters), which causes
+	// the Kubernetes API server to ignore the DryRun field. By skipping the API call
+	// entirely, we ensure no resources are accidentally deleted in dry-run mode.
 	if dryRun {
-		dryRunOpts = []string{"All"}
+		return nil
 	}
 
-	return deleter.client.Delete(ctx, descriptor, res.Name(), metav1.DeleteOptions{
-		DryRun: dryRunOpts,
-	})
+	return deleter.client.Delete(ctx, descriptor, res.Name(), metav1.DeleteOptions{})
 }
 
 func (deleter *Deleter) supportedDescriptors() map[schema.GroupVersionKind]resources.Descriptor {

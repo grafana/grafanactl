@@ -17,11 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// PushRegistry is a registry of resources that can be pushed to Grafana.
-type PushRegistry interface {
-	SupportedResources() resources.Descriptors
-}
-
 // PushClient is a client that can push resources to Grafana.
 type PushClient interface {
 	Create(
@@ -40,7 +35,7 @@ type PushClient interface {
 // Pusher takes care of pushing resources to Grafana API.
 type Pusher struct {
 	client   PushClient
-	registry PushRegistry
+	registry Registry
 }
 
 // NewDefaultPusher creates a new Pusher.
@@ -60,7 +55,7 @@ func NewDefaultPusher(ctx context.Context, cfg config.NamespacedRESTConfig) (*Pu
 }
 
 // NewPusher creates a new Pusher.
-func NewPusher(client PushClient, registry PushRegistry) *Pusher {
+func NewPusher(client PushClient, registry Registry) *Pusher {
 	return &Pusher{
 		client:   client,
 		registry: registry,

@@ -125,7 +125,7 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			// Delete!
-			deleter, err := remote.NewDeleter(ctx, cfg)
+			deleter, err := remote.NewDefaultDeleter(ctx, cfg)
 			if err != nil {
 				return err
 			}
