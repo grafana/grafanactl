@@ -2,8 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Renovate configuration for grafanactl - groups dependencies by ecosystem to reduce PR noise while maintaining update visibility",
   "extends": [
-    "config:recommended",
-    "github>grafana/grafana:renovate/default-preset"
+    "github>grafana/grafana-renovate-config//presets/base"
   ],
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Renovate Dependency Dashboard",
