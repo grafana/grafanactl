@@ -65,16 +65,6 @@
       "semanticCommitScope": "deps"
     },
     {
-      "description": "Group Devbox dependencies (development environment tools)",
-      "matchManagers": [
-        "devbox"
-      ],
-      "groupName": "Devbox dependencies",
-      "groupSlug": "devbox-deps",
-      "semanticCommitType": "build",
-      "semanticCommitScope": "devbox"
-    },
-    {
       "description": "Group all GitHub Actions together - maintains digest pinning for security while reducing PR noise",
       "matchManagers": [
         "github-actions"
