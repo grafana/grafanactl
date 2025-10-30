@@ -33,26 +33,26 @@
       "matchManagers": [
         "gomod"
       ],
-      "excludePackagePatterns": [
-        "^github\\.com/grafana/grafana/"
-      ],
       "groupName": "Go dependencies",
       "groupSlug": "go-deps",
       "semanticCommitType": "build",
-      "semanticCommitScope": "deps"
+      "semanticCommitScope": "deps",
+      "matchPackageNames": [
+        "!/^github\\.com/grafana/grafana//"
+      ]
     },
     {
       "description": "Group Grafana monorepo dependencies separately as they often update together and require coordinated testing",
       "matchManagers": [
         "gomod"
       ],
-      "matchPackagePatterns": [
-        "^github\\.com/grafana/grafana/"
-      ],
       "groupName": "Grafana monorepo dependencies",
       "groupSlug": "grafana-monorepo",
       "semanticCommitType": "build",
-      "semanticCommitScope": "deps"
+      "semanticCommitScope": "deps",
+      "matchPackageNames": [
+        "/^github\\.com/grafana/grafana//"
+      ]
     },
     {
       "description": "Group Python dependencies (mkdocs and related) for documentation",
@@ -143,29 +143,29 @@
     },
     {
       "description": "Disable automerge for Grafana monorepo dependencies to ensure manual testing",
-      "matchPackagePatterns": [
-        "^github\\.com/grafana/grafana/"
-      ],
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": [
+        "/^github\\.com/grafana/grafana//"
+      ]
     },
     {
       "description": "Separate Kubernetes client-go and apimachinery for careful version coordination",
-      "matchPackagePatterns": [
-        "^k8s\\.io/"
-      ],
       "groupName": "Kubernetes dependencies",
       "groupSlug": "k8s-deps",
       "automerge": false,
       "semanticCommitType": "build",
-      "semanticCommitScope": "k8s"
+      "semanticCommitScope": "k8s",
+      "matchPackageNames": [
+        "/^k8s\\.io//"
+      ]
     }
   ],
   "customManagers": [
     {
       "description": "Detect DEVBOX_VERSION environment variable in GitHub Actions workflows",
       "customType": "regex",
-      "fileMatch": [
-        "^\\.github/workflows/.*\\.ya?ml$"
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.*\\.ya?ml$/"
       ],
       "matchStrings": [
         "DEVBOX_VERSION:\\s*[\"']?(?<currentValue>[^\\s\"']+)[\"']?"
