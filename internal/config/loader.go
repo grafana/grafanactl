@@ -18,6 +18,7 @@ const (
 	configFilePermissions  = 0o600
 	StandardConfigFolder   = "grafanactl"
 	StandardConfigFileName = "config.yaml"
+	ConfigFileEnvVar       = "GRAFANACTL_CONFIG"
 
 	defaultEmptyConfigFile = `
 contexts:
@@ -38,6 +39,11 @@ func ExplicitConfigFile(path string) Source {
 
 func StandardLocation() Source {
 	return func() (string, error) {
+		// Check if GRAFANACTL_CONFIG environment variable is set
+		if envPath := os.Getenv(ConfigFileEnvVar); envPath != "" {
+			return envPath, nil
+		}
+
 		file, err := xdg.ConfigFile(filepath.Join(StandardConfigFolder, StandardConfigFileName))
 		if err != nil {
 			return "", err
