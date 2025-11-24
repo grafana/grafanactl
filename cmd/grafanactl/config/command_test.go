@@ -288,6 +288,23 @@ current-context: prod
 	testCase.Run(t)
 }
 
+func Test_ViewCommand_withEnvVar(t *testing.T) {
+	testCase := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--minify"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains("local"),
+			testutils.CommandOutputContains("http://localhost:3000/"),
+		},
+		Env: map[string]string{
+			"GRAFANACTL_CONFIG": "testdata/config.yaml",
+		},
+	}
+
+	testCase.Run(t)
+}
+
 func Test_ViewCommand_withEnvironmentVariablesAndEmptyConfig(t *testing.T) {
 	configFile := testutils.CreateTempFile(t, "contexts:")
 
