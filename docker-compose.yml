@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   mysql:
-    image: mysql:8.0@sha256:3e646bcda0d9448ffa3d2024eef04e1bca95528ec19b9e8b76749da9d97d4a10
+    image: mysql:8.4@sha256:b306273d4d36bc1a7f265130c3dd93c0462253af7634203e569add0403a7b273
     container_name: grafanactl-mysql
     restart: unless-stopped
     environment:
@@ -27,7 +27,7 @@ services:
       - grafana
 
   grafana:
-    image: grafana/grafana:12.2@sha256:74144189b38447facf737dfd0f3906e42e0776212bf575dc3334c3609183adf7
+    image: grafana/grafana:12.3@sha256:70d9599b186ce287be0d2c5ba9a78acb2e86c1a68c9c41449454d0fc3eeb84e8
     container_name: grafanactl-grafana
     restart: unless-stopped
     ports:
