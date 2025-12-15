@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Restore go vendors
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # zizmor: ignore[cache-poisoning] this is actually fine #v4.3.0
+        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # zizmor: ignore[cache-poisoning] this is actually fine #v5.0.1
         with:
           path: |
             ~/go/pkg/mod
