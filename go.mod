@@ -16,7 +16,7 @@ require (
 	github.com/grafana/authlib/types v0.0.0-20250930082137-a40e2c2b094f
 	github.com/grafana/grafana-app-sdk/logging v0.48.5
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20250925215610-d92957c70d5c
-	github.com/grafana/grafana/apps/folder v0.0.0-20250724095330-d852bde2a5fb
+	github.com/grafana/grafana/apps/folder/v12 v12.3.1
 	github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250903133002-4e28cba1c53a
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
