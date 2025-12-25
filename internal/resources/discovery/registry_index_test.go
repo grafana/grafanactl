@@ -341,6 +341,198 @@ func TestRegistryIndex_LookupPartialGVK(t *testing.T) {
 	}
 }
 
+func TestRegistryIndex_LookupAllVersionsForPartialGVK(t *testing.T) {
+	tests := []struct {
+		name      string
+		discovery func() ([]*metav1.APIGroup, []*metav1.APIResourceList)
+		gvk       resources.PartialGVK
+		want      resources.Descriptors
+		wantOK    bool
+	}{
+		{
+			name:      "lookup with empty GVK returns not found",
+			discovery: getSingleVersionDiscovery,
+			gvk:       resources.PartialGVK{},
+			want:      nil,
+			wantOK:    false,
+		},
+		{
+			name:      "lookup with non-existent resource returns not found",
+			discovery: getSingleVersionDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "nonexistent",
+			},
+			want:   nil,
+			wantOK: false,
+		},
+		{
+			name:      "lookup with existing resource returns all versions",
+			discovery: getMultipleVersionsDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "dashboards",
+			},
+			want: resources.Descriptors{
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v1",
+					},
+				},
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v2",
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name:      "lookup with resource and group returns all versions for that group",
+			discovery: getMixedVersionsDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "dashboards",
+				Group:    "dashboard.grafana.app",
+			},
+			want: resources.Descriptors{
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v1",
+					},
+				},
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v2",
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name:      "lookup with resource, group and version returns only that version",
+			discovery: getMixedVersionsDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "dashboards",
+				Group:    "dashboard.grafana.app",
+				Version:  "v1",
+			},
+			want: resources.Descriptors{
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v1",
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name:      "lookup with single version resource returns that version",
+			discovery: getSingleVersionDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "dashboards",
+			},
+			want: resources.Descriptors{
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v1",
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name:      "lookup with mixed discovery returns all versions from all groups",
+			discovery: getMixedVersionsDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "dashboards",
+			},
+			want: resources.Descriptors{
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v1",
+					},
+				},
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v2",
+					},
+				},
+			},
+			wantOK: true,
+		},
+		{
+			name:      "lookup with kind instead of resource returns all versions",
+			discovery: getMultipleVersionsDiscovery,
+			gvk: resources.PartialGVK{
+				Resource: "Dashboard",
+			},
+			want: resources.Descriptors{
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v1",
+					},
+				},
+				{
+					Kind:     "Dashboard",
+					Plural:   "dashboards",
+					Singular: "dashboard",
+					GroupVersion: schema.GroupVersion{
+						Group:   "dashboard.grafana.app",
+						Version: "v2",
+					},
+				},
+			},
+			wantOK: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			registryIndex := discovery.NewRegistryIndex()
+			groups, resources := test.discovery()
+			require.NoError(t, registryIndex.Update(t.Context(), groups, resources))
+
+			actual, ok := registryIndex.LookupAllVersionsForPartialGVK(test.gvk)
+			assert.ElementsMatch(t, test.want, actual)
+			assert.Equal(t, test.wantOK, ok)
+		})
+	}
+}
+
 func getEmptyDiscovery() ([]*metav1.APIGroup, []*metav1.APIResourceList) {
 	return []*metav1.APIGroup{}, []*metav1.APIResourceList{}
 }

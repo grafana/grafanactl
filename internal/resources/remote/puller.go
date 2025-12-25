@@ -22,7 +22,7 @@ type PullClient interface {
 	) (*unstructured.Unstructured, error)
 
 	GetMultiple(
-		ctx context.Context, desc resources.Descriptor, names []string, opts metav1.ListOptions,
+		ctx context.Context, desc resources.Descriptor, names []string, opts metav1.GetOptions,
 	) ([]unstructured.Unstructured, error)
 
 	List(
@@ -120,7 +120,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 					partialRes[idx] = res.Items
 				}
 			case resources.FilterTypeMultiple:
-				res, err := p.client.GetMultiple(ctx, filt.Descriptor, filt.ResourceUIDs, metav1.ListOptions{})
+				res, err := p.client.GetMultiple(ctx, filt.Descriptor, filt.ResourceUIDs, metav1.GetOptions{})
 				if err != nil {
 					if req.StopOnError {
 						return err

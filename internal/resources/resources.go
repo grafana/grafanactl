@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	folderv1beta1 "github.com/grafana/grafana/apps/folder/pkg/apis/folder/v1beta1"
 	"github.com/grafana/grafana/pkg/apimachinery/utils"
 	"github.com/grafana/grafanactl/internal/format"
 	"golang.org/x/sync/errgroup"
@@ -16,6 +17,8 @@ import (
 const (
 	// TODO: change once we have a proper manager kind for grafanactl.
 	ResourceManagerKind = utils.ManagerKindKubectl
+	// TODO: move this to grafana/grafana.
+	AnnotationSavedFromUI = "grafana.app/saved-from-ui"
 )
 
 // ResourceRef is a unique identifier for a resource.
@@ -169,6 +172,18 @@ func (r *Resource) GetManagerKind() utils.ManagerKind {
 	}
 
 	return m.Kind
+}
+
+// IsFolder returns true if the resource is a folder.
+func (r *Resource) IsFolder() bool {
+	return r.GroupVersionKind().Group == folderv1beta1.FolderKind().Group() &&
+		r.GroupVersionKind().Kind == folderv1beta1.FolderKind().Kind()
+}
+
+// GetFolder returns the parent folder UID from the annotation.
+// Returns empty string if the folder has no parent (is a root folder).
+func (r *Resource) GetFolder() string {
+	return r.Raw.GetFolder()
 }
 
 // Resources is a collection of resources.

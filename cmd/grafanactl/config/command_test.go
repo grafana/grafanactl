@@ -287,3 +287,45 @@ current-context: prod
 
 	testCase.Run(t)
 }
+
+func Test_ViewCommand_withEnvVar(t *testing.T) {
+	testCase := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--minify"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputContains("local"),
+			testutils.CommandOutputContains("http://localhost:3000/"),
+		},
+		Env: map[string]string{
+			"GRAFANACTL_CONFIG": "testdata/config.yaml",
+		},
+	}
+
+	testCase.Run(t)
+}
+
+func Test_ViewCommand_withEnvironmentVariablesAndEmptyConfig(t *testing.T) {
+	configFile := testutils.CreateTempFile(t, "contexts:")
+
+	testCase := testutils.CommandTestCase{
+		Cmd:     config.Command(),
+		Command: []string{"view", "--config", configFile, "--minify", "--raw"},
+		Assertions: []testutils.CommandAssertion{
+			testutils.CommandSuccess(),
+			testutils.CommandOutputEquals(`contexts:
+  default:
+    grafana:
+      server: https://grafana.example.com/
+      token: token
+current-context: default
+`),
+		},
+		Env: map[string]string{
+			"GRAFANA_SERVER": "https://grafana.example.com/",
+			"GRAFANA_TOKEN":  "token",
+		},
+	}
+
+	testCase.Run(t)
+}

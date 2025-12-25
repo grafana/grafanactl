@@ -31,7 +31,8 @@ Once you have configured your authentication method, you are ready to use the Gr
 
 !!! note
 
-    Every supported environment variable is listed in our [reference documentation](./reference/environment-variables/index.md).
+    * Every supported environment variable is listed in our [reference documentation](./reference/environment-variables/index.md).
+    * Check the [config file reference documentation](./reference/configuration/index.md) for details on all available config options.
 
 ## Defining contexts
 
@@ -41,6 +42,8 @@ Configure the `default` context:
 
 ```shell
 grafanactl config set contexts.default.grafana.server http://localhost:3000
+
+# Set org-id when using OSS/Enterprise - skip when targeting Grafana Cloud
 grafanactl config set contexts.default.grafana.org-id 1
 
 # Authenticate with a service account token

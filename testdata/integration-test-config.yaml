@@ -1,0 +1,26 @@
+# Integration test configuration for grafanactl
+# This config is used for testing grafanactl against a local Grafana instance
+# running via docker-compose.yml
+#
+# Usage:
+#   grafanactl --config testdata/integration-test-config.yaml config view
+
+current-context: "local"
+
+contexts:
+  local:
+    grafana:
+      # Local Grafana instance running in Docker
+      server: "http://localhost:3000"
+
+      # Basic authentication with default admin credentials
+      # Username: admin, Password: admin
+      basic-auth:
+        username: "admin"
+        password: "admin"
+
+      # For testing with insecure connections (self-signed certs, etc.)
+      # insecure-skip-tls-verify: true
+
+      # Default organization ID (Grafana on-prem uses org-id as namespace)
+      org-id: 1

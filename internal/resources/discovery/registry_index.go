@@ -90,6 +90,25 @@ func (r *RegistryIndex) LookupPartialGVK(gvk resources.PartialGVK) (resources.De
 	return desc, true
 }
 
+// LookupAllVersionsForPartialGVK returns all descriptors for the provided partial GVK.
+// This is useful when you want to get all supported versions of a resource type.
+// If group is provided, it will only return versions for that group.
+// If version is provided, it will only return that specific version (same as LookupPartialGVK).
+// If neither group nor version are provided, it will return all versions of all groups that support the resource.
+func (r *RegistryIndex) LookupAllVersionsForPartialGVK(gvk resources.PartialGVK) (resources.Descriptors, bool) {
+	groupKindCandidates, ok := r.getKindCandidates(gvk.Resource)
+	if !ok {
+		return nil, false
+	}
+
+	descs, ok := r.filterAllCandidates(groupKindCandidates, gvk.Group, gvk.Version)
+	if !ok {
+		return nil, false
+	}
+
+	return descs, true
+}
+
 // Update updates the registry index from the provided API groups and resources.
 func (r *RegistryIndex) Update(ctx context.Context, groups []*metav1.APIGroup, list []*metav1.APIResourceList) error {
 	r.lock.Lock()
@@ -320,6 +339,79 @@ func (r *RegistryIndex) filterCandidates(
 	}
 
 	return resources.Descriptor{}, false
+}
+
+// filterAllCandidates returns all descriptors for the given candidates based on group and version constraints.
+// If version is specified, it returns only that version.
+// If group is specified but not version, it returns all versions for that group.
+// If neither is specified, it returns all versions for all groups.
+func (r *RegistryIndex) filterAllCandidates(
+	groupKindCandidates []schema.GroupKind, group, version string,
+) (resources.Descriptors, bool) {
+	// If a specific version is requested, use the existing single-descriptor logic
+	if version != "" {
+		desc, ok := r.filterCandidates(groupKindCandidates, group, version)
+		if !ok {
+			return nil, false
+		}
+		return resources.Descriptors{desc}, true
+	}
+
+	var targetGroups []string
+	if group != "" {
+		// Check if the group was provided in the short form.
+		if g, ok := r.shortGroups[group]; ok {
+			targetGroups = []string{g}
+		} else if _, ok := r.longGroups[group]; ok {
+			// Check if the group was provided in the long form.
+			targetGroups = []string{group}
+		} else {
+			return nil, false
+		}
+	} else {
+		// No group specified, collect all groups that support this resource
+		groupSet := make(map[string]struct{})
+		for _, gk := range groupKindCandidates {
+			groupSet[gk.Group] = struct{}{}
+		}
+		for g := range groupSet {
+			targetGroups = append(targetGroups, g)
+		}
+	}
+
+	var result resources.Descriptors
+	for _, targetGroup := range targetGroups {
+		// Find the kind for this group
+		var kind string
+		for _, gk := range groupKindCandidates {
+			if gk.Group == targetGroup {
+				kind = gk.Kind
+				break
+			}
+		}
+		if kind == "" {
+			continue
+		}
+
+		// Find all versions for this group/kind combination
+		for gv, descs := range r.descriptors {
+			if gv.Group != targetGroup {
+				continue
+			}
+			for _, desc := range descs {
+				if desc.Kind == kind {
+					result = append(result, desc)
+					break
+				}
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, false
+	}
+
+	return result, true
 }
 
 func makeShortName(name string) string {

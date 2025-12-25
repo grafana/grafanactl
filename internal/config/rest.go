@@ -1,6 +1,8 @@
 package config
 
 import (
+	"context"
+
 	authlib "github.com/grafana/authlib/types"
 	"k8s.io/client-go/rest"
 )
@@ -13,7 +15,7 @@ type NamespacedRESTConfig struct {
 }
 
 // NewNamespacedRESTConfig creates a new namespaced REST config.
-func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
+func NewNamespacedRESTConfig(ctx context.Context, cfg Context) NamespacedRESTConfig {
 	rcfg := rest.Config{
 		// TODO add user agent
 		// UserAgent: cfg.UserAgent.ValueString(),
@@ -50,10 +52,18 @@ func NewNamespacedRESTConfig(cfg Context) NamespacedRESTConfig {
 
 	// Namespace
 	var namespace string
-	if cfg.Grafana.OrgID != 0 {
-		namespace = authlib.OrgNamespaceFormatter(cfg.Grafana.OrgID)
+
+	discoveredStackID, err := DiscoverStackID(ctx, *cfg.Grafana)
+
+	if err == nil {
+		// even if cfg.Grafana.OrgID was set - we ignore it, discoveredStackID takes precedent
+		namespace = authlib.CloudNamespaceFormatter(discoveredStackID)
 	} else {
-		namespace = authlib.CloudNamespaceFormatter(cfg.Grafana.StackID)
+		if cfg.Grafana.OrgID != 0 {
+			namespace = authlib.OrgNamespaceFormatter(cfg.Grafana.OrgID)
+		} else {
+			namespace = authlib.CloudNamespaceFormatter(cfg.Grafana.StackID)
+		}
 	}
 
 	return NamespacedRESTConfig{

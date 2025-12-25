@@ -77,6 +77,54 @@ func TestLoad_standardLocation_withExistingConfig(t *testing.T) {
 	req.Empty(cfg.Contexts)
 }
 
+func TestLoad_standardLocation_withEnvVar(t *testing.T) {
+	req := require.New(t)
+
+	// Set the environment variable to point to a test config
+	t.Setenv(config.ConfigFileEnvVar, "./testdata/config.yaml")
+
+	cfg, err := config.Load(t.Context(), config.StandardLocation())
+	req.NoError(err)
+
+	req.Equal("local", cfg.CurrentContext)
+	req.Len(cfg.Contexts, 1)
+	req.Equal("local", cfg.Contexts["local"].Name)
+	req.Equal("http://localhost:3000/", cfg.Contexts["local"].Grafana.Server)
+}
+
+func TestLoad_standardLocation_envVarTakesPrecedence(t *testing.T) {
+	req := require.New(t)
+
+	fakeConfigDir := t.TempDir()
+
+	t.Setenv("XDG_CONFIG_HOME", fakeConfigDir)
+
+	// create a config file at the standard location with different content
+	err := os.MkdirAll(filepath.Join(fakeConfigDir, config.StandardConfigFolder), 0777)
+	req.NoError(err)
+
+	err = os.WriteFile(
+		filepath.Join(fakeConfigDir, config.StandardConfigFolder, config.StandardConfigFileName),
+		[]byte(`current-context: standard-location`),
+		0600,
+	)
+	req.NoError(err)
+
+	// Set the environment variable to point to a different config
+	t.Setenv(config.ConfigFileEnvVar, "./testdata/config.yaml")
+
+	// make sure the xdg library uses the new-fake env var we just set
+	xdg.Reload()
+
+	cfg, err := config.Load(t.Context(), config.StandardLocation())
+	req.NoError(err)
+
+	// Should load from env var, not standard location
+	req.Equal("local", cfg.CurrentContext)
+	req.Len(cfg.Contexts, 1)
+	req.Equal("http://localhost:3000/", cfg.Contexts["local"].Grafana.Server)
+}
+
 func TestLoad_withOverride(t *testing.T) {
 	req := require.New(t)
 

@@ -1,0 +1,179 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate configuration for grafanactl - groups dependencies by ecosystem to reduce PR noise while maintaining update visibility",
+  "extends": [
+    "github>grafana/grafana-renovate-config//presets/base"
+  ],
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard",
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 0,
+  "rebaseWhen": "conflicted",
+  "schedule": [
+    "before 3am on Monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "reviewers": [],
+  "assignees": [],
+  "postUpdateOptions": [
+    "gomodTidy",
+    "gomodUpdateImportPaths"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Group all Go dependencies together except Grafana monorepo packages",
+      "matchManagers": [
+        "gomod"
+      ],
+      "groupName": "Go dependencies",
+      "groupSlug": "go-deps",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps",
+      "matchPackageNames": [
+        "!/^github\\.com/grafana/grafana//"
+      ]
+    },
+    {
+      "description": "Group Grafana monorepo dependencies separately as they often update together and require coordinated testing",
+      "matchManagers": [
+        "gomod"
+      ],
+      "groupName": "Grafana monorepo dependencies",
+      "groupSlug": "grafana-monorepo",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps",
+      "matchPackageNames": [
+        "/^github\\.com/grafana/grafana//"
+      ]
+    },
+    {
+      "description": "Group Python dependencies (mkdocs and related) for documentation",
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "groupName": "Python dependencies",
+      "groupSlug": "python-deps",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Group all GitHub Actions together - maintains digest pinning for security while reducing PR noise",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "actions",
+      "pinDigests": true
+    },
+    {
+      "description": "Group Docker image updates for integration test environment",
+      "matchManagers": [
+        "docker-compose"
+      ],
+      "groupName": "Docker dependencies",
+      "groupSlug": "docker-deps",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "docker"
+    },
+    {
+      "description": "Separate major updates from minor/patch to enable careful review of breaking changes",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": null,
+      "groupSlug": null,
+      "labels": [
+        "dependencies",
+        "major-update"
+      ],
+      "semanticCommitType": "build",
+      "semanticCommitScope": "deps-major"
+    },
+    {
+      "description": "Auto-merge patch updates for Go dependencies after CI passes to reduce maintenance burden",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "ignoreTests": false,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Auto-merge patch updates for Python dependencies after CI passes",
+      "matchManagers": [
+        "pip_requirements"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "ignoreTests": false,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Auto-merge patch updates for GitHub Actions after CI passes",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "ignoreTests": false,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Disable automerge for Grafana monorepo dependencies to ensure manual testing",
+      "automerge": false,
+      "matchPackageNames": [
+        "/^github\\.com/grafana/grafana//"
+      ]
+    },
+    {
+      "description": "Separate Kubernetes client-go and apimachinery for careful version coordination",
+      "groupName": "Kubernetes dependencies",
+      "groupSlug": "k8s-deps",
+      "automerge": false,
+      "semanticCommitType": "build",
+      "semanticCommitScope": "k8s",
+      "matchPackageNames": [
+        "/^k8s\\.io//"
+      ]
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Detect DEVBOX_VERSION environment variable in GitHub Actions workflows",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.*\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "DEVBOX_VERSION:\\s*[\"']?(?<currentValue>[^\\s\"']+)[\"']?"
+      ],
+      "depNameTemplate": "devbox",
+      "datasourceTemplate": "github-releases",
+      "packageNameTemplate": "jetify-com/devbox",
+      "versioningTemplate": "semver"
+    }
+  ]
+}

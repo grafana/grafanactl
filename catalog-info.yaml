@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: grafanactl
+  title: grafanactl
+  description: Command-line tool designed to simplify interaction with Grafana resources.
+  annotations:
+    github.com/project-slug: grafana/grafanactl
+  tags:
+    - gitops
+  links:
+    - title: "Internal Slack Channel #app-platform"
+      url: https://grafanalabs.enterprise.slack.com/archives/C04RVCAG9B5
+spec:
+  type: tool
+  owner: group:default/grafana-app-platform-squad
+  lifecycle: experimental

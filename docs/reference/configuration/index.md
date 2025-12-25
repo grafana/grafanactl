@@ -40,7 +40,6 @@ contexts:
         # server is used.
         server-name: string
         # CertData holds PEM-encoded bytes (typically read from a client certificate file).
-        # CertData takes precedence over CertFile
         # Note: this value is base64-encoded in the config file and will be
         # automatically decoded.
         cert-data: 
@@ -48,7 +47,6 @@ contexts:
           - ...
           
         # KeyData holds PEM-encoded bytes (typically read from a client certificate key file).
-        # KeyData takes precedence over KeyFile
         # Note: this value is base64-encoded in the config file and will be
         # automatically decoded.
         key-data: 
@@ -56,7 +54,6 @@ contexts:
           - ...
           
         # CAData holds PEM-encoded bytes (typically read from a root certificates bundle).
-        # CAData takes precedence over CAFile
         # Note: this value is base64-encoded in the config file and will be
         # automatically decoded.
         ca-data: 

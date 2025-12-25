@@ -1,5 +1,8 @@
 # Grafana CLI
 
+> [!NOTE]
+> **Grafana CLI only supports *Grafana 12 and above*, older Grafana versions are not supported!**
+
 Grafana CLI (_grafanactl_) is a command-line tool designed to simplify interaction with Grafana instances.
 
 It enables users to authenticate, manage multiple environments, and perform administrative tasks through Grafana's REST API — all from the terminal.
@@ -13,13 +16,13 @@ install, configure and use the Grafana CLI.
 
 ## Maturity
 
-This project should be considered as "public preview". While it is used by
-Grafana Labs, it is still under active development.
+> [!WARNING]
+> **This repository is currently *in public preview*, which means that it is still under active development.**
+> Bugs and issues are handled solely by Engineering teams. On-call support or SLAs are not available.
+
+This project should be considered as "public preview". While it is used by Grafana Labs, it is still under active development.
 
 Additional information can be found in [Release life cycle for Grafana Labs](https://grafana.com/docs/release-life-cycle/).
-
-> [!NOTE]
-> Bugs and issues are handled solely by Engineering teams. On-call support or SLAs are not available.
 
 ## Contributing
 

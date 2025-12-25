@@ -47,9 +47,13 @@ func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...c
 				cfg.SetContext(cfg.CurrentContext, true, config.Context{})
 			}
 
-			grafanaCfg := cfg.Contexts[cfg.CurrentContext]
+			curCtx := cfg.Contexts[cfg.CurrentContext]
 
-			if err := env.Parse(grafanaCfg); err != nil {
+			if curCtx.Grafana == nil {
+				curCtx.Grafana = &config.GrafanaConfig{}
+			}
+
+			if err := env.Parse(curCtx); err != nil {
 				return err
 			}
 
@@ -93,7 +97,7 @@ func (opts *Options) LoadRESTConfig(ctx context.Context) (config.NamespacedRESTC
 		return config.NamespacedRESTConfig{}, err
 	}
 
-	return cfg.GetCurrentContext().ToRESTConfig(), nil
+	return cfg.GetCurrentContext().ToRESTConfig(ctx), nil
 }
 
 func (opts *Options) configSource() config.Source {
@@ -115,13 +119,14 @@ func Command() *cobra.Command {
 The configuration file to load is chosen as follows:
 
 1. If the --config flag is set, then that file will be loaded. No other location will be considered.
-2. If the $XDG_CONFIG_HOME environment variable is set, then it will be used: $XDG_CONFIG_HOME/%[1]s/%[2]s
+2. If the $%[3]s environment variable is set, then that file will be loaded. No other location will be considered.
+3. If the $XDG_CONFIG_HOME environment variable is set, then it will be used: $XDG_CONFIG_HOME/%[1]s/%[2]s
    Example: /home/user/.config/%[1]s/%[2]s
-3. If the $HOME environment variable is set, then it will be used: $HOME/.config/%[1]s/%[2]s
+4. If the $HOME environment variable is set, then it will be used: $HOME/.config/%[1]s/%[2]s
    Example: /home/user/.config/%[1]s/%[2]s
-4. If the $XDG_CONFIG_DIRS environment variable is set, then it will be used: $XDG_CONFIG_DIRS/%[1]s/%[2]s
+5. If the $XDG_CONFIG_DIRS environment variable is set, then it will be used: $XDG_CONFIG_DIRS/%[1]s/%[2]s
    Example: /etc/xdg/%[1]s/%[2]s
-`, config.StandardConfigFolder, config.StandardConfigFileName),
+`, config.StandardConfigFolder, config.StandardConfigFileName, config.ConfigFileEnvVar),
 	}
 
 	configOpts.BindFlags(cmd.PersistentFlags())
@@ -345,7 +350,7 @@ func checkContext(cmd *cobra.Command, gCtx *config.Context) {
 
 	io.Success(stdout, "Configuration: %s", io.Green("valid"))
 
-	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(*gCtx)); err != nil {
+	if _, err := discovery.NewDefaultRegistry(cmd.Context(), config.NewNamespacedRESTConfig(cmd.Context(), *gCtx)); err != nil {
 		io.Error(stdout, "Connectivity: %s", io.Red(summarizeError(err)))
 		io.Warning(stdout, "Grafana version: %s", io.Yellow("skipped")+"\n")
 		printSuggestions(err)

@@ -174,7 +174,9 @@ func loadResourcesFromDirectories(ctx context.Context, cfg config.NamespacedREST
 		StopOnError:        opts.StopOnError,
 	}
 
-	filters, err := reg.MakeFilters(selectors)
+	filters, err := reg.MakeFilters(discovery.MakeFiltersOptions{
+		Selectors: selectors,
+	})
 	if err != nil {
 		return err
 	}
