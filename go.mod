@@ -11,17 +11,17 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/strfmt v0.25.0
-	github.com/goccy/go-yaml v1.19.0
+	github.com/goccy/go-yaml v1.19.2
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
-	github.com/grafana/authlib/types v0.0.0-20250930082137-a40e2c2b094f
-	github.com/grafana/grafana-app-sdk/logging v0.48.5
-	github.com/grafana/grafana-openapi-client-go v0.0.0-20250925215610-d92957c70d5c
+	github.com/grafana/authlib/types v0.0.0-20260109134828-3a49741c0bd1
+	github.com/grafana/grafana-app-sdk/logging v0.48.7
+	github.com/grafana/grafana-openapi-client-go v0.0.0-20251202103709-7ef691d4df1d
 	github.com/grafana/grafana/apps/folder v0.0.0-20250724095330-d852bde2a5fb
 	github.com/grafana/grafana/pkg/apimachinery v0.0.0-20250903133002-4e28cba1c53a
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	k8s.io/apimachinery v0.34.2
 	k8s.io/cli-runtime v0.34.2
 	k8s.io/client-go v0.34.2
@@ -30,6 +30,7 @@ require (
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
@@ -78,10 +79,10 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.6 // indirect
-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel v1.38.0 // indirect
-	go.opentelemetry.io/otel/metric v1.38.0 // indirect
-	go.opentelemetry.io/otel/trace v1.38.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel v1.39.0 // indirect
+	go.opentelemetry.io/otel/metric v1.39.0 // indirect
+	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.46.0 // indirect
