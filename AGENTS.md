@@ -816,6 +816,148 @@ Based on TODO comments in code:
 - Grafana <12 (not supported)
 - Extremely large deployments (>10,000 resources without streaming)
 
+## Release Process
+
+grafanactl uses a **tag-driven release process** powered by **GoReleaser** and **GitHub Actions**.
+
+### Quick Start
+
+**To release a new version**:
+
+```bash
+# Option 1: Use the release script (recommended)
+scripts/release.sh [patch|minor|major|next]
+
+# Option 2: Use the /release skill in Claude Code
+/release
+```
+
+### How Releases Work
+
+Pushing a git tag matching `v*` to the repository triggers an automated pipeline:
+
+1. **GitHub Actions** (`.github/workflows/release.yaml`) detects the tag
+2. **GoReleaser** (`.goreleaser.yaml`) builds cross-platform binaries:
+   - Linux (amd64, arm64)
+   - macOS/Darwin (amd64, arm64)
+   - Windows (amd64, arm64)
+3. **Artifacts** are uploaded to GitHub Releases:
+   - Pre-built binaries as tar.gz (zip for Windows)
+   - Checksum file (`grafanactl_checksums.txt`)
+4. **Changelog** is auto-generated from commit history:
+   - Excludes commits prefixed with `docs:`, `test:`, `chore:`, and merge commits
+5. **Documentation** is built and published to GitHub Pages
+
+### Release Script (`scripts/release.sh`)
+
+The release script automates the entire process:
+
+```bash
+#!/usr/bin/env bash
+# Usage: scripts/release.sh [patch|minor|major|next]
+
+# Features:
+# - Uses svu for semantic version calculation
+# - Runs `make all` for pre-release validation
+# - Shows commits since last tag for review
+# - Confirms before tagging and pushing
+# - Provides GitHub Actions workflow URL
+```
+
+**Version Bump Types**:
+- `next` - Auto-detect from conventional commits (recommended)
+- `patch` - Bug fixes only (0.1.8 → 0.1.9)
+- `minor` - New features (0.1.8 → 0.2.0)
+- `major` - Breaking changes (0.1.8 → 1.0.0)
+
+**Conventional Commits** (used by `svu` for auto-detection):
+| Prefix | Bump | Example |
+|--------|------|---------|
+| `fix:` | patch | 0.1.8 → 0.1.9 |
+| `feat:` | minor | 0.1.8 → 0.2.0 |
+| `feat!:` or `BREAKING CHANGE:` | major | 0.1.8 → 1.0.0 |
+| `chore:` | none | No version change |
+
+### Pre-Release Checklist
+
+Before releasing:
+- ✅ All changes committed and pushed to main
+- ✅ CI passing on main branch (`make all`)
+- ✅ No uncommitted changes (`git status`)
+- ✅ Up to date with remote (`git pull`)
+- ✅ All PRs merged
+
+The release script runs `make all` which includes:
+- Linting (`make lint`)
+- Tests (`make tests`)
+- Build (`make build`)
+- Documentation generation (`make docs`)
+- Documentation drift check (`make reference-drift`)
+
+### Monitoring Releases
+
+After pushing the tag:
+
+```bash
+# Check workflow status
+gh run list --workflow=release.yaml --limit=1
+
+# View workflow logs
+gh run watch
+
+# View the release when complete
+gh release view <version>
+```
+
+### Manual Release (if needed)
+
+If the script cannot be used:
+
+```bash
+# 1. Calculate next version
+NEXT=$(svu next)  # or: svu patch / svu minor / svu major
+
+# 2. Validate
+make all
+
+# 3. Tag and push
+git tag "$NEXT"
+git push origin "$NEXT"
+
+# 4. Monitor
+gh run list --workflow=release.yaml --limit=1
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `scripts/release.sh` | Release automation script |
+| `.goreleaser.yaml` | GoReleaser build configuration |
+| `.github/workflows/release.yaml` | Release workflow definition |
+| `cmd/grafanactl/main.go` | Version variables (`main.version`, `main.commit`, `main.date`) |
+
+### Version Information
+
+Version details are injected at build time via ldflags:
+
+```go
+// cmd/grafanactl/main.go
+var (
+    version string  // Git tag (e.g., "0.1.8")
+    commit  string  // Git commit SHA
+    date    string  // Build timestamp
+)
+```
+
+For local builds without a tag, version defaults to `"SNAPSHOT"`.
+
+### Project Skills
+
+grafanactl includes a project-specific skill for release automation:
+
+- **`/release`** - Guides through the release process using `scripts/release.sh` and `svu`
+
 ## Go Code Organization Standards
 
 When writing Go code, always organize code symbols in a given file in this order:
