@@ -491,13 +491,194 @@ func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
+func TestPusher_Push_UpdateExistingResource(t *testing.T) {
+	tests := []struct {
+		name                 string
+		localResources       []*resources.Resource
+		existingResources    map[string]*unstructured.Unstructured
+		wantOperations       []string
+		wantResourceVersions map[string]string
+		wantPushedCount      int
+		wantFailedCount      int
+	}{
+		{
+			name: "update single dashboard with resourceVersion from server",
+			localResources: []*resources.Resource{
+				createDashboardResource("dashboard-1"),
+			},
+			existingResources: map[string]*unstructured.Unstructured{
+				"dashboard-1": makeExistingDashboard("dashboard-1", "42"),
+			},
+			wantOperations:       []string{"update-dashboard-1"},
+			wantResourceVersions: map[string]string{"dashboard-1": "42"},
+			wantPushedCount:      1,
+			wantFailedCount:      0,
+		},
+		{
+			name: "mix of create and update operations",
+			localResources: []*resources.Resource{
+				createDashboardResource("dashboard-new"),
+				createDashboardResource("dashboard-existing"),
+			},
+			existingResources: map[string]*unstructured.Unstructured{
+				"dashboard-existing": makeExistingDashboard("dashboard-existing", "99"),
+			},
+			wantOperations:       []string{"create-dashboard-new", "update-dashboard-existing"},
+			wantResourceVersions: map[string]string{"dashboard-existing": "99"},
+			wantPushedCount:      2,
+			wantFailedCount:      0,
+		},
+		{
+			name: "update folder with resourceVersion",
+			localResources: []*resources.Resource{
+				createFolderResource("folder-1", "v1"),
+			},
+			existingResources: map[string]*unstructured.Unstructured{
+				"folder-1": makeExistingFolder("folder-1", "7"),
+			},
+			wantOperations:       []string{"update-folder-1"},
+			wantResourceVersions: map[string]string{"folder-1": "7"},
+			wantPushedCount:      1,
+			wantFailedCount:      0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := require.New(t)
+
+			mockClient := &mockPushClient{
+				operations:        []string{},
+				mu:                sync.Mutex{},
+				existingResources: tc.existingResources,
+			}
+
+			mockRegistry := &mockPushRegistry{
+				supportedResources: []resources.Descriptor{
+					{
+						GroupVersion: schema.GroupVersion{Group: "folder.grafana.app", Version: "v1"},
+						Kind:         "Folder",
+						Singular:     "folder",
+						Plural:       "folders",
+					},
+					{
+						GroupVersion: schema.GroupVersion{Group: "dashboard.grafana.app", Version: "v1"},
+						Kind:         "Dashboard",
+						Singular:     "dashboard",
+						Plural:       "dashboards",
+					},
+				},
+			}
+
+			pusher := remote.NewPusher(mockClient, mockRegistry)
+			testResources := resources.NewResources(tc.localResources...)
+
+			summary, err := pusher.Push(t.Context(), remote.PushRequest{
+				Resources:      testResources,
+				MaxConcurrency: 1,
+				IncludeManaged: true,
+			})
+
+			req.NoError(err)
+			req.Equal(tc.wantPushedCount, summary.PushedCount)
+			req.Equal(tc.wantFailedCount, summary.FailedCount)
+			req.ElementsMatch(tc.wantOperations, mockClient.operations)
+
+			for name, expectedRV := range tc.wantResourceVersions {
+				updated, ok := mockClient.updatedObjects[name]
+				req.True(ok, "expected object %s to be updated", name)
+				req.Equal(expectedRV, updated.GetResourceVersion(),
+					"resourceVersion mismatch for %s", name)
+			}
+		})
+	}
+}
+
+func TestPusher_Push_UpdateFailure(t *testing.T) {
+	req := require.New(t)
+
+	mockClient := &mockPushClient{
+		operations: []string{},
+		mu:         sync.Mutex{},
+		existingResources: map[string]*unstructured.Unstructured{
+			"dashboard-1": makeExistingDashboard("dashboard-1", "42"),
+		},
+		shouldFail:   map[string]bool{"dashboard-1": true},
+		failureError: errors.New("update failed"),
+	}
+
+	mockRegistry := &mockPushRegistry{
+		supportedResources: []resources.Descriptor{
+			{
+				GroupVersion: schema.GroupVersion{Group: "dashboard.grafana.app", Version: "v1"},
+				Kind:         "Dashboard",
+				Singular:     "dashboard",
+				Plural:       "dashboards",
+			},
+		},
+	}
+
+	pusher := remote.NewPusher(mockClient, mockRegistry)
+	testResources := resources.NewResources(
+		createDashboardResource("dashboard-1"),
+	)
+
+	summary, err := pusher.Push(t.Context(), remote.PushRequest{
+		Resources:      testResources,
+		MaxConcurrency: 1,
+		IncludeManaged: true,
+	})
+
+	req.NoError(err)
+	req.Equal(0, summary.PushedCount)
+	req.Equal(1, summary.FailedCount)
+	req.Len(summary.Failures, 1)
+	req.Equal("dashboard-1", summary.Failures[0].Resource.Name())
+}
+
+func makeExistingDashboard(name, resourceVersion string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "dashboard.grafana.app/v1",
+			"kind":       "Dashboard",
+			"metadata": map[string]any{
+				"name":            name,
+				"namespace":       "default",
+				"resourceVersion": resourceVersion,
+			},
+			"spec": map[string]any{
+				"title": "Existing Dashboard " + name,
+			},
+		},
+	}
+}
+
+func makeExistingFolder(name, resourceVersion string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "folder.grafana.app/v1",
+			"kind":       "Folder",
+			"metadata": map[string]any{
+				"name":            name,
+				"namespace":       "default",
+				"resourceVersion": resourceVersion,
+			},
+			"spec": map[string]any{
+				"title": "Existing Folder " + name,
+			},
+		},
+	}
+}
+
 // Mock implementations
 
 type mockPushClient struct {
-	operations   []string
-	mu           sync.Mutex
-	shouldFail   map[string]bool
-	failureError error
+	operations        []string
+	mu                sync.Mutex
+	shouldFail        map[string]bool
+	failureError      error
+	existingResources map[string]*unstructured.Unstructured
+	updatedObjects    map[string]*unstructured.Unstructured
 }
 
 func (m *mockPushClient) Create(
@@ -525,6 +706,11 @@ func (m *mockPushClient) Update(
 	name := obj.GetName()
 	m.operations = append(m.operations, "update-"+name)
 
+	if m.updatedObjects == nil {
+		m.updatedObjects = make(map[string]*unstructured.Unstructured)
+	}
+	m.updatedObjects[name] = obj.DeepCopy()
+
 	if m.shouldFail != nil && m.shouldFail[name] {
 		return nil, m.failureError
 	}
@@ -535,7 +721,13 @@ func (m *mockPushClient) Update(
 func (m *mockPushClient) Get(
 	_ context.Context, desc resources.Descriptor, name string, _ metav1.GetOptions,
 ) (*unstructured.Unstructured, error) {
-	// Simulate resource not found to trigger Create operations
+	if m.existingResources != nil {
+		if existing, ok := m.existingResources[name]; ok {
+			return existing, nil
+		}
+	}
+
+	// Simulate resource not found to trigger Create operations.
 	return nil, apierrors.NewNotFound(desc.GroupVersionResource().GroupResource(), name)
 }
 

@@ -275,15 +275,13 @@ func (p *Pusher) upsertResource(
 	}
 
 	// Check if the resource already exists.
-	_, err := p.client.Get(ctx, desc, name, metav1.GetOptions{})
+	existing, err := p.client.Get(ctx, desc, name, metav1.GetOptions{})
 	if err == nil {
 		obj := src.ToUnstructured()
 
-		// Otherwise, update the resource.
-		// TODO: double-check if we need to do some resource version shenanigans here.
-		// (most likely yes)
-		// Something like – take existing resource, replace the annotations, labels, spec, etc.
-		// and then push it back.
+		// Copy the resourceVersion from the existing resource so the API accepts the update.
+		obj.SetResourceVersion(existing.GetResourceVersion())
+
 		if _, err := p.client.Update(ctx, desc, &obj, metav1.UpdateOptions{
 			DryRun: dryRunOpts,
 		}); err != nil {
