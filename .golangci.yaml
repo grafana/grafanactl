@@ -1,7 +1,7 @@
 version: "2"
 
 run:
-  go: "1.24"
+  go: "1.26"
   modules-download-mode: vendor
 
 linters:
@@ -11,24 +11,32 @@ linters:
     - err113
     - exhaustive
     - exhaustruct
+    - funcorder
     - funlen
     - gocognit
     - goconst
+    - godoclint
     - godox
     - lll
     - mnd
     - nlreturn
+    - noinlineerr
     - paralleltest
     - tagalign
     - tagliatelle
     - varnamelen
     - wrapcheck
     - wsl
+    - wsl_v5
 
   settings:
     errcheck:
       exclude-functions:
         - fmt:.*
+    revive:
+      rules:
+        - name: var-naming
+          disabled: true
     depguard:
       rules:
         debug_tools:

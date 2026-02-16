@@ -11,7 +11,7 @@ type StaticLevelLogger struct {
 	level  slog.Level
 }
 
-func (d *StaticLevelLogger) Print(v ...interface{}) {
+func (d *StaticLevelLogger) Print(v ...any) {
 	if len(v) == 0 {
 		return
 	}

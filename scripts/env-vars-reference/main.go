@@ -31,10 +31,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	configType := config.Config{}
-
 	envVarMap := make(map[string]string)
-	discoverEnvVars(reflect.TypeOf(configType), typesCommentsMap, envVarMap)
+	discoverEnvVars(reflect.TypeFor[config.Config](), typesCommentsMap, envVarMap)
 
 	err = os.WriteFile(filepath.Join(outputDir, "index.md"), toMarkdown(envVarMap), 0600)
 	if err != nil {
@@ -60,7 +58,7 @@ func toMarkdown(envVarMap map[string]string) []byte {
 		}
 	}
 
-	return []byte(fmt.Sprintf("# Environment variables reference\n\n%s\n", buffer.String()))
+	return fmt.Appendf(nil, "# Environment variables reference\n\n%s\n", buffer.String())
 }
 
 type typeComments struct {
@@ -123,8 +121,7 @@ func discoverEnvVars(typeDef reflect.Type, typesCommentsMap map[string]typeComme
 	case reflect.Struct:
 		comments := typesCommentsMap[typeDef.Name()]
 
-		for fieldIndex := range typeDef.NumField() {
-			field := typeDef.Field(fieldIndex)
+		for field := range typeDef.Fields() {
 			fieldKind := field.Type.Kind()
 			envName := strings.Split(field.Tag.Get("env"), ",")[0]
 
