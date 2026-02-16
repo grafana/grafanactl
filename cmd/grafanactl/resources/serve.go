@@ -206,9 +206,9 @@ func executeWatchScript(ctx context.Context, command string) ([]byte, error) {
 
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", command)
+		cmd = exec.CommandContext(ctx, "cmd", "/c", command)
 	} else {
-		cmd = exec.Command("sh", "-c", command)
+		cmd = exec.CommandContext(ctx, "sh", "-c", command)
 	}
 
 	// If the script exits with a non-zero code, stderr will be used to populate an error.

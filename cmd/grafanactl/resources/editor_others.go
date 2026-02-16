@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 package resources
 
@@ -25,7 +24,7 @@ func (e editor) openEditor(ctx context.Context, file string) error {
 	logger.Debug("Starting editor", slog.String("command", strings.Join(args, " ")))
 
 	//nolint:gosec
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

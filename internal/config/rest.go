@@ -11,6 +11,7 @@ import (
 // TODO: move to app SDK?
 type NamespacedRESTConfig struct {
 	rest.Config
+
 	Namespace string
 }
 

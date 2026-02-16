@@ -77,8 +77,7 @@ func (e DetailedError) Error() string {
 		// Will pretty-print YAML-related errors and leave the other ones as-is.
 		formattedErr := yaml.FormatError(e.Parent, !color.NoColor, true)
 
-		lines := strings.Split(formattedErr, "\n")
-		for _, line := range lines {
+		for line := range strings.SplitSeq(formattedErr, "\n") {
 			buffer.WriteString("│ " + line + "\n")
 		}
 	}

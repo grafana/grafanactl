@@ -212,7 +212,7 @@ func (c *tableCodec) Encode(output io.Writer, input any) error {
 		var row metav1.TableRow
 		if c.wide {
 			row = metav1.TableRow{
-				Cells: []interface{}{
+				Cells: []any{
 					r.GetKind(),
 					r.GetName(),
 					r.GetNamespace(),
@@ -225,7 +225,7 @@ func (c *tableCodec) Encode(output io.Writer, input any) error {
 			}
 		} else {
 			row = metav1.TableRow{
-				Cells: []interface{}{
+				Cells: []any{
 					r.GetKind(),
 					r.GetName(),
 					r.GetNamespace(),

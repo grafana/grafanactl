@@ -3,6 +3,7 @@ package resources
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -225,10 +226,8 @@ func parseUIDs(uids string) ([]string, error) {
 	}
 
 	res := strings.Split(uids, ",")
-	for _, uid := range res {
-		if uid == "" {
-			return nil, errors.New("missing resource UID")
-		}
+	if slices.Contains(res, "") {
+		return nil, errors.New("missing resource UID")
 	}
 
 	return res, nil

@@ -152,10 +152,7 @@ func (c *DashboardProxy) dashboardJSONGetHandler() http.HandlerFunc {
 			return
 		}
 
-		generation := resource.Raw.GetGeneration()
-		if generation < 1 {
-			generation = 1
-		}
+		generation := max(resource.Raw.GetGeneration(), 1)
 
 		object := map[string]any{
 			"kind":       "DashboardWithAccessInfo",

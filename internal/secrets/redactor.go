@@ -41,7 +41,7 @@ func redactSecrets(curr reflect.Value, redact bool) error {
 		return nil
 
 	case reflect.Slice:
-		if actualCurrValue.Type() == reflect.TypeOf([]byte{}) && redact {
+		if actualCurrValue.Type() == reflect.TypeFor[[]byte]() && redact {
 			if !actualCurrValue.IsNil() {
 				actualCurrValue.SetBytes([]byte(redacted))
 			}

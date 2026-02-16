@@ -30,9 +30,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	configType := config.Config{}
-
-	value := reflect.TypeOf(configType)
+	value := reflect.TypeFor[config.Config]()
 
 	markdown := toMarkdown(docs(value, typesCommentsMap))
 	err = os.WriteFile(filepath.Join(outputDir, "index.md"), []byte(markdown), 0600)
