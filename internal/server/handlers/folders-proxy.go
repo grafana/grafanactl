@@ -43,12 +43,12 @@ func (c *FoldersProxy) ProxyURL(_ string) string {
 	return ""
 }
 
-func (c *FoldersProxy) Endpoints(proxy *httputil.ReverseProxy) []HTTPEndpoint {
+func (c *FoldersProxy) Endpoints(_ *httputil.ReverseProxy) []HTTPEndpoint {
 	return []HTTPEndpoint{
 		{
 			Method:  http.MethodGet,
 			URL:     "/api/folders/{name}",
-			Handler: c.folderJSONGetHandler(proxy),
+			Handler: c.folderJSONGetHandler(),
 		},
 	}
 }
@@ -57,7 +57,7 @@ func (c *FoldersProxy) StaticEndpoints() StaticProxyConfig {
 	return StaticProxyConfig{}
 }
 
-func (c *FoldersProxy) folderJSONGetHandler(proxy *httputil.ReverseProxy) http.HandlerFunc {
+func (c *FoldersProxy) folderJSONGetHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
 		if name == "" {
@@ -67,17 +67,18 @@ func (c *FoldersProxy) folderJSONGetHandler(proxy *httputil.ReverseProxy) http.H
 
 		// TODO: use at least group + kind to identify a resource
 		resource, found := c.resources.Find("Folder", name)
-		if !found {
-			logging.FromContext(r.Context()).Info(fmt.Sprintf("Folder with name %s not found: proxying request", name))
 
-			proxy.ServeHTTP(w, r)
-			return
+		title := name
+		if found {
+			title = resource.Raw.FindTitle(name)
+		} else {
+			logging.FromContext(r.Context()).Info(fmt.Sprintf("Folder with name %s not found locally: returning mock folder", name))
 		}
 
 		// TODO: this is far from complete, but it's enough to serve dashboards defined in a folder
 		folder := map[string]any{
 			"uid":   name,
-			"title": resource.Raw.FindTitle(name),
+			"title": title,
 		}
 
 		httputils.WriteJSON(r, w, folder)
