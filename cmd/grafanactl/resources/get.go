@@ -19,13 +19,13 @@ import (
 )
 
 type getOpts struct {
-	IO          cmdio.Options
-	StopOnError bool
+	IO      cmdio.Options
+	OnError OnErrorMode
 }
 
 func (opts *getOpts) setup(flags *pflag.FlagSet) {
 	// Setup some additional formatting options
-	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
+	bindOnErrorFlag(flags, &opts.OnError)
 	opts.IO.RegisterCustomCodec("text", &tableCodec{wide: false})
 	opts.IO.RegisterCustomCodec("wide", &tableCodec{wide: true})
 	opts.IO.DefaultFormat("text")
@@ -39,7 +39,7 @@ func (opts *getOpts) Validate() error {
 		return err
 	}
 
-	return nil
+	return opts.OnError.Validate()
 }
 
 func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
@@ -98,7 +98,7 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			res, err := fetchResources(ctx, fetchRequest{
 				Config:      cfg,
-				StopOnError: opts.StopOnError,
+				StopOnError: opts.OnError.StopOnError(),
 			}, args)
 			if err != nil {
 				return err

@@ -41,8 +41,11 @@ grafanactl resources delete [RESOURCE_SELECTOR]... [flags]
       --force                Delete all resources of the specified resource types
   -h, --help                 help for delete
       --max-concurrent int   Maximum number of concurrent operations (default 10)
+      --on-error string      How to handle errors during resource operations:
+                               ignore — continue processing all resources and exit 0 (default)
+                               fail   — continue processing all resources and exit 1 if any failed
+                               abort  — stop on the first error and exit 1 (default "ignore")
   -p, --path strings         Path on disk containing the resources to delete
-      --stop-on-error        Stop pulling resources when an error occurs
 ```
 
 ### Options inherited from parent commands

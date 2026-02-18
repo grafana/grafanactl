@@ -61,8 +61,11 @@ grafanactl resources push [RESOURCE_SELECTOR]... [flags]
       --include-managed       If set, resources managed by other tools will be included in the push operation
       --max-concurrent int    Maximum number of concurrent operations (default 10)
       --omit-manager-fields   If set, the manager fields will not be appended to the resources
+      --on-error string       How to handle errors during resource operations:
+                                ignore — continue processing all resources and exit 0 (default)
+                                fail   — continue processing all resources and exit 1 if any failed
+                                abort  — stop on the first error and exit 1 (default "ignore")
   -p, --path strings          Paths on disk from which to read the resources to push (default [./resources])
-      --stop-on-error         Stop pushing resources when an error occurs
 ```
 
 ### Options inherited from parent commands

@@ -3,7 +3,6 @@ package remote
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/config"
@@ -86,7 +85,7 @@ type PushRequest struct {
 	// but will ensure the requests are valid and perform server-side validations.
 	DryRun bool
 
-	// Disable log emission for push failures. Callers will have to rely on the PushSummary
+	// Disable log emission for push failures. Callers will have to rely on the OperationSummary
 	// returned by the Push() function to explore and report failures.
 	NoPushFailureLog bool
 
@@ -94,35 +93,12 @@ type PushRequest struct {
 	IncludeManaged bool
 }
 
-type PushFailure struct {
-	Resource *resources.Resource
-	Error    error
-}
-
-type PushSummary struct {
-	PushedCount int
-	FailedCount int
-	Failures    []PushFailure
-	mu          sync.Mutex
-}
-
-func (summary *PushSummary) recordFailure(resource *resources.Resource, err error) {
-	summary.mu.Lock()
-	defer summary.mu.Unlock()
-
-	summary.FailedCount++
-	summary.Failures = append(summary.Failures, PushFailure{
-		Resource: resource,
-		Error:    err,
-	})
-}
-
 // Push pushes resources to Grafana.
 // It pushes folders first (respecting parent-child hierarchy), then other resources.
 // This ensures that parent folders are created before their children,
 // and all folders are created before other resources that depend on them.
-func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, error) {
-	summary := &PushSummary{}
+func (p *Pusher) Push(ctx context.Context, request PushRequest) (*OperationSummary, error) {
+	summary := &OperationSummary{}
 	supported := p.supportedDescriptors()
 
 	if request.MaxConcurrency < 1 {
@@ -135,7 +111,7 @@ func (p *Pusher) Push(ctx context.Context, request PushRequest) (*PushSummary, e
 	}
 
 	// If all resources were folders, we're done
-	if summary.PushedCount+summary.FailedCount >= request.Resources.Len() {
+	if summary.SuccessCount()+summary.FailedCount() >= request.Resources.Len() {
 		return summary, nil
 	}
 
@@ -162,7 +138,7 @@ func (p *Pusher) pushFolders(
 	ctx context.Context,
 	request PushRequest,
 	supported map[schema.GroupVersionKind]resources.Descriptor,
-	summary *PushSummary,
+	summary *OperationSummary,
 ) error {
 	// Collect all folder resources
 	var folders []*resources.Resource
@@ -200,7 +176,7 @@ func (p *Pusher) pushSingleResource(
 	ctx context.Context,
 	res *resources.Resource,
 	supported map[schema.GroupVersionKind]resources.Descriptor,
-	summary *PushSummary,
+	summary *OperationSummary,
 	request PushRequest,
 ) error {
 	name := res.Name()
@@ -215,7 +191,7 @@ func (p *Pusher) pushSingleResource(
 	desc, ok := supported[gvk]
 	if !ok {
 		err := fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-		summary.recordFailure(res, err)
+		summary.RecordFailure(res, err)
 
 		if request.StopOnError {
 			return err
@@ -229,7 +205,7 @@ func (p *Pusher) pushSingleResource(
 
 	for _, processor := range request.Processors {
 		if err := processor.Process(res); err != nil {
-			summary.recordFailure(res, err)
+			summary.RecordFailure(res, err)
 
 			if request.StopOnError {
 				return err
@@ -249,7 +225,7 @@ func (p *Pusher) pushSingleResource(
 	}
 
 	if err := p.upsertResource(ctx, desc, name, res, request.DryRun, logger); err != nil {
-		summary.recordFailure(res, err)
+		summary.RecordFailure(res, err)
 
 		if request.StopOnError {
 			return err
@@ -262,7 +238,7 @@ func (p *Pusher) pushSingleResource(
 	}
 
 	logger.Info("Resource pushed")
-	summary.PushedCount++
+	summary.RecordSuccess()
 	return nil
 }
 

@@ -2,6 +2,7 @@ package resources
 
 import (
 	"errors"
+	"fmt"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
@@ -18,7 +19,7 @@ const (
 
 type pullOpts struct {
 	IO             cmdio.Options
-	StopOnError    bool
+	OnError        OnErrorMode
 	IncludeManaged bool
 	Path           string
 }
@@ -27,7 +28,7 @@ func (opts *pullOpts) setup(flags *pflag.FlagSet) {
 	// Bind all the flags
 	opts.IO.BindFlags(flags)
 
-	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
+	bindOnErrorFlag(flags, &opts.OnError)
 	flags.StringVarP(&opts.Path, "path", "p", defaultResourcesPath, "Path on disk in which the resources will be written")
 	flags.BoolVar(
 		&opts.IncludeManaged,
@@ -46,7 +47,7 @@ func (opts *pullOpts) Validate() error {
 		return errors.New("--path is required")
 	}
 
-	return nil
+	return opts.OnError.Validate()
 }
 
 func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
@@ -120,7 +121,7 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 					&process.ServerFieldsStripper{},
 				},
 				ExcludeManaged: !opts.IncludeManaged,
-				StopOnError:    opts.StopOnError,
+				StopOnError:    opts.OnError.StopOnError(),
 			}, args)
 			if err != nil {
 				return err
@@ -130,14 +131,28 @@ func pullCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				Path:        opts.Path,
 				Namer:       local.GroupResourcesByKind(opts.IO.OutputFormat),
 				Encoder:     codec,
-				StopOnError: opts.StopOnError,
+				StopOnError: opts.OnError.StopOnError(),
 			}
 
 			if err := writer.Write(ctx, &res.Resources); err != nil {
 				return err
 			}
 
-			cmdio.Success(cmd.OutOrStdout(), "%d resources pulled", res.Resources.Len())
+			pullSummary := res.PullSummary
+
+			printer := cmdio.Success
+			if pullSummary.FailedCount() != 0 {
+				printer = cmdio.Warning
+				if pullSummary.SuccessCount() == 0 {
+					printer = cmdio.Error
+				}
+			}
+
+			printer(cmd.OutOrStdout(), "%d resources pulled, %d errors", pullSummary.SuccessCount(), pullSummary.FailedCount())
+
+			if opts.OnError.FailOnErrors() && pullSummary.FailedCount() > 0 {
+				return fmt.Errorf("%d resource(s) failed to pull", pullSummary.FailedCount())
+			}
 
 			return nil
 		},

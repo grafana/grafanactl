@@ -83,7 +83,8 @@ type PullRequest struct {
 }
 
 // Pull pulls resources from Grafana.
-func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
+func (p *Puller) Pull(ctx context.Context, req PullRequest) (*OperationSummary, error) {
+	summary := &OperationSummary{}
 	filters := req.Filters
 
 	// If no filters are provided, we need to pull all available resources.
@@ -116,6 +117,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 						return err
 					}
 					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", filt.String()))
+					summary.RecordFailure(nil, err)
 				} else {
 					partialRes[idx] = res.Items
 				}
@@ -126,6 +128,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 						return err
 					}
 					logger.Warn("Could not pull resources", logs.Err(err), slog.String("cmd", filt.String()))
+					summary.RecordFailure(nil, err)
 				} else {
 					partialRes[idx] = res
 				}
@@ -136,6 +139,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 						return err
 					}
 					logger.Warn("Could not pull resource", logs.Err(err), slog.String("cmd", filt.String()))
+					summary.RecordFailure(nil, err)
 				} else {
 					partialRes[idx] = []unstructured.Unstructured{*res}
 				}
@@ -145,7 +149,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 	}
 
 	if err := errg.Wait(); err != nil {
-		return err
+		return summary, err
 	}
 
 	req.Resources.Clear()
@@ -153,7 +157,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 		for _, item := range r {
 			res, err := resources.FromUnstructured(&item)
 			if err != nil {
-				return err
+				return summary, err
 			}
 
 			// TODO: this should be replaced by a more generic mechanism,
@@ -164,17 +168,19 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) error {
 
 			if err := p.process(res, req.Processors); err != nil {
 				if req.StopOnError {
-					return err
+					return summary, err
 				}
 
 				logger.Warn("Failed to process resource", logs.Err(err))
+				summary.RecordFailure(res, err)
 			} else {
 				req.Resources.Add(res)
+				summary.RecordSuccess()
 			}
 		}
 	}
 
-	return nil
+	return summary, nil
 }
 
 func (p *Puller) process(res *resources.Resource, processors []Processor) error {

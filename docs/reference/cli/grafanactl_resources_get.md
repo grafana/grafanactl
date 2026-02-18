@@ -56,9 +56,12 @@ grafanactl resources get [RESOURCE_SELECTOR]... [flags]
 ### Options
 
 ```
-  -h, --help            help for get
-  -o, --output string   Output format. One of: json, text, wide, yaml (default "text")
-      --stop-on-error   Stop pulling resources when an error occurs
+  -h, --help              help for get
+      --on-error string   How to handle errors during resource operations:
+                            ignore — continue processing all resources and exit 0 (default)
+                            fail   — continue processing all resources and exit 1 if any failed
+                            abort  — stop on the first error and exit 1 (default "ignore")
+  -o, --output string     Output format. One of: json, text, wide, yaml (default "text")
 ```
 
 ### Options inherited from parent commands

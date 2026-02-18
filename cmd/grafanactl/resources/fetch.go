@@ -21,6 +21,7 @@ type fetchRequest struct {
 type fetchResponse struct {
 	Resources      resources.Resources
 	IsSingleTarget bool
+	PullSummary    *remote.OperationSummary
 }
 
 func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fetchResponse, error) {
@@ -66,9 +67,12 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 		StopOnError:    opts.StopOnError || sels.IsSingleTarget(),
 	}
 
-	if err := pull.Pull(ctx, req); err != nil {
+	summary, err := pull.Pull(ctx, req)
+	if err != nil {
 		return nil, err
 	}
+
+	res.PullSummary = summary
 
 	return &res, nil
 }

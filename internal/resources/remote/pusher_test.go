@@ -56,8 +56,8 @@ func TestPusher_Push_FoldersFirst(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(4, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(4, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 
 	// Verify that all folders were pushed before all dashboards
 	req.Len(mockClient.operations, 4)
@@ -135,8 +135,8 @@ func TestPusher_Push_OnlyFolders(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(2, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(2, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 	req.Len(mockClient.operations, 2)
 }
 
@@ -174,8 +174,8 @@ func TestPusher_Push_OnlyDashboards(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(2, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(2, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 	req.Len(mockClient.operations, 2)
 }
 
@@ -201,8 +201,8 @@ func TestPusher_Push_EmptyResources(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(0, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(0, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 	req.Empty(mockClient.operations)
 }
 
@@ -245,10 +245,10 @@ func TestPusher_Push_FolderCreationError(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(3, summary.PushedCount) // 1 folder + 2 dashboards succeeded
-	req.Equal(1, summary.FailedCount) // 1 folder failed
-	req.Len(summary.Failures, 1)
-	req.Equal("folder-1", summary.Failures[0].Resource.Name())
+	req.Equal(3, summary.SuccessCount()) // 1 folder + 2 dashboards succeeded
+	req.Equal(1, summary.FailedCount())  // 1 folder failed
+	req.Len(summary.Failures(), 1)
+	req.Equal("folder-1", summary.Failures()[0].Resource.Name())
 }
 
 func TestPusher_Push_NestedFolders(t *testing.T) {
@@ -291,8 +291,8 @@ func TestPusher_Push_NestedFolders(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(4, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(4, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 	req.Len(mockClient.operations, 4)
 
 	// Verify that parent folders are pushed before child folders
@@ -360,8 +360,8 @@ func TestPusher_Push_MultipleFolderTrees(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(4, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(4, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 	req.Len(mockClient.operations, 4)
 
 	// Verify ordering within each tree
@@ -420,8 +420,8 @@ func TestPusher_Push_OrphanedFolder(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(1, summary.PushedCount)
-	req.Equal(0, summary.FailedCount)
+	req.Equal(1, summary.SuccessCount())
+	req.Equal(0, summary.FailedCount())
 	req.Len(mockClient.operations, 1)
 }
 
@@ -580,8 +580,8 @@ func TestPusher_Push_UpdateExistingResource(t *testing.T) {
 			})
 
 			req.NoError(err)
-			req.Equal(tc.wantPushedCount, summary.PushedCount)
-			req.Equal(tc.wantFailedCount, summary.FailedCount)
+			req.Equal(tc.wantPushedCount, summary.SuccessCount())
+			req.Equal(tc.wantFailedCount, summary.FailedCount())
 			req.ElementsMatch(tc.wantOperations, mockClient.operations)
 
 			for name, expectedRV := range tc.wantResourceVersions {
@@ -630,10 +630,10 @@ func TestPusher_Push_UpdateFailure(t *testing.T) {
 	})
 
 	req.NoError(err)
-	req.Equal(0, summary.PushedCount)
-	req.Equal(1, summary.FailedCount)
-	req.Len(summary.Failures, 1)
-	req.Equal("dashboard-1", summary.Failures[0].Resource.Name())
+	req.Equal(0, summary.SuccessCount())
+	req.Equal(1, summary.FailedCount())
+	req.Len(summary.Failures(), 1)
+	req.Equal("dashboard-1", summary.Failures()[0].Resource.Name())
 }
 
 func makeExistingDashboard(name, resourceVersion string) *unstructured.Unstructured {

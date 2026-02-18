@@ -15,9 +15,8 @@ contexts:
 
       # Basic authentication with default admin credentials
       # Username: admin, Password: admin
-      basic-auth:
-        username: "admin"
-        password: "admin"
+      user: "admin"
+      password: "admin"
 
       # For testing with insecure connections (self-signed certs, etc.)
       # insecure-skip-tls-verify: true
