@@ -140,6 +140,9 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			summary, err := deleter.Delete(ctx, req)
 			if err != nil {
+				if summary != nil {
+					cmdio.Warning(cmd.OutOrStdout(), "%d resources deleted, %d errors (aborted)", summary.SuccessCount(), summary.FailedCount())
+				}
 				return err
 			}
 

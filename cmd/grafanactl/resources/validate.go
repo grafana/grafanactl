@@ -156,8 +156,12 @@ This command validates its inputs against a remote Grafana instance.
 				}
 
 				for _, failure := range summary.Failures() {
+					file := ""
+					if failure.Resource != nil {
+						file = failure.Resource.SourcePath()
+					}
 					printableSummary.Failures = append(printableSummary.Failures, map[string]string{
-						"file":  failure.Resource.SourcePath(),
+						"file":  file,
 						"error": failure.Error.Error(),
 					})
 				}
@@ -194,7 +198,10 @@ func (c *validationTableCodec) Encode(output io.Writer, input any) error {
 
 	fmt.Fprintf(tab, "FILE\tERROR\n")
 	for _, failure := range summary.Failures() {
-		file := failure.Resource.SourcePath()
+		file := ""
+		if failure.Resource != nil {
+			file = failure.Resource.SourcePath()
+		}
 		fmt.Fprintf(tab, "%s\t%s\n", file, failure.Error)
 	}
 

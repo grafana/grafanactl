@@ -116,6 +116,7 @@ func TestDeleter_Delete(t *testing.T) {
 			clientFailureError: errors.New("delete failed"),
 			stopOnError:        true,
 			wantErr:            true,
+			wantFailedCount:    1,
 		},
 		{
 			name: "all resources fail without stop on error",
@@ -155,7 +156,8 @@ func TestDeleter_Delete(t *testing.T) {
 
 			if tc.wantErr {
 				req.Error(err)
-				req.Nil(summary)
+				req.NotNil(summary)
+				req.Equal(tc.wantFailedCount, summary.FailedCount())
 				return
 			}
 

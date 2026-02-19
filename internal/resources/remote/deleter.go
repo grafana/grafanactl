@@ -85,15 +85,6 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (*Ope
 				"name", name,
 			)
 
-			if _, ok := supported[gvk]; !ok {
-				if request.StopOnError {
-					return fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-				}
-
-				logger.Warn("Skipping resource not supported by the API")
-				return nil
-			}
-
 			desc, ok := supported[gvk]
 			if !ok {
 				if request.StopOnError {
@@ -120,7 +111,7 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (*Ope
 		},
 	)
 	if err != nil {
-		return nil, err
+		return summary, err
 	}
 
 	return summary, nil
