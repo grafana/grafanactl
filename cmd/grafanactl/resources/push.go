@@ -2,6 +2,7 @@ package resources
 
 import (
 	"errors"
+	"fmt"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
@@ -18,7 +19,7 @@ import (
 type pushOpts struct {
 	Paths             []string
 	MaxConcurrent     int
-	StopOnError       bool
+	OnError           OnErrorMode
 	DryRun            bool
 	OmitManagerFields bool
 	IncludeManaged    bool
@@ -27,7 +28,7 @@ type pushOpts struct {
 func (opts *pushOpts) setup(flags *pflag.FlagSet) {
 	flags.StringSliceVarP(&opts.Paths, "path", "p", []string{defaultResourcesPath}, "Paths on disk from which to read the resources to push")
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
-	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pushing resources when an error occurs")
+	bindOnErrorFlag(flags, &opts.OnError)
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the push operation will be simulated, without actually creating or updating any resources")
 	flags.BoolVar(&opts.OmitManagerFields, "omit-manager-fields", opts.OmitManagerFields, "If set, the manager fields will not be appended to the resources")
 	flags.BoolVar(&opts.IncludeManaged, "include-managed", opts.IncludeManaged, "If set, resources managed by other tools will be included in the push operation")
@@ -42,7 +43,7 @@ func (opts *pushOpts) Validate() error {
 		return errors.New("max-concurrent must be greater than zero")
 	}
 
-	return nil
+	return opts.OnError.Validate()
 }
 
 func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
@@ -123,7 +124,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			reader := local.FSReader{
 				Decoders:           format.Codecs(),
 				MaxConcurrentReads: opts.MaxConcurrent,
-				StopOnError:        opts.StopOnError,
+				StopOnError:        opts.OnError.StopOnError(),
 			}
 
 			resourcesList := resources.NewResources()
@@ -150,7 +151,7 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			req := remote.PushRequest{
 				Resources:      resourcesList,
 				MaxConcurrency: opts.MaxConcurrent,
-				StopOnError:    opts.StopOnError,
+				StopOnError:    opts.OnError.StopOnError(),
 				DryRun:         opts.DryRun,
 				Processors:     procs,
 				IncludeManaged: opts.IncludeManaged,
@@ -162,14 +163,18 @@ func pushCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			printer := cmdio.Success
-			if summary.FailedCount != 0 {
+			if summary.FailedCount() != 0 {
 				printer = cmdio.Warning
-				if summary.PushedCount == 0 {
+				if summary.SuccessCount() == 0 {
 					printer = cmdio.Error
 				}
 			}
 
-			printer(cmd.OutOrStdout(), "%d resources pushed, %d errors", summary.PushedCount, summary.FailedCount)
+			printer(cmd.OutOrStdout(), "%d resources pushed, %d errors", summary.SuccessCount(), summary.FailedCount())
+
+			if opts.OnError.FailOnErrors() && summary.FailedCount() > 0 {
+				return fmt.Errorf("%d resource(s) failed to push", summary.FailedCount())
+			}
 
 			return nil
 		},

@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   mysql:
-    image: mysql:8.4@sha256:7fcf7bcd3fa703ff23a2b998e4ed9077e5db570bcc4468459902e33b23d2841d
+    image: mysql:9.6@sha256:db32c8ec843c042a728efb0ac7aa814d6f010eaac8923e20ae0a849d09c5baf8
     container_name: grafanactl-mysql
     restart: unless-stopped
     environment:

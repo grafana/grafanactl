@@ -22,7 +22,7 @@ type validateOpts struct {
 
 	Paths         []string
 	MaxConcurrent int
-	StopOnError   bool
+	OnError       OnErrorMode
 }
 
 func (opts *validateOpts) setup(flags *pflag.FlagSet) {
@@ -33,7 +33,7 @@ func (opts *validateOpts) setup(flags *pflag.FlagSet) {
 
 	flags.StringSliceVarP(&opts.Paths, "path", "p", []string{defaultResourcesPath}, "Paths on disk from which to read the resources.")
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
-	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop validating resources when an error occurs")
+	bindOnErrorFlag(flags, &opts.OnError)
 }
 
 func (opts *validateOpts) Validate() error {
@@ -45,7 +45,7 @@ func (opts *validateOpts) Validate() error {
 		return errors.New("max-concurrent must be greater than zero")
 	}
 
-	return nil
+	return opts.OnError.Validate()
 }
 
 func validateCmd(configOpts *cmdconfig.Options) *cobra.Command {
@@ -112,7 +112,7 @@ This command validates its inputs against a remote Grafana instance.
 			reader := local.FSReader{
 				Decoders:           format.Codecs(),
 				MaxConcurrentReads: opts.MaxConcurrent,
-				StopOnError:        opts.StopOnError,
+				StopOnError:        opts.OnError.StopOnError(),
 			}
 
 			resourcesList := resources.NewResources()
@@ -129,7 +129,7 @@ This command validates its inputs against a remote Grafana instance.
 			req := remote.PushRequest{
 				Resources:        resourcesList,
 				MaxConcurrency:   opts.MaxConcurrent,
-				StopOnError:      opts.StopOnError,
+				StopOnError:      opts.OnError.StopOnError(),
 				DryRun:           true,
 				NoPushFailureLog: true,
 			}
@@ -139,29 +139,43 @@ This command validates its inputs against a remote Grafana instance.
 				return err
 			}
 
-			if summary.FailedCount == 0 && opts.IO.OutputFormat == "text" {
+			if summary.FailedCount() == 0 && opts.IO.OutputFormat == "text" {
 				cmdio.Success(cmd.OutOrStdout(), "No errors found.")
 				return nil
 			}
 
 			if opts.IO.OutputFormat == "text" {
-				return codec.Encode(cmd.OutOrStdout(), summary)
+				if err := codec.Encode(cmd.OutOrStdout(), summary); err != nil {
+					return err
+				}
+			} else {
+				printableSummary := struct {
+					Failures []map[string]string `json:"failures" yaml:"failures"`
+				}{
+					Failures: make([]map[string]string, 0),
+				}
+
+				for _, failure := range summary.Failures() {
+					file := ""
+					if failure.Resource != nil {
+						file = failure.Resource.SourcePath()
+					}
+					printableSummary.Failures = append(printableSummary.Failures, map[string]string{
+						"file":  file,
+						"error": failure.Error.Error(),
+					})
+				}
+
+				if err := codec.Encode(cmd.OutOrStdout(), printableSummary); err != nil {
+					return err
+				}
 			}
 
-			printableSummary := struct {
-				Failures []map[string]string `json:"failures" yaml:"failures"`
-			}{
-				Failures: make([]map[string]string, 0),
+			if opts.OnError.FailOnErrors() && summary.FailedCount() > 0 {
+				return fmt.Errorf("%d resource(s) failed to validate", summary.FailedCount())
 			}
 
-			for _, failure := range summary.Failures {
-				printableSummary.Failures = append(printableSummary.Failures, map[string]string{
-					"file":  failure.Resource.SourcePath(),
-					"error": failure.Error.Error(),
-				})
-			}
-
-			return codec.Encode(cmd.OutOrStdout(), printableSummary)
+			return nil
 		},
 	}
 
@@ -178,13 +192,16 @@ func (c *validationTableCodec) Format() format.Format {
 
 func (c *validationTableCodec) Encode(output io.Writer, input any) error {
 	//nolint:forcetypeassert
-	summary := input.(*remote.PushSummary)
+	summary := input.(*remote.OperationSummary)
 
 	tab := tabwriter.NewWriter(output, 0, 4, 2, ' ', tabwriter.TabIndent|tabwriter.DiscardEmptyColumns)
 
 	fmt.Fprintf(tab, "FILE\tERROR\n")
-	for _, failure := range summary.Failures {
-		file := failure.Resource.SourcePath()
+	for _, failure := range summary.Failures() {
+		file := ""
+		if failure.Resource != nil {
+			file = failure.Resource.SourcePath()
+		}
 		fmt.Fprintf(tab, "%s\t%s\n", file, failure.Error)
 	}
 
