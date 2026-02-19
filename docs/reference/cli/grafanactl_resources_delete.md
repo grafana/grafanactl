@@ -42,9 +42,9 @@ grafanactl resources delete [RESOURCE_SELECTOR]... [flags]
   -h, --help                 help for delete
       --max-concurrent int   Maximum number of concurrent operations (default 10)
       --on-error string      How to handle errors during resource operations:
-                               ignore — continue processing all resources and exit 0 (default)
-                               fail   — continue processing all resources and exit 1 if any failed
-                               abort  — stop on the first error and exit 1 (default "ignore")
+                               ignore — continue processing all resources and exit 0
+                               fail   — continue processing all resources and exit 1 if any failed (default)
+                               abort  — stop on the first error and exit 1 (default "fail")
   -p, --path strings         Path on disk containing the resources to delete
 ```
 

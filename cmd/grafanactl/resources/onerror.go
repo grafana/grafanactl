@@ -11,11 +11,10 @@ type OnErrorMode string
 
 const (
 	// OnErrorIgnore continues processing all resources and exits 0, even if some failed.
-	// This is the default mode and preserves backwards compatibility.
 	OnErrorIgnore OnErrorMode = "ignore"
 
 	// OnErrorFail continues processing all resources but exits with a non-zero code
-	// if any resource operations failed. Useful for CI/CD pipelines.
+	// if any resource operations failed. This is the default mode.
 	OnErrorFail OnErrorMode = "fail"
 
 	// OnErrorAbort stops processing on the first error and exits with a non-zero code.
@@ -24,14 +23,14 @@ const (
 
 // bindOnErrorFlag registers the --on-error flag on the given flag set.
 func bindOnErrorFlag(flags *pflag.FlagSet, target *OnErrorMode) {
-	*target = OnErrorIgnore
+	*target = OnErrorFail
 	flags.StringVar(
 		(*string)(target),
 		"on-error",
-		string(OnErrorIgnore),
+		string(OnErrorFail),
 		`How to handle errors during resource operations:
-  ignore — continue processing all resources and exit 0 (default)
-  fail   — continue processing all resources and exit 1 if any failed
+  ignore — continue processing all resources and exit 0
+  fail   — continue processing all resources and exit 1 if any failed (default)
   abort  — stop on the first error and exit 1`,
 	)
 }
