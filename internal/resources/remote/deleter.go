@@ -14,9 +14,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// DeleteClient is a client that can delete resources from Grafana.
+type DeleteClient interface {
+	Delete(ctx context.Context, desc resources.Descriptor, name string, opts metav1.DeleteOptions) error
+}
+
 // Deleter takes care of deleting resources from Grafana.
 type Deleter struct {
-	client   *dynamic.NamespacedClient
+	client   DeleteClient
 	registry PushRegistry
 }
 
@@ -38,6 +43,15 @@ func NewDeleter(ctx context.Context, cfg config.NamespacedRESTConfig) (*Deleter,
 	}, nil
 }
 
+// NewDeleterWithClient creates a new Deleter with the given client and registry.
+// This is primarily useful for testing.
+func NewDeleterWithClient(client DeleteClient, registry PushRegistry) *Deleter {
+	return &Deleter{
+		client:   client,
+		registry: registry,
+	}
+}
+
 // DeleteRequest is a request for deleting resources from Grafana.
 type DeleteRequest struct {
 	// A list of resources to delete.
@@ -53,13 +67,8 @@ type DeleteRequest struct {
 	DryRun bool
 }
 
-type DeleteSummary struct {
-	DeletedCount int
-	FailedCount  int
-}
-
-func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (DeleteSummary, error) {
-	summary := DeleteSummary{}
+func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (*OperationSummary, error) {
+	summary := &OperationSummary{}
 	supported := deleter.supportedDescriptors()
 
 	if request.MaxConcurrency < 1 {
@@ -76,15 +85,6 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (Dele
 				"name", name,
 			)
 
-			if _, ok := supported[gvk]; !ok {
-				if request.StopOnError {
-					return fmt.Errorf("resource not supported by the API: %s/%s", gvk, name)
-				}
-
-				logger.Warn("Skipping resource not supported by the API")
-				return nil
-			}
-
 			desc, ok := supported[gvk]
 			if !ok {
 				if request.StopOnError {
@@ -96,7 +96,7 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (Dele
 			}
 
 			if err := deleter.deleteResource(ctx, desc, res, request.DryRun); err != nil {
-				summary.FailedCount++
+				summary.RecordFailure(res, err)
 				if request.StopOnError {
 					return err
 				}
@@ -105,8 +105,8 @@ func (deleter *Deleter) Delete(ctx context.Context, request DeleteRequest) (Dele
 				return nil
 			}
 
-			summary.DeletedCount++
 			logger.Info("Resource deleted")
+			summary.RecordSuccess()
 			return nil
 		},
 	)

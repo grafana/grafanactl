@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
@@ -18,7 +19,7 @@ import (
 )
 
 type deleteOpts struct {
-	StopOnError   bool
+	OnError       OnErrorMode
 	Force         bool
 	MaxConcurrent int
 	DryRun        bool
@@ -26,7 +27,7 @@ type deleteOpts struct {
 }
 
 func (opts *deleteOpts) setup(flags *pflag.FlagSet) {
-	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
+	bindOnErrorFlag(flags, &opts.OnError)
 	flags.IntVar(&opts.MaxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 	flags.BoolVar(&opts.Force, "force", opts.Force, "Delete all resources of the specified resource types")
 	flags.BoolVar(&opts.DryRun, "dry-run", opts.DryRun, "If set, the delete operation will be simulated")
@@ -42,7 +43,7 @@ func (opts *deleteOpts) Validate(args []string) error {
 		return errors.New("either --path or resource selectors need to be specified")
 	}
 
-	return nil
+	return opts.OnError.Validate()
 }
 
 func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
@@ -105,7 +106,7 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			if len(opts.Path) == 0 {
 				fetchRes, err := fetchResources(ctx, fetchRequest{
 					Config:      cfg,
-					StopOnError: opts.StopOnError,
+					StopOnError: opts.OnError.StopOnError(),
 				}, args)
 				if err != nil {
 					return err
@@ -133,25 +134,32 @@ func deleteCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			req := remote.DeleteRequest{
 				Resources:      &res,
 				MaxConcurrency: opts.MaxConcurrent,
-				StopOnError:    opts.StopOnError,
+				StopOnError:    opts.OnError.StopOnError(),
 				DryRun:         opts.DryRun,
 			}
 
 			summary, err := deleter.Delete(ctx, req)
 			if err != nil {
+				if summary != nil {
+					cmdio.Warning(cmd.OutOrStdout(), "%d resources deleted, %d errors (aborted)", summary.SuccessCount(), summary.FailedCount())
+				}
 				return err
 			}
 
 			// Reporting time.
 			printer := cmdio.Success
-			if summary.FailedCount != 0 {
+			if summary.FailedCount() != 0 {
 				printer = cmdio.Warning
-				if summary.DeletedCount == 0 {
+				if summary.SuccessCount() == 0 {
 					printer = cmdio.Error
 				}
 			}
 
-			printer(cmd.OutOrStdout(), "%d resources deleted, %d errors", summary.DeletedCount, summary.FailedCount)
+			printer(cmd.OutOrStdout(), "%d resources deleted, %d errors", summary.SuccessCount(), summary.FailedCount())
+
+			if opts.OnError.FailOnErrors() && summary.FailedCount() > 0 {
+				return fmt.Errorf("%d resource(s) failed to delete", summary.FailedCount())
+			}
 
 			return nil
 		},
@@ -171,7 +179,7 @@ func loadResourcesFromDirectories(ctx context.Context, cfg config.NamespacedREST
 	reader := local.FSReader{
 		Decoders:           format.Codecs(),
 		MaxConcurrentReads: opts.MaxConcurrent,
-		StopOnError:        opts.StopOnError,
+		StopOnError:        opts.OnError.StopOnError(),
 	}
 
 	filters, err := reg.MakeFilters(discovery.MakeFiltersOptions{

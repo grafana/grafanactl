@@ -1,9 +1,192 @@
 package remote_test
 
 import (
+	"context"
+	"errors"
 	"testing"
+
+	"github.com/grafana/grafanactl/internal/resources"
+	"github.com/grafana/grafanactl/internal/resources/remote"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestPuller(t *testing.T) {
-	t.Skipf("not implemented")
+// mockPullClient implements PullClient for testing.
+type mockPullClient struct {
+	// listResults maps descriptor plural to the items returned by List.
+	listResults map[string][]unstructured.Unstructured
+	// listErrors maps descriptor plural to the error returned by List.
+	listErrors map[string]error
+}
+
+func (m *mockPullClient) Get(
+	_ context.Context, _ resources.Descriptor, _ string, _ metav1.GetOptions,
+) (*unstructured.Unstructured, error) {
+	return nil, errors.New("not implemented in mock")
+}
+
+func (m *mockPullClient) GetMultiple(
+	_ context.Context, _ resources.Descriptor, _ []string, _ metav1.GetOptions,
+) ([]unstructured.Unstructured, error) {
+	return nil, errors.New("not implemented in mock")
+}
+
+func (m *mockPullClient) List(
+	_ context.Context, desc resources.Descriptor, _ metav1.ListOptions,
+) (*unstructured.UnstructuredList, error) {
+	if m.listErrors != nil {
+		if err, ok := m.listErrors[desc.Plural]; ok {
+			return nil, err
+		}
+	}
+
+	items := m.listResults[desc.Plural]
+	return &unstructured.UnstructuredList{Items: items}, nil
+}
+
+// mockPullRegistry implements PullRegistry for testing.
+type mockPullRegistry struct {
+	descriptors resources.Descriptors
+}
+
+func (m *mockPullRegistry) PreferredResources() resources.Descriptors {
+	return m.descriptors
+}
+
+// makeUnstructuredDashboard creates a minimal unstructured dashboard for testing.
+func makeUnstructuredDashboard(name string) unstructured.Unstructured {
+	return unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "dashboard.grafana.app/v1",
+			"kind":       "Dashboard",
+			"metadata": map[string]any{
+				"name":      name,
+				"namespace": "default",
+			},
+			"spec": map[string]any{
+				"title": "Test Dashboard " + name,
+			},
+		},
+	}
+}
+
+// dashboardDescriptor returns a Descriptor for the dashboard resource type used in tests.
+func dashboardDescriptor() resources.Descriptor {
+	return resources.Descriptor{
+		GroupVersion: schema.GroupVersion{Group: "dashboard.grafana.app", Version: "v1"},
+		Kind:         "Dashboard",
+		Singular:     "dashboard",
+		Plural:       "dashboards",
+	}
+}
+
+func TestPuller_Pull(t *testing.T) {
+	tests := []struct {
+		name             string
+		listResults      map[string][]unstructured.Unstructured
+		listErrors       map[string]error
+		stopOnError      bool
+		wantError        bool
+		wantSuccessCount int
+		wantFailedCount  int
+	}{
+		{
+			name: "all resources succeed",
+			listResults: map[string][]unstructured.Unstructured{
+				"dashboards": {
+					makeUnstructuredDashboard("dashboard-1"),
+					makeUnstructuredDashboard("dashboard-2"),
+					makeUnstructuredDashboard("dashboard-3"),
+				},
+			},
+			stopOnError:      false,
+			wantError:        false,
+			wantSuccessCount: 3,
+			wantFailedCount:  0,
+		},
+		{
+			name:        "list failure with StopOnError=false records failure and returns nil error",
+			listResults: map[string][]unstructured.Unstructured{},
+			listErrors:  map[string]error{"dashboards": errors.New("connection refused")},
+			stopOnError: false,
+			wantError:   false,
+			// The list-level failure counts as one failed operation.
+			wantSuccessCount: 0,
+			wantFailedCount:  1,
+		},
+		{
+			name:        "list failure with StopOnError=true returns error",
+			listResults: map[string][]unstructured.Unstructured{},
+			listErrors:  map[string]error{"dashboards": errors.New("connection refused")},
+			stopOnError: true,
+			wantError:   true,
+		},
+		{
+			name:             "empty list succeeds with zero counts",
+			listResults:      map[string][]unstructured.Unstructured{"dashboards": {}},
+			stopOnError:      false,
+			wantError:        false,
+			wantSuccessCount: 0,
+			wantFailedCount:  0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req := require.New(t)
+
+			mockClient := &mockPullClient{
+				listResults: tc.listResults,
+				listErrors:  tc.listErrors,
+			}
+
+			desc := dashboardDescriptor()
+			mockRegistry := &mockPullRegistry{
+				descriptors: resources.Descriptors{desc},
+			}
+
+			puller := remote.NewPuller(mockClient, mockRegistry)
+
+			dest := resources.NewResources()
+			pullReq := remote.PullRequest{
+				Filters: resources.Filters{
+					{
+						Type:       resources.FilterTypeAll,
+						Descriptor: desc,
+					},
+				},
+				Resources:   dest,
+				StopOnError: tc.stopOnError,
+			}
+
+			summary, err := puller.Pull(context.Background(), pullReq)
+
+			if tc.wantError {
+				req.Error(err)
+				return
+			}
+
+			req.NoError(err)
+			req.NotNil(summary)
+			req.Equal(tc.wantSuccessCount, summary.SuccessCount())
+			req.Equal(tc.wantFailedCount, summary.FailedCount())
+			req.Len(summary.Failures(), tc.wantFailedCount)
+
+			// For failure cases, verify the failure has a nil resource (filter-level failure)
+			// and a non-nil error.
+			if tc.wantFailedCount > 0 {
+				for _, failure := range summary.Failures() {
+					req.Nil(failure.Resource, "filter-level failure should have nil resource")
+					req.Error(failure.Error)
+				}
+			}
+
+			// For success cases, verify the destination received the resources.
+			if tc.wantSuccessCount > 0 {
+				req.Equal(tc.wantSuccessCount, dest.Len())
+			}
+		})
+	}
 }

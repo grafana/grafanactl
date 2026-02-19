@@ -2,6 +2,7 @@ package resources
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -19,13 +20,13 @@ import (
 )
 
 type getOpts struct {
-	IO          cmdio.Options
-	StopOnError bool
+	IO      cmdio.Options
+	OnError OnErrorMode
 }
 
 func (opts *getOpts) setup(flags *pflag.FlagSet) {
 	// Setup some additional formatting options
-	flags.BoolVar(&opts.StopOnError, "stop-on-error", opts.StopOnError, "Stop pulling resources when an error occurs")
+	bindOnErrorFlag(flags, &opts.OnError)
 	opts.IO.RegisterCustomCodec("text", &tableCodec{wide: false})
 	opts.IO.RegisterCustomCodec("wide", &tableCodec{wide: true})
 	opts.IO.DefaultFormat("text")
@@ -39,7 +40,7 @@ func (opts *getOpts) Validate() error {
 		return err
 	}
 
-	return nil
+	return opts.OnError.Validate()
 }
 
 func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
@@ -98,7 +99,7 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			res, err := fetchResources(ctx, fetchRequest{
 				Config:      cfg,
-				StopOnError: opts.StopOnError,
+				StopOnError: opts.OnError.StopOnError(),
 			}, args)
 			if err != nil {
 				return err
@@ -112,26 +113,36 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			output := res.Resources.ToUnstructuredList()
 			resources.SortUnstructured(output.Items)
 
+			var encodeErr error
 			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
 				// Avoid printing a list of results if a single resource is being pulled,
 				// and we are not using the table output format.
 				if res.IsSingleTarget && len(output.Items) == 1 {
-					return codec.Encode(cmd.OutOrStdout(), output.Items[0].Object)
+					encodeErr = codec.Encode(cmd.OutOrStdout(), output.Items[0].Object)
+				} else {
+					// For JSON / YAML output we don't want to have "object" keys in the output,
+					// so use the custom printItems type instead.
+					formatted := printItems{
+						Items: make([]map[string]any, len(output.Items)),
+					}
+					for i, item := range output.Items {
+						formatted.Items[i] = item.Object
+					}
+					encodeErr = codec.Encode(cmd.OutOrStdout(), formatted)
 				}
-
-				// For JSON / YAML output we don't want to have "object" keys in the output,
-				// so use the custom printItems type instead.
-				formatted := printItems{
-					Items: make([]map[string]any, len(output.Items)),
-				}
-				for i, item := range output.Items {
-					formatted.Items[i] = item.Object
-				}
-
-				return codec.Encode(cmd.OutOrStdout(), formatted)
+			} else {
+				encodeErr = codec.Encode(cmd.OutOrStdout(), output)
 			}
 
-			return codec.Encode(cmd.OutOrStdout(), output)
+			if encodeErr != nil {
+				return encodeErr
+			}
+
+			if opts.OnError.FailOnErrors() && res.PullSummary.FailedCount() > 0 {
+				return fmt.Errorf("%d resource(s) failed to get", res.PullSummary.FailedCount())
+			}
+
+			return nil
 		},
 	}
 
