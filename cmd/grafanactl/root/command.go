@@ -60,6 +60,7 @@ func Command(version string) *cobra.Command {
 
 	rootCmd.AddCommand(alerts.Command())
 	rootCmd.AddCommand(config.Command())
+	rootCmd.AddCommand(helpTreeCmd())
 	rootCmd.AddCommand(resources.Command())
 
 	rootCmd.PersistentFlags().BoolVar(&noColors, "no-color", noColors, "Disable color output")
