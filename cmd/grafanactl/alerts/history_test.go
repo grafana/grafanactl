@@ -209,7 +209,7 @@ func TestHistoryTableCodecFormat(t *testing.T) {
 func TestHistoryTableCodecDecode(t *testing.T) {
 	codec := &historyTableCodec{}
 	err := codec.Decode(nil, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support decoding")
 }
 
@@ -320,45 +320,46 @@ func TestHistoryTableCodecEncode(t *testing.T) {
 	}
 }
 
-func TestAnnotationsToHistoryEntries(t *testing.T) {
-	annotations := []alertAnnotation{
+func TestStateHistoryToHistoryEntries(t *testing.T) {
+	history := []stateHistoryEntry{
 		{
-			AlertName: "CPU High",
-			PrevState: "Normal",
-			NewState:  "Alerting",
-			Time:      1705312800000, // 2024-01-15T10:00:00Z
-			TimeEnd:   1705316400000, // 2024-01-15T11:00:00Z (1h later)
+			RuleTitle: "CPU High",
+			Previous:  "Normal",
+			Current:   "Alerting",
+			Timestamp: time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC),
 		},
 		{
-			AlertName: "Disk Full",
-			PrevState: "Alerting",
-			NewState:  "Normal",
-			Time:      1705316400000,
-			TimeEnd:   0, // no end time
+			RuleTitle: "Disk Full",
+			Previous:  "Alerting",
+			Current:   "Normal",
+			Timestamp: time.Date(2024, 1, 15, 11, 0, 0, 0, time.UTC),
 		},
 		{
-			AlertName: "Memory Leak",
-			PrevState: "Normal",
-			NewState:  "Pending",
-			Time:      1705316400000,
-			TimeEnd:   1705316400000, // same as start (no duration)
+			RuleTitle: "Memory Leak",
+			Previous:  "Normal",
+			Current:   "Pending",
+			Timestamp: time.Date(2024, 1, 15, 11, 0, 0, 0, time.UTC),
 		},
 	}
 
-	entries := annotationsToHistoryEntries(annotations)
+	entries := stateHistoryToHistoryEntries(history)
 
 	require.Len(t, entries, 3)
 
 	assert.Equal(t, "CPU High", entries[0].AlertName)
 	assert.Equal(t, "Normal", entries[0].PrevState)
 	assert.Equal(t, "Alerting", entries[0].NewState)
-	assert.Equal(t, "1h0m", entries[0].Duration)
+	assert.Empty(t, entries[0].Duration)
 	assert.Equal(t, "2024-01-15T10:00:00Z", entries[0].Time)
 
 	assert.Equal(t, "Disk Full", entries[1].AlertName)
+	assert.Equal(t, "Alerting", entries[1].PrevState)
+	assert.Equal(t, "Normal", entries[1].NewState)
 	assert.Empty(t, entries[1].Duration)
 
 	assert.Equal(t, "Memory Leak", entries[2].AlertName)
+	assert.Equal(t, "Normal", entries[2].PrevState)
+	assert.Equal(t, "Pending", entries[2].NewState)
 	assert.Empty(t, entries[2].Duration)
 }
 

@@ -3,6 +3,7 @@ package alerts
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,89 +70,104 @@ func TestNoiseReportCmdStructure(t *testing.T) {
 
 func TestAnalyzeNoise(t *testing.T) {
 	tests := []struct {
-		name        string
-		annotations []alertAnnotation
-		threshold   int
-		want        []NoiseEntry
+		name      string
+		entries   []stateHistoryEntry
+		threshold int
+		want      []NoiseEntry
 	}{
 		{
-			name:        "empty annotations returns empty result",
-			annotations: nil,
-			threshold:   5,
-			want:        []NoiseEntry{},
+			name:      "empty entries returns empty result",
+			entries:   nil,
+			threshold: 5,
+			want:      []NoiseEntry{},
 		},
 		{
-			name: "single alert with one fire is meaningful",
-			annotations: []alertAnnotation{
-				{AlertName: "CPU High", NewState: "alerting", Time: 1000, TimeEnd: 61000},
+			name: "single alert with fire and resolve is meaningful",
+			entries: []stateHistoryEntry{
+				{RuleTitle: "CPU High", Current: "Alerting", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "CPU High", Current: "Normal", Timestamp: time.UnixMilli(61000)},
 			},
 			threshold: 5,
 			want: []NoiseEntry{
-				{AlertName: "CPU High", FireCount: 1, ResolveCount: 0, AvgDuration: "1m0s", Classification: "meaningful"},
+				{AlertName: "CPU High", FireCount: 1, ResolveCount: 1, AvgDuration: "1m0s", Classification: "meaningful"},
 			},
 		},
 		{
 			name: "alert exceeding threshold is noisy",
-			annotations: func() []alertAnnotation {
-				var anns []alertAnnotation
+			entries: func() []stateHistoryEntry {
+				var entries []stateHistoryEntry
 				for i := range 10 {
-					anns = append(anns, alertAnnotation{
-						AlertName: "Flappy Alert",
-						NewState:  "alerting",
-						Time:      int64(i) * 60000,
-						TimeEnd:   int64(i)*60000 + 30000,
+					entries = append(entries, stateHistoryEntry{
+						RuleTitle: "Flappy Alert",
+						Current:   "Alerting",
+						Timestamp: time.UnixMilli(int64(i) * 60000),
+					})
+					entries = append(entries, stateHistoryEntry{
+						RuleTitle: "Flappy Alert",
+						Current:   "Normal",
+						Timestamp: time.UnixMilli(int64(i)*60000 + 30000),
 					})
 				}
-				return anns
+				return entries
 			}(),
 			threshold: 5,
 			want: []NoiseEntry{
-				{AlertName: "Flappy Alert", FireCount: 10, ResolveCount: 0, AvgDuration: "30s", Classification: "noisy"},
+				{AlertName: "Flappy Alert", FireCount: 10, ResolveCount: 10, AvgDuration: "30s", Classification: "noisy"},
 			},
 		},
 		{
 			name: "at threshold is still meaningful",
-			annotations: func() []alertAnnotation {
-				var anns []alertAnnotation
-				for range 5 {
-					anns = append(anns, alertAnnotation{
-						AlertName: "Edge Case",
-						NewState:  "alerting",
-						Time:      1000,
-						TimeEnd:   2000,
+			entries: func() []stateHistoryEntry {
+				var entries []stateHistoryEntry
+				for i := range 5 {
+					entries = append(entries, stateHistoryEntry{
+						RuleTitle: "Edge Case",
+						Current:   "Alerting",
+						Timestamp: time.UnixMilli(int64(i) * 10000),
+					})
+					entries = append(entries, stateHistoryEntry{
+						RuleTitle: "Edge Case",
+						Current:   "Normal",
+						Timestamp: time.UnixMilli(int64(i)*10000 + 1000),
 					})
 				}
-				return anns
+				return entries
 			}(),
 			threshold: 5,
 			want: []NoiseEntry{
-				{AlertName: "Edge Case", FireCount: 5, ResolveCount: 0, AvgDuration: "1s", Classification: "meaningful"},
+				{AlertName: "Edge Case", FireCount: 5, ResolveCount: 5, AvgDuration: "1s", Classification: "meaningful"},
 			},
 		},
 		{
 			name: "multiple alerts sorted by fire count descending",
-			annotations: []alertAnnotation{
-				{AlertName: "Low Fire", NewState: "alerting", Time: 1000, TimeEnd: 2000},
-				{AlertName: "High Fire", NewState: "alerting", Time: 1000, TimeEnd: 2000},
-				{AlertName: "High Fire", NewState: "alerting", Time: 3000, TimeEnd: 4000},
-				{AlertName: "High Fire", NewState: "alerting", Time: 5000, TimeEnd: 6000},
-				{AlertName: "Mid Fire", NewState: "alerting", Time: 1000, TimeEnd: 2000},
-				{AlertName: "Mid Fire", NewState: "alerting", Time: 3000, TimeEnd: 4000},
+			entries: []stateHistoryEntry{
+				{RuleTitle: "Low Fire", Current: "Alerting", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "Low Fire", Current: "Normal", Timestamp: time.UnixMilli(2000)},
+				{RuleTitle: "High Fire", Current: "Alerting", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "High Fire", Current: "Normal", Timestamp: time.UnixMilli(2000)},
+				{RuleTitle: "High Fire", Current: "Alerting", Timestamp: time.UnixMilli(3000)},
+				{RuleTitle: "High Fire", Current: "Normal", Timestamp: time.UnixMilli(4000)},
+				{RuleTitle: "High Fire", Current: "Alerting", Timestamp: time.UnixMilli(5000)},
+				{RuleTitle: "High Fire", Current: "Normal", Timestamp: time.UnixMilli(6000)},
+				{RuleTitle: "Mid Fire", Current: "Alerting", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "Mid Fire", Current: "Normal", Timestamp: time.UnixMilli(2000)},
+				{RuleTitle: "Mid Fire", Current: "Alerting", Timestamp: time.UnixMilli(3000)},
+				{RuleTitle: "Mid Fire", Current: "Normal", Timestamp: time.UnixMilli(4000)},
 			},
 			threshold: 5,
 			want: []NoiseEntry{
-				{AlertName: "High Fire", FireCount: 3, ResolveCount: 0, AvgDuration: "1s", Classification: "meaningful"},
-				{AlertName: "Mid Fire", FireCount: 2, ResolveCount: 0, AvgDuration: "1s", Classification: "meaningful"},
-				{AlertName: "Low Fire", FireCount: 1, ResolveCount: 0, AvgDuration: "1s", Classification: "meaningful"},
+				{AlertName: "High Fire", FireCount: 3, ResolveCount: 3, AvgDuration: "1s", Classification: "meaningful"},
+				{AlertName: "Mid Fire", FireCount: 2, ResolveCount: 2, AvgDuration: "1s", Classification: "meaningful"},
+				{AlertName: "Low Fire", FireCount: 1, ResolveCount: 1, AvgDuration: "1s", Classification: "meaningful"},
 			},
 		},
 		{
-			name: "mixed states: alerting, firing, ok, normal",
-			annotations: []alertAnnotation{
-				{AlertName: "Mixed", NewState: "alerting", Time: 1000, TimeEnd: 61000},
-				{AlertName: "Mixed", NewState: "ok"},
-				{AlertName: "Mixed", NewState: "firing", Time: 70000, TimeEnd: 130000},
-				{AlertName: "Mixed", NewState: "normal"},
+			name: "mixed states: Alerting, Firing, OK, Normal",
+			entries: []stateHistoryEntry{
+				{RuleTitle: "Mixed", Current: "Alerting", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "Mixed", Current: "OK", Timestamp: time.UnixMilli(61000)},
+				{RuleTitle: "Mixed", Current: "Firing", Timestamp: time.UnixMilli(70000)},
+				{RuleTitle: "Mixed", Current: "Normal", Timestamp: time.UnixMilli(130000)},
 			},
 			threshold: 5,
 			want: []NoiseEntry{
@@ -159,31 +175,32 @@ func TestAnalyzeNoise(t *testing.T) {
 			},
 		},
 		{
-			name: "annotation with no duration (TimeEnd == Time) does not count towards avg",
-			annotations: []alertAnnotation{
-				{AlertName: "NoDuration", NewState: "alerting", Time: 1000, TimeEnd: 1000},
-				{AlertName: "NoDuration", NewState: "alerting", Time: 2000, TimeEnd: 62000},
+			name: "fire without resolve has no duration",
+			entries: []stateHistoryEntry{
+				{RuleTitle: "NoDuration", Current: "Alerting", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "NoDuration", Current: "Alerting", Timestamp: time.UnixMilli(2000)},
 			},
 			threshold: 5,
 			want: []NoiseEntry{
-				{AlertName: "NoDuration", FireCount: 2, ResolveCount: 0, AvgDuration: "1m0s", Classification: "meaningful"},
+				{AlertName: "NoDuration", FireCount: 2, ResolveCount: 0, AvgDuration: "", Classification: "meaningful"},
 			},
 		},
 		{
-			name: "uid populated from dashboardUID",
-			annotations: []alertAnnotation{
-				{AlertName: "WithUID", NewState: "alerting", DashboardUID: "dash-123", Time: 1000, TimeEnd: 2000},
+			name: "uid populated from ruleUID",
+			entries: []stateHistoryEntry{
+				{RuleTitle: "WithUID", Current: "Alerting", RuleUID: "rule-123", Timestamp: time.UnixMilli(1000)},
+				{RuleTitle: "WithUID", Current: "Normal", Timestamp: time.UnixMilli(2000)},
 			},
 			threshold: 5,
 			want: []NoiseEntry{
-				{AlertName: "WithUID", UID: "dash-123", FireCount: 1, ResolveCount: 0, AvgDuration: "1s", Classification: "meaningful"},
+				{AlertName: "WithUID", UID: "rule-123", FireCount: 1, ResolveCount: 1, AvgDuration: "1s", Classification: "meaningful"},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := analyzeNoise(tt.annotations, tt.threshold)
+			got := analyzeNoise(tt.entries, tt.threshold)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -228,7 +245,7 @@ func TestNoiseReportTableCodecFormat(t *testing.T) {
 func TestNoiseReportTableCodecDecode(t *testing.T) {
 	codec := &noiseReportTableCodec{}
 	err := codec.Decode(nil, nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support decoding")
 }
 

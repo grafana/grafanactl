@@ -287,143 +287,198 @@ func TestAlertsResponseParsing(t *testing.T) {
 	}
 }
 
-func TestAlertAnnotationParsing(t *testing.T) {
+func TestParseStateHistoryFrame(t *testing.T) {
 	tests := []struct {
-		name            string
-		input           string
-		wantAnnotations int
-		validate        func(t *testing.T, annotations []alertAnnotation)
+		name        string
+		input       string
+		wantEntries int
+		wantErr     bool
+		validate    func(t *testing.T, entries []stateHistoryEntry)
 	}{
 		{
-			name:            "empty annotations",
-			input:           `[]`,
-			wantAnnotations: 0,
-		},
-		{
-			name: "single annotation",
-			input: `[
-				{
-					"id": 100,
-					"alertId": 42,
-					"alertName": "CPU Alert",
-					"newState": "alerting",
-					"prevState": "normal",
-					"time": 1700000000000,
-					"timeEnd": 1700003600000,
-					"dashboardId": 5,
-					"dashboardUID": "dash-1",
-					"panelId": 3,
-					"text": "CPU usage exceeded threshold"
-				}
-			]`,
-			wantAnnotations: 1,
-			validate: func(t *testing.T, annotations []alertAnnotation) {
-				t.Helper()
-
-				a := annotations[0]
-				assert.Equal(t, int64(100), a.ID)
-				assert.Equal(t, int64(42), a.AlertID)
-				assert.Equal(t, "CPU Alert", a.AlertName)
-				assert.Equal(t, "alerting", a.NewState)
-				assert.Equal(t, "normal", a.PrevState)
-				assert.Equal(t, int64(1700000000000), a.Time)
-				assert.Equal(t, int64(1700003600000), a.TimeEnd)
-				assert.Equal(t, int64(5), a.DashboardID)
-				assert.Equal(t, "dash-1", a.DashboardUID)
-				assert.Equal(t, int64(3), a.PanelID)
-				assert.Equal(t, "CPU usage exceeded threshold", a.Text)
-			},
-		},
-		{
-			name: "multiple annotations with state transitions",
-			input: `[
-				{
-					"id": 1,
-					"alertId": 10,
-					"alertName": "Alert A",
-					"newState": "alerting",
-					"prevState": "normal",
-					"time": 1700000000000,
-					"timeEnd": 1700001000000
+			name: "realistic data frame with multiple entries",
+			input: `{
+				"schema": {
+					"fields": [
+						{"name": "time", "type": "time", "typeInfo": {"frame": "time.Time"}},
+						{"name": "line", "type": "other", "typeInfo": {"frame": "json.RawMessage"}},
+						{"name": "labels", "type": "other", "typeInfo": {"frame": "json.RawMessage"}}
+					]
 				},
-				{
-					"id": 2,
-					"alertId": 10,
-					"alertName": "Alert A",
-					"newState": "normal",
-					"prevState": "alerting",
-					"time": 1700001000000,
-					"timeEnd": 0
-				},
-				{
-					"id": 3,
-					"alertId": 20,
-					"alertName": "Alert B",
-					"newState": "alerting",
-					"prevState": "pending",
-					"time": 1700002000000,
-					"timeEnd": 1700005000000
+				"data": {
+					"values": [
+						[1700003000000, 1700002000000, 1700001000000],
+						[
+							{"schemaVersion":1,"previous":"Normal","current":"Alerting","error":"","values":{"A":42.5},"condition":"A","dashboardUID":"dash-1","panelID":1,"fingerprint":"abc123","ruleTitle":"High CPU","ruleID":100,"ruleUID":"rule-1","labels":{"severity":"critical"}},
+							{"schemaVersion":1,"previous":"Alerting","current":"Normal","ruleTitle":"High CPU","ruleID":100,"ruleUID":"rule-1","labels":{"severity":"critical"}},
+							{"schemaVersion":1,"previous":"Normal","current":"Alerting","values":{"B":99.9},"condition":"B","ruleTitle":"Disk Full","ruleID":200,"ruleUID":"rule-2","labels":{"severity":"warning"}}
+						],
+						[{}, {}, {}]
+					]
 				}
-			]`,
-			wantAnnotations: 3,
-			validate: func(t *testing.T, annotations []alertAnnotation) {
+			}`,
+			wantEntries: 3,
+			validate: func(t *testing.T, entries []stateHistoryEntry) {
 				t.Helper()
 
-				assert.Equal(t, "alerting", annotations[0].NewState)
-				assert.Equal(t, "normal", annotations[0].PrevState)
+				// Sorted by timestamp descending
+				assert.Equal(t, "High CPU", entries[0].RuleTitle)
+				assert.Equal(t, "Normal", entries[0].Previous)
+				assert.Equal(t, "Alerting", entries[0].Current)
+				assert.Equal(t, "dash-1", entries[0].DashboardUID)
+				assert.Equal(t, int64(1), entries[0].PanelID)
+				assert.Equal(t, "abc123", entries[0].Fingerprint)
+				assert.Equal(t, "rule-1", entries[0].RuleUID)
+				assert.Equal(t, int64(100), entries[0].RuleID)
+				assert.Equal(t, "A", entries[0].Condition)
+				assert.InDelta(t, 42.5, entries[0].Values["A"], 0.001)
+				assert.Equal(t, "critical", entries[0].Labels["severity"])
+				assert.Equal(t, 1, entries[0].SchemaVersion)
+				assert.Equal(t, time.UnixMilli(1700003000000), entries[0].Timestamp)
 
-				assert.Equal(t, "normal", annotations[1].NewState)
-				assert.Equal(t, "alerting", annotations[1].PrevState)
-				assert.Equal(t, int64(0), annotations[1].TimeEnd)
+				assert.Equal(t, "High CPU", entries[1].RuleTitle)
+				assert.Equal(t, "Alerting", entries[1].Previous)
+				assert.Equal(t, "Normal", entries[1].Current)
+				assert.Equal(t, time.UnixMilli(1700002000000), entries[1].Timestamp)
 
-				assert.Equal(t, int64(20), annotations[2].AlertID)
-				assert.Equal(t, "Alert B", annotations[2].AlertName)
-				assert.Equal(t, "pending", annotations[2].PrevState)
+				assert.Equal(t, "Disk Full", entries[2].RuleTitle)
+				assert.Equal(t, "Normal", entries[2].Previous)
+				assert.Equal(t, "Alerting", entries[2].Current)
+				assert.Equal(t, "rule-2", entries[2].RuleUID)
+				assert.Equal(t, "warning", entries[2].Labels["severity"])
+				assert.Equal(t, time.UnixMilli(1700001000000), entries[2].Timestamp)
 			},
 		},
 		{
-			name: "annotation with zero/missing optional fields",
-			input: `[
-				{
-					"id": 50,
-					"alertId": 0,
-					"alertName": "",
-					"newState": "alerting",
-					"prevState": "normal",
-					"time": 1700000000000,
-					"timeEnd": 0,
-					"dashboardId": 0,
-					"dashboardUID": "",
-					"panelId": 0,
-					"text": ""
+			name: "empty frame with no fields",
+			input: `{
+				"schema": {
+					"fields": []
+				},
+				"data": {
+					"values": []
 				}
-			]`,
-			wantAnnotations: 1,
-			validate: func(t *testing.T, annotations []alertAnnotation) {
+			}`,
+			wantEntries: 0,
+		},
+		{
+			name: "frame with fields but empty values",
+			input: `{
+				"schema": {
+					"fields": [
+						{"name": "time", "type": "time"},
+						{"name": "line", "type": "other"},
+						{"name": "labels", "type": "other"}
+					]
+				},
+				"data": {
+					"values": [[], [], []]
+				}
+			}`,
+			wantEntries: 0,
+		},
+		{
+			name: "frame missing line field",
+			input: `{
+				"schema": {
+					"fields": [
+						{"name": "time", "type": "time"},
+						{"name": "labels", "type": "other"}
+					]
+				},
+				"data": {
+					"values": [
+						[1700000000000],
+						[{}]
+					]
+				}
+			}`,
+			wantEntries: 0,
+		},
+		{
+			name: "malformed line entry skipped",
+			input: `{
+				"schema": {
+					"fields": [
+						{"name": "time", "type": "time"},
+						{"name": "line", "type": "other"},
+						{"name": "labels", "type": "other"}
+					]
+				},
+				"data": {
+					"values": [
+						[1700002000000, 1700001000000],
+						[
+							"not a json object",
+							{"schemaVersion":1,"previous":"Normal","current":"Alerting","ruleTitle":"Valid Rule","ruleUID":"rule-ok"}
+						],
+						[{}, {}]
+					]
+				}
+			}`,
+			wantEntries: 1,
+			validate: func(t *testing.T, entries []stateHistoryEntry) {
 				t.Helper()
 
-				a := annotations[0]
-				assert.Equal(t, int64(50), a.ID)
-				assert.Zero(t, a.AlertID)
-				assert.Empty(t, a.AlertName)
-				assert.Zero(t, a.DashboardID)
-				assert.Empty(t, a.DashboardUID)
-				assert.Zero(t, a.PanelID)
-				assert.Empty(t, a.Text)
+				assert.Equal(t, "Valid Rule", entries[0].RuleTitle)
+				assert.Equal(t, "rule-ok", entries[0].RuleUID)
+				assert.Equal(t, time.UnixMilli(1700001000000), entries[0].Timestamp)
 			},
+		},
+		{
+			name: "entry with error field and empty optional fields",
+			input: `{
+				"schema": {
+					"fields": [
+						{"name": "time", "type": "time"},
+						{"name": "line", "type": "other"},
+						{"name": "labels", "type": "other"}
+					]
+				},
+				"data": {
+					"values": [
+						[1700000000000],
+						[
+							{"schemaVersion":1,"previous":"Normal","current":"Error","error":"datasource timeout","ruleTitle":"Broken Rule","ruleUID":"rule-err"}
+						],
+						[{}]
+					]
+				}
+			}`,
+			wantEntries: 1,
+			validate: func(t *testing.T, entries []stateHistoryEntry) {
+				t.Helper()
+
+				assert.Equal(t, "Error", entries[0].Current)
+				assert.Equal(t, "datasource timeout", entries[0].Error)
+				assert.Equal(t, "Broken Rule", entries[0].RuleTitle)
+				assert.Empty(t, entries[0].DashboardUID)
+				assert.Zero(t, entries[0].PanelID)
+				assert.Empty(t, entries[0].Fingerprint)
+				assert.Nil(t, entries[0].Labels)
+				assert.Nil(t, entries[0].Values)
+			},
+		},
+		{
+			name:    "invalid JSON input",
+			input:   `not json at all`,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var annotations []alertAnnotation
-			err := json.Unmarshal([]byte(tt.input), &annotations)
-			require.NoError(t, err)
+			entries, err := parseStateHistoryFrame([]byte(tt.input))
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
 
-			assert.Len(t, annotations, tt.wantAnnotations)
+			require.NoError(t, err)
+			assert.Len(t, entries, tt.wantEntries)
 
 			if tt.validate != nil {
-				tt.validate(t, annotations)
+				tt.validate(t, entries)
 			}
 		})
 	}

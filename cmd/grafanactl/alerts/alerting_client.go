@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"time"
 
@@ -58,19 +59,35 @@ type alertInstance struct {
 	Value       string            `json:"value"`
 }
 
-// alertAnnotation represents an alert state change annotation from /api/annotations.
-type alertAnnotation struct {
-	ID           int64  `json:"id"`
-	AlertID      int64  `json:"alertId"`
-	AlertName    string `json:"alertName"`
-	NewState     string `json:"newState"`
-	PrevState    string `json:"prevState"`
-	Time         int64  `json:"time"`
-	TimeEnd      int64  `json:"timeEnd"`
-	DashboardID  int64  `json:"dashboardId"`
-	DashboardUID string `json:"dashboardUID"`
-	PanelID      int64  `json:"panelId"`
-	Text         string `json:"text"`
+// stateHistoryFrame represents the Grafana data frame JSON response from /api/v1/rules/history.
+type stateHistoryFrame struct {
+	Schema struct {
+		Fields []struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+		} `json:"fields"`
+	} `json:"schema"`
+	Data struct {
+		Values []json.RawMessage `json:"values"`
+	} `json:"data"`
+}
+
+// stateHistoryEntry represents a parsed LokiEntry from the state history API line field.
+type stateHistoryEntry struct {
+	SchemaVersion int               `json:"schemaVersion"`
+	Previous      string            `json:"previous"`
+	Current       string            `json:"current"`
+	Error         string            `json:"error,omitempty"`
+	Values        map[string]any    `json:"values,omitempty"`
+	Condition     string            `json:"condition,omitempty"`
+	DashboardUID  string            `json:"dashboardUID,omitempty"`
+	PanelID       int64             `json:"panelID,omitempty"`
+	Fingerprint   string            `json:"fingerprint,omitempty"`
+	RuleTitle     string            `json:"ruleTitle"`
+	RuleID        int64             `json:"ruleID,omitempty"`
+	RuleUID       string            `json:"ruleUID"`
+	Labels        map[string]string `json:"labels,omitempty"`
+	Timestamp     time.Time         `json:"-"` // populated from the frame's time field, not from JSON
 }
 
 func fetchRulesFromPrometheusAPI(ctx context.Context, gCtx *config.Context) (*rulesResponse, error) {
@@ -103,19 +120,17 @@ func fetchFiringAlerts(ctx context.Context, gCtx *config.Context) ([]alertInstan
 	return result.Data.Alerts, nil
 }
 
-func fetchAlertAnnotations(ctx context.Context, gCtx *config.Context, from, to int64) ([]alertAnnotation, error) {
+func fetchStateHistory(ctx context.Context, gCtx *config.Context, from, to int64) ([]stateHistoryEntry, error) {
 	requestURL, err := url.Parse(gCtx.Grafana.Server)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server URL: %w", err)
 	}
 
-	requestURL.Path += "/api/annotations"
+	requestURL.Path += "/api/v1/rules/history"
 
 	q := requestURL.Query()
-	q.Set("type", "alert")
 	q.Set("from", strconv.FormatInt(from, 10))
 	q.Set("to", strconv.FormatInt(to, 10))
-	q.Set("limit", "5000")
 	requestURL.RawQuery = q.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL.String(), nil)
@@ -132,21 +147,21 @@ func fetchAlertAnnotations(ctx context.Context, gCtx *config.Context, from, to i
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request to /api/annotations failed: %w", err)
+		return nil, fmt.Errorf("request to /api/v1/rules/history failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("request to /api/annotations failed with status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("request to /api/v1/rules/history failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var annotations []alertAnnotation
-	if err := json.NewDecoder(resp.Body).Decode(&annotations); err != nil {
-		return nil, fmt.Errorf("failed to decode annotations response: %w", err)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read state history response: %w", err)
 	}
 
-	return annotations, nil
+	return parseStateHistoryFrame(body)
 }
 
 // alertingRequestTimeout is the timeout for alerting API requests.
@@ -200,4 +215,62 @@ func setAuthHeaders(req *http.Request, gCtx *config.Context) {
 	if gCtx.Grafana.OrgID != 0 {
 		req.Header.Set("X-Grafana-Org-Id", strconv.FormatInt(gCtx.Grafana.OrgID, 10))
 	}
+}
+
+func parseStateHistoryFrame(data []byte) ([]stateHistoryEntry, error) {
+	var frame stateHistoryFrame
+	if err := json.Unmarshal(data, &frame); err != nil {
+		return nil, fmt.Errorf("failed to decode state history response: %w", err)
+	}
+
+	timeIdx := -1
+	lineIdx := -1
+
+	for i, field := range frame.Schema.Fields {
+		switch field.Name {
+		case "time":
+			timeIdx = i
+		case "line":
+			lineIdx = i
+		}
+	}
+
+	if timeIdx == -1 || lineIdx == -1 {
+		return nil, nil
+	}
+
+	if len(frame.Data.Values) <= timeIdx || len(frame.Data.Values) <= lineIdx {
+		return nil, nil
+	}
+
+	var timestamps []int64
+	if err := json.Unmarshal(frame.Data.Values[timeIdx], &timestamps); err != nil {
+		return nil, fmt.Errorf("failed to parse state history timestamps: %w", err)
+	}
+
+	var lines []json.RawMessage
+	if err := json.Unmarshal(frame.Data.Values[lineIdx], &lines); err != nil {
+		return nil, fmt.Errorf("failed to parse state history lines: %w", err)
+	}
+
+	entries := make([]stateHistoryEntry, 0, len(lines))
+
+	for i, line := range lines {
+		var entry stateHistoryEntry
+		if err := json.Unmarshal(line, &entry); err != nil {
+			continue
+		}
+
+		if i < len(timestamps) {
+			entry.Timestamp = time.UnixMilli(timestamps[i])
+		}
+
+		entries = append(entries, entry)
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Timestamp.After(entries[j].Timestamp)
+	})
+
+	return entries, nil
 }

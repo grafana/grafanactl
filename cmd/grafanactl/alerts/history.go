@@ -34,7 +34,7 @@ type historyOpts struct {
 func (opts *historyOpts) setup(flags *pflag.FlagSet) {
 	flags.StringVar(&opts.From, "from", "24h", "Start time (duration like '24h', '7d', '30d' relative to now, or epoch ms)")
 	flags.StringVar(&opts.To, "to", "now", "End time (duration like '1h' relative to now, 'now', or epoch ms)")
-	flags.IntVar(&opts.Limit, "limit", 1000, "Maximum number of annotations to return")
+	flags.IntVar(&opts.Limit, "limit", 1000, "Maximum number of state history entries to return")
 	opts.IO.RegisterCustomCodec("text", &historyTableCodec{})
 	opts.IO.DefaultFormat("text")
 	opts.IO.BindFlags(flags)
@@ -51,7 +51,7 @@ func historyCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Use:   "history",
 		Args:  cobra.NoArgs,
 		Short: "Show alert state change history",
-		Long:  "Show alert state change history from Grafana annotations, displaying when alerts transitioned between states.",
+		Long:  "Show alert state change history from Grafana state history, displaying when alerts transitioned between states.",
 		Example: `
 	grafanactl alerts history
 	grafanactl alerts history --from 7d
@@ -79,16 +79,16 @@ func historyCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return fmt.Errorf("invalid --to value: %w", err)
 			}
 
-			annotations, err := fetchAlertAnnotations(cmd.Context(), currentCtx, from, to)
+			history, err := fetchStateHistory(cmd.Context(), currentCtx, from/1000, to/1000)
 			if err != nil {
-				return fmt.Errorf("failed to fetch alert annotations: %w", err)
+				return fmt.Errorf("failed to fetch alert state history: %w", err)
 			}
 
-			if opts.Limit > 0 && len(annotations) > opts.Limit {
-				annotations = annotations[:opts.Limit]
+			if opts.Limit > 0 && len(history) > opts.Limit {
+				history = history[:opts.Limit]
 			}
 
-			entries := annotationsToHistoryEntries(annotations)
+			entries := stateHistoryToHistoryEntries(history)
 
 			codec, err := opts.IO.Codec()
 			if err != nil {
@@ -143,20 +143,15 @@ func parseTimeArg(arg string, _ bool) (int64, error) {
 	return time.Now().Add(-dur).UnixMilli(), nil
 }
 
-func annotationsToHistoryEntries(annotations []alertAnnotation) []historyEntry {
-	entries := make([]historyEntry, 0, len(annotations))
+func stateHistoryToHistoryEntries(history []stateHistoryEntry) []historyEntry {
+	entries := make([]historyEntry, 0, len(history))
 
-	for _, a := range annotations {
+	for _, h := range history {
 		entry := historyEntry{
-			Time:      time.UnixMilli(a.Time).UTC().Format(time.RFC3339),
-			AlertName: a.AlertName,
-			PrevState: a.PrevState,
-			NewState:  a.NewState,
-		}
-
-		if a.TimeEnd > a.Time {
-			dur := time.Duration(a.TimeEnd-a.Time) * time.Millisecond
-			entry.Duration = formatDuration(dur)
+			Time:      h.Timestamp.UTC().Format(time.RFC3339),
+			AlertName: h.RuleTitle,
+			PrevState: h.Previous,
+			NewState:  h.Current,
 		}
 
 		entries = append(entries, entry)

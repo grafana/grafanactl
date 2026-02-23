@@ -82,12 +82,12 @@ func noiseReportCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			to := now.UnixMilli()
 			from := now.Add(-duration).UnixMilli()
 
-			annotations, err := fetchAlertAnnotations(cmd.Context(), currentCtx, from, to)
+			stateEntries, err := fetchStateHistory(cmd.Context(), currentCtx, from/1000, to/1000)
 			if err != nil {
-				return fmt.Errorf("failed to fetch alert annotations: %w", err)
+				return fmt.Errorf("failed to fetch state history: %w", err)
 			}
 
-			entries := analyzeNoise(annotations, opts.Threshold)
+			entries := analyzeNoise(stateEntries, opts.Threshold)
 
 			codec, err := opts.IO.Codec()
 			if err != nil {
@@ -118,41 +118,66 @@ func noiseReportCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	return cmd
 }
 
-func analyzeNoise(annotations []alertAnnotation, threshold int) []NoiseEntry {
+func analyzeNoise(entries []stateHistoryEntry, threshold int) []NoiseEntry {
 	type alertStats struct {
-		uid            string
-		fireCount      int
-		resolveCount   int
-		totalFiringMs  int64
-		firingPeriods  int
+		uid           string
+		fireCount     int
+		resolveCount  int
+		totalFiringMs int64
+		firingPeriods int
 	}
 
 	statsByName := make(map[string]*alertStats)
+	entriesByRule := make(map[string][]stateHistoryEntry)
 
-	for _, ann := range annotations {
-		stats, ok := statsByName[ann.AlertName]
+	for _, entry := range entries {
+		stats, ok := statsByName[entry.RuleTitle]
 		if !ok {
 			stats = &alertStats{}
-			statsByName[ann.AlertName] = stats
+			statsByName[entry.RuleTitle] = stats
 		}
 
-		if stats.uid == "" && ann.DashboardUID != "" {
-			stats.uid = ann.DashboardUID
+		if stats.uid == "" && entry.RuleUID != "" {
+			stats.uid = entry.RuleUID
 		}
 
-		switch ann.NewState {
+		switch strings.ToLower(entry.Current) {
 		case "alerting", "firing":
 			stats.fireCount++
-			if ann.TimeEnd > ann.Time {
-				stats.totalFiringMs += ann.TimeEnd - ann.Time
-				stats.firingPeriods++
-			}
 		case "ok", "normal":
 			stats.resolveCount++
 		}
+
+		entriesByRule[entry.RuleTitle] = append(entriesByRule[entry.RuleTitle], entry)
 	}
 
-	entries := make([]NoiseEntry, 0, len(statsByName))
+	// Compute durations from fire→resolve transitions.
+	for name, ruleEntries := range entriesByRule {
+		sort.Slice(ruleEntries, func(i, j int) bool {
+			return ruleEntries[i].Timestamp.Before(ruleEntries[j].Timestamp)
+		})
+
+		stats := statsByName[name]
+
+		var lastFireTime *time.Time
+
+		for _, entry := range ruleEntries {
+			switch strings.ToLower(entry.Current) {
+			case "alerting", "firing":
+				ts := entry.Timestamp
+				lastFireTime = &ts
+			case "ok", "normal":
+				if lastFireTime != nil {
+					duration := entry.Timestamp.Sub(*lastFireTime)
+					stats.totalFiringMs += duration.Milliseconds()
+					stats.firingPeriods++
+					lastFireTime = nil
+				}
+			}
+		}
+	}
+
+	results := make([]NoiseEntry, 0, len(statsByName))
 
 	for name, stats := range statsByName {
 		avgDur := ""
@@ -166,7 +191,7 @@ func analyzeNoise(annotations []alertAnnotation, threshold int) []NoiseEntry {
 			classification = "noisy"
 		}
 
-		entries = append(entries, NoiseEntry{
+		results = append(results, NoiseEntry{
 			AlertName:      name,
 			UID:            stats.uid,
 			FireCount:      stats.fireCount,
@@ -176,11 +201,11 @@ func analyzeNoise(annotations []alertAnnotation, threshold int) []NoiseEntry {
 		})
 	}
 
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].FireCount > entries[j].FireCount
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].FireCount > results[j].FireCount
 	})
 
-	return entries
+	return results
 }
 
 func parsePeriod(period string) (time.Duration, error) {
