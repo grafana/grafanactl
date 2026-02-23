@@ -279,7 +279,7 @@ Use these files to complete the task:
 - You are assigned ONE type of grafana investigation. Focus entirely on completing it.
 - Run `bin/grafanactl --help` in order to ensure you have the tools needed to accomplish your task. You may run --help on subcommands if necessary.
 - If you do not see the tools required in `grafanactl` in order to accomplish your task, you will need to spawn subagents to add new tools to `grafanactl` in order to accomplish your investigation.
-- Tell youir sub-agents to Reference @../../mcp-grafana/main and @../../app-env-cli/main For inspiration and examples about how to call various APIs in Grafana related to this task.
+- Tell youir sub-agents to Reference @../../mcp-grafana/main and @../../grafana-assisant-app/main and @../../app-env-cli/main For inspiration and examples about how to call various APIs in Grafana related to this task.
 - You will create tasks and delegate them to sub-agents (using .claude/agent/teams/builder.md and ./claude/agent/teams/validator.md) in order to implement the tools that you need with the documentation and tests.
 - Spawn one builder and one validator per tool that requires creation.
 - Subagents will build and validate their work. You will need to run `make build` in order to ensure `grafanactl` is up to date when those tasks complete.

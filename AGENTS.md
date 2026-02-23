@@ -81,9 +81,20 @@ make clean
 
 ### Command Structure
 
-grafanactl follows the Cobra command pattern with two main command groups:
+grafanactl follows the Cobra command pattern with three main command groups plus a utility command:
 
-1. **config**: Manage configuration contexts for connecting to Grafana instances
+**Tip:** Run `grafanactl help-tree` to see the entire command tree with all flags in a compact format, or `grafanactl help-tree <command>` for a subtree (e.g., `grafanactl help-tree alerts`).
+
+1. **alerts**: Manage and investigate Grafana alert rules
+   - `alerts list`: List alert rules with runtime state (`--state` filter)
+   - `alerts get`: Get a single alert rule by UID
+   - `alerts search`: Search alert rules by name
+   - `alerts export`: Export alert rules in provisioning format
+   - `alerts instances`: List currently firing alert instances
+   - `alerts history`: Show alert state change history from Grafana state history
+   - `alerts noise-report`: Analyze alert firing patterns to identify noisy vs meaningful alerts
+
+2. **config**: Manage configuration contexts for connecting to Grafana instances
    - `config set`: Set configuration values
    - `config unset`: Unset configuration values
    - `config use-context`: Switch between configured contexts
@@ -92,7 +103,7 @@ grafanactl follows the Cobra command pattern with two main command groups:
    - `config view`: View the current configuration
    - `config check`: Validate the configuration
 
-2. **resources**: Manipulate Grafana resources (dashboards, folders, etc.)
+3. **resources**: Manipulate Grafana resources (dashboards, folders, etc.)
    - `resources get`: Get resources from Grafana
    - `resources list`: List resources
    - `resources pull`: Pull resources from Grafana to local files
@@ -102,10 +113,15 @@ grafanactl follows the Cobra command pattern with two main command groups:
    - `resources validate`: Validate resource manifests
    - `resources serve`: Serve resources locally with live reload
 
+4. **help-tree**: Print a compact, token-efficient command tree for LLM and scripting use
+   - `help-tree`: Full command tree with all flags, args, and descriptions
+   - `help-tree <command>`: Subtree for a specific command group (e.g., `help-tree alerts`)
+
 ### Core Packages
 
 **cmd/grafanactl/** - CLI command implementations
-- `root/`: Root command setup with logging and flags
+- `root/`: Root command setup with logging, flags, and `help-tree`
+- `alerts/`: Alert rule management, noise investigation, and state history commands
 - `config/`: Configuration management commands
 - `resources/`: Resource manipulation commands
 - `fail/`: Error handling and detailed error messages
