@@ -44,7 +44,7 @@ GENERAL_PURPOSE_AGENT: `general-purpose`
 - If `ORCHESTRATION_PROMPT` is provided, use it to guide team composition, task granularity, dependency structure, and parallel/sequential decisions.
 - Carefully analyze the user's requirements provided in the USER_PROMPT variable
 - Determine the task type (chore|feature|refactor|fix|enhancement) and complexity (simple|medium|complex)
-- Think deeply (ultrathink) about the best approach to implement the requested functionality or solve the problem
+- Think deeply about the best approach to implement the requested functionality or solve the problem
 - Understand the codebase directly without subagents to understand existing patterns and architecture
 - Follow the Plan Format below to create a comprehensive implementation plan
 - Include all required sections and conditional sections based on task type and complexity
@@ -259,6 +259,15 @@ IMPORTANT: **PLANNING ONLY** - Do not execute, build, or deploy. Output is a pla
 ## Relevant Files
 Use these files to complete the task:
 
+The result of the investigation may require that you suggest changes to a code base in order to fix an underlying problem. The user will indicate where this code base is located. Call it the "service under investigation"
+
+<relavant details about the service under investigation>
+
+Take Implementation details from the following repositories. Some of the access patterns that you'll need or are trying to solve for have already been implemented here. Use those as "donor DNA".
+- @../../mcp-grafana/main
+- @../../grafana-assisant-app/main
+- @../../app-env-cli/main
+
 <list files relevant to the task with bullet points explaining why. Include new files to be created under an h3 'New Files' section if needed>
 
 <if complexity is medium/complex, include this section:>
@@ -277,7 +286,8 @@ Use these files to complete the task:
 
 - You operate as the grafana investogator trying to solve for the <input task>
 - You are assigned ONE type of grafana investigation. Focus entirely on completing it.
-- Run `bin/grafanactl --help` in order to ensure you have the tools needed to accomplish your task. You may run --help on subcommands if necessary.
+- Draft a claude-code skill in the @skills directory that details as the steps needed to accomplish the task. If the `grafanactl` commands to not exist, imagine what you might want those commands to be. These can be written.
+- Run `bin/grafanactl help-tree` in order to ensure you have the tools needed to accomplish your task. You may run `grafanactl help-tree [command] on subcommands if necessary.
 - If you do not see the tools required in `grafanactl` in order to accomplish your task, you will need to spawn subagents to add new tools to `grafanactl` in order to accomplish your investigation.
 - Tell youir sub-agents to Reference @../../mcp-grafana/main and @../../grafana-assisant-app/main and @../../app-env-cli/main For inspiration and examples about how to call various APIs in Grafana related to this task.
 - You will create tasks and delegate them to sub-agents (using .claude/agent/teams/builder.md and ./claude/agent/teams/validator.md) in order to implement the tools that you need with the documentation and tests.
@@ -298,6 +308,7 @@ Use these files to complete the task:
   - Communication is paramount. You'll use the Task* Tools to communicate with the team members and ensure they're on track to complete the plan.
 - Take note of the session id of each team member. This is how you'll reference them.
 - However, use the tools that are built for you by your sub-agents in order to validate the task at hand.
+- CRITICAL: You must finish the investigation described in <input task> - You must use `grafanactl` to complete the investigation. If you still do not have the tools needed to finish the investigation, start another round of sub-agents to build the tools you need.
 
 ### Team Members
 <list the team members you'll use to execute the plan>
