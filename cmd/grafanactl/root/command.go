@@ -8,7 +8,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 	"github.com/grafana/grafana-app-sdk/logging"
+	"github.com/grafana/grafanactl/cmd/grafanactl/alerts"
 	"github.com/grafana/grafanactl/cmd/grafanactl/config"
+	cmdlogs "github.com/grafana/grafanactl/cmd/grafanactl/logs"
 	"github.com/grafana/grafanactl/cmd/grafanactl/resources"
 	"github.com/grafana/grafanactl/internal/logs"
 	"github.com/spf13/cobra"
@@ -57,7 +59,10 @@ func Command(version string) *cobra.Command {
 	rootCmd.SetErr(os.Stderr)
 	rootCmd.SetIn(os.Stdin)
 
+	rootCmd.AddCommand(alerts.Command())
 	rootCmd.AddCommand(config.Command())
+	rootCmd.AddCommand(helpTreeCmd())
+	rootCmd.AddCommand(cmdlogs.Command())
 	rootCmd.AddCommand(resources.Command())
 
 	rootCmd.PersistentFlags().BoolVar(&noColors, "no-color", noColors, "Disable color output")
