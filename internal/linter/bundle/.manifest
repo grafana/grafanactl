@@ -1,0 +1,7 @@
+{
+  "roots": ["grafanactl"],
+  "metadata": {
+    "name": "grafanactl"
+  },
+  "rego_version": 1
+}
