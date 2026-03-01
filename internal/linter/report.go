@@ -21,7 +21,7 @@ type Violation struct {
 	Description      string            `json:"description"`
 	ResourceType     string            `json:"resource_type"`
 	Severity         string            `json:"severity"`
-	Location         Location          `json:"location,omitempty"`
+	Location         Location          `json:"location"`
 	Details          string            `json:"details,omitempty"`
 	RelatedResources []RelatedResource `json:"related_resources"`
 }

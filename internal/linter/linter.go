@@ -202,10 +202,6 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 	return finalReport, nil
 }
 
-func (linter *Linter) prepareInput(res *resources.Resource) (map[string]any, error) {
-	return res.ToUnstructured().Object, nil
-}
-
 func (linter *Linter) parseInputs(ctx context.Context) (*resources.Resources, error) {
 	inputs := resources.NewResources()
 	filters := resources.Filters{}

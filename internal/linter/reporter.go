@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 )
 
 // Reporter formats and publishes linter reports.
@@ -31,26 +31,28 @@ func (reporter CompactReporter) Publish(_ context.Context, out io.Writer, r Repo
 		return err
 	}
 
-	buffer := &strings.Builder{}
-	table := tablewriter.NewWriter(buffer)
+	table := tablewriter.NewTable(out)
+	defer func() { _ = table.Close() }()
 
 	table.Header([]string{"Location", "Severity", "Rule", "Details"})
-	// @TODO
-	//table.AutoFormatHeaders(false)
-	//table.ColWidth(80)
-	//table.AutoWrapText(true)
 
 	for _, violation := range r.Violations {
-		table.Append([]string{violation.Location.String(), violation.Severity, violation.Rule, violation.Details})
+		err := table.Append([]string{violation.Location.String(), violation.Severity, violation.Rule, violation.Details})
+		if err != nil {
+			return err
+		}
 	}
 
-	summary := fmt.Sprintf("%d %s linted , %d %s found.",
+	summary := fmt.Sprintf("%d %s linted, %d %s found.",
 		r.Summary.FilesScanned, pluralize("file", r.Summary.FilesScanned),
-		r.Summary.NumViolations, pluralize("violation", r.Summary.NumViolations))
+		r.Summary.NumViolations, pluralize("violation", r.Summary.NumViolations),
+	)
 
-	table.Render()
+	if err := table.Render(); err != nil {
+		return err
+	}
 
-	_, err := fmt.Fprintln(out, strings.TrimSuffix(buffer.String(), ""), summary)
+	_, err := fmt.Fprintln(out, summary)
 
 	return err
 }
@@ -65,14 +67,21 @@ type PrettyReporter struct {
 //
 //nolint:nestif
 func (reporter PrettyReporter) Publish(_ context.Context, out io.Writer, r Report) error {
-	table := buildPrettyViolationsTable(r.Violations)
+	if err := printPrettyViolationsTable(out, r.Violations); err != nil {
+		return err
+	}
+
+	if len(r.Violations) > 0 {
+		_, _ = fmt.Fprintln(out)
+	}
 
 	numsWarning, numsError := 0, 0
 
 	for _, violation := range r.Violations {
-		if violation.Severity == "warning" {
+		switch violation.Severity {
+		case "warning":
 			numsWarning++
-		} else if violation.Severity == "error" {
+		case "error":
 			numsError++
 		}
 	}
@@ -107,33 +116,32 @@ func (reporter PrettyReporter) Publish(_ context.Context, out io.Writer, r Repor
 		)
 	}
 
-	_, err := fmt.Fprint(out, table+footer+"\n")
-	if err != nil {
-		return fmt.Errorf("failed to write report: %w", err)
-	}
+	_, err := fmt.Fprint(out, footer+"\n")
 
 	return err
 }
 
-func buildPrettyViolationsTable(violations []Violation) string {
-	buffer := &strings.Builder{}
-	table := tablewriter.NewWriter(buffer)
-
-	// @TODO
-	//table.SetNoWhiteSpace(true)
-	//table.SetTablePadding("\t")
-	//table.SetAlignment(tablewriter.ALIGN_LEFT)
-	//table.SetCenterSeparator("")
-	//table.SetColumnSeparator("")
-	//table.SetRowSeparator("")
-	//table.SetHeaderLine(false)
-	//table.SetBorder(false)
-	//table.SetAutoWrapText(false)
+func printPrettyViolationsTable(out io.Writer, violations []Violation) error {
+	table := tablewriter.NewTable(
+		out,
+		tablewriter.WithRendition(tw.Rendition{
+			Borders: tw.Border{
+				Top:    tw.Off,
+				Bottom: tw.Off,
+				Left:   tw.Off,
+				Right:  tw.Off,
+			},
+			Symbols: tw.NewSymbolCustom("").WithColumn(""),
+		}),
+		tablewriter.WithConfig(tablewriter.Config{
+			Row: tw.CellConfig{
+				Formatting: tw.CellFormatting{AutoWrap: tw.WrapNormal}, // Wrap long content
+			},
+		}),
+	)
+	defer func() { _ = table.Close() }()
 
 	numViolations := len(violations)
-
-	// Note: it's tempting to use table.SetColumnColor here, but for whatever reason, that requires using
-	// table.SetHeader as well, and we don't want a header for this format.
 
 	yellow := color.New(color.FgYellow).SprintFunc()
 	cyan := color.New(color.FgCyan).SprintFunc()
@@ -145,37 +153,30 @@ func buildPrettyViolationsTable(violations []Violation) string {
 			description = yellow(violation.Description)
 		}
 
-		table.Append([]string{yellow("Rule:"), violation.Rule})
+		_ = table.Append([]string{yellow("Rule:"), violation.Rule})
 
 		// if there is no support for color, then we show the level in addition
 		// so that the level of the violation is still clear
 		if color.NoColor {
-			table.Append([]string{"Severity:", violation.Severity})
+			_ = table.Append([]string{"Severity:", violation.Severity})
 		}
 
-		table.Append([]string{yellow("Description:"), description})
-		table.Append([]string{yellow("Resource type:"), violation.ResourceType})
-		table.Append([]string{yellow("Location:"), cyan(violation.Location.String())})
-		table.Append([]string{yellow("Details:"), violation.Details})
+		_ = table.Append([]string{yellow("Description:"), description})
+		_ = table.Append([]string{yellow("Resource type:"), violation.ResourceType})
+		_ = table.Append([]string{yellow("Location:"), cyan(violation.Location.String())})
+		_ = table.Append([]string{yellow("Details:"), violation.Details})
 
 		documentation := violation.DocumentationURL()
 		if documentation != "" {
-			table.Append([]string{yellow("Documentation:"), cyan(violation.DocumentationURL())})
+			_ = table.Append([]string{yellow("Documentation:"), cyan(violation.DocumentationURL())})
 		}
 
 		if i+1 < numViolations {
-			table.Append([]string{""})
+			_ = table.Append([]string{""})
 		}
 	}
 
-	end := ""
-	if numViolations > 0 {
-		end = "\n"
-	}
-
-	table.Render()
-
-	return buffer.String() + end
+	return table.Render()
 }
 
 func pluralize(singular string, count int) string {
