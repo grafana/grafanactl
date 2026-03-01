@@ -6,7 +6,7 @@ import data.grafanactl.result
 import data.grafanactl.utils
 
 report contains violation if {
-	utils.resource_is_dashboard_v1alpha1(input)
+	utils.resource_is_dashboard_v1(input)
 
 	input.spec.timezone != "utc"
 

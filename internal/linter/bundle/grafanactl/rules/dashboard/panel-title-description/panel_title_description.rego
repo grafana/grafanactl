@@ -11,9 +11,9 @@ import data.grafanactl.result
 import data.grafanactl.utils
 
 report contains violation if {
-	utils.resource_is_dashboard_v1alpha1(input)
+	utils.resource_is_dashboard_v1(input)
 
-	panels := utils.dashboard_v1alpha1_panels(input)
+	panels := utils.dashboard_v1_panels(input)
 
 	invalid_panels := [panels[i] | object.get(panels[i], ["title"], "") == ""]
 
@@ -24,9 +24,9 @@ report contains violation if {
 }
 
 report contains violation if {
-	utils.resource_is_dashboard_v1alpha1(input)
+	utils.resource_is_dashboard_v1(input)
 
-	panels := utils.dashboard_v1alpha1_panels(input)
+	panels := utils.dashboard_v1_panels(input)
 
 	invalid_panels := [panels[i] | object.get(panels[i], ["description"], "") == ""]
 

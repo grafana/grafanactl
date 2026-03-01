@@ -11,10 +11,10 @@ import data.grafanactl.result
 import data.grafanactl.utils
 
 report contains violation if {
-	utils.resource_is_dashboard_v1alpha1(input)
+	utils.resource_is_dashboard_v1(input)
 
-	variables := utils.dashboard_v1alpha1_variables(input)
-	panels := utils.dashboard_v1alpha1_panels(input)
+	variables := utils.dashboard_v1_variables(input)
+	panels := utils.dashboard_v1_panels(input)
 	prom_targets := _prometheus_targets(panels)
 
 	queries := [query | query := {
