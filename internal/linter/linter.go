@@ -175,13 +175,8 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 
 	// TODO: parallel eval?
 	for _, input := range inputs.AsList() {
-		rawInput, err := linter.prepareInput(input)
-		if err != nil {
-			return Report{}, fmt.Errorf("failed preparing input for linting: %w", err)
-		}
-
 		evalArgs := []rego.EvalOption{
-			rego.EvalInput(rawInput),
+			rego.EvalInput(input.ToUnstructured().Object),
 		}
 
 		resultSet, err := preparedQuery.Eval(ctx, evalArgs...)
@@ -208,12 +203,7 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 }
 
 func (linter *Linter) prepareInput(res *resources.Resource) (map[string]any, error) {
-	rawInput := make(map[string]any)
-	if err := jsonRoundTrip(res.ToUnstructured(), &rawInput); err != nil {
-		return nil, err
-	}
-
-	return rawInput, nil
+	return res.ToUnstructured().Object, nil
 }
 
 func (linter *Linter) parseInputs(ctx context.Context) (*resources.Resources, error) {
