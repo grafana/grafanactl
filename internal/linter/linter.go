@@ -54,6 +54,50 @@ func MaxConcurrency(maxConcurrency int) Option {
 	}
 }
 
+func DisableAll() Option {
+	return func(l *Linter) error {
+		l.disableAll = true
+		l.enableAll = false
+		return nil
+	}
+}
+
+func DisabledCategories(categories []string) Option {
+	return func(l *Linter) error {
+		l.disabledCategories = categories
+		return nil
+	}
+}
+
+func DisabledRules(rules []string) Option {
+	return func(l *Linter) error {
+		l.disabledRules = rules
+		return nil
+	}
+}
+
+func EnableAll() Option {
+	return func(l *Linter) error {
+		l.disableAll = false
+		l.enableAll = true
+		return nil
+	}
+}
+
+func EnabledCategories(categories []string) Option {
+	return func(l *Linter) error {
+		l.enabledCategories = categories
+		return nil
+	}
+}
+
+func EnabledRules(rules []string) Option {
+	return func(l *Linter) error {
+		l.enabledRules = rules
+		return nil
+	}
+}
+
 func ResourceReader(reader resourceReader) Option {
 	return func(l *Linter) error {
 		l.resourceReader = reader
@@ -72,6 +116,13 @@ type Linter struct {
 	ruleBundles      []*bundle.Bundle
 	customRulesPaths []string
 	maxConcurrency   int
+
+	disableAll         bool
+	disabledCategories []string
+	disabledRules      []string
+	enableAll          bool
+	enabledCategories  []string
+	enabledRules       []string
 }
 
 func New(opts ...Option) (*Linter, error) {
@@ -84,6 +135,12 @@ func New(opts ...Option) (*Linter, error) {
 		ruleBundles: []*bundle.Bundle{
 			&builtinBundle,
 		},
+		disableAll:         false,
+		disabledCategories: []string{},
+		disabledRules:      []string{},
+		enableAll:          true,
+		enabledCategories:  []string{},
+		enabledRules:       []string{},
 	}
 
 	for _, opt := range opts {
@@ -185,6 +242,7 @@ func (linter *Linter) prepare(ctx context.Context) (rego.PreparedEvalQuery, erro
 	regoOpts := []func(*rego.Rego){
 		// Matches the report-generation statement in `./bundle/grafanactl/main/main.rego`
 		rego.Query("lint := data.grafanactl.main.lint"),
+		rego.ParsedBundle("internal", linter.createDataBundle()),
 		// Add a few built-ins
 		builtins.ValidateLogQL(),
 		builtins.ValidatePromql(),
@@ -209,6 +267,28 @@ func (linter *Linter) prepare(ctx context.Context) (rego.PreparedEvalQuery, erro
 	}
 
 	return rego.New(regoOpts...).PrepareForEval(ctx)
+}
+
+func (linter *Linter) createDataBundle() *bundle.Bundle {
+	params := map[string]any{
+		"disable_all":         linter.disableAll,
+		"disabled_categories": linter.disabledCategories,
+		"disabled_rules":      linter.disabledRules,
+
+		"enable_all":         linter.enableAll,
+		"enabled_categories": linter.enabledCategories,
+		"enabled_rules":      linter.enabledRules,
+	}
+
+	return &bundle.Bundle{
+		Manifest: bundle.Manifest{
+			Roots:    &[]string{"internal", "eval"},
+			Metadata: map[string]any{"name": "internal"},
+		},
+		Data: map[string]any{
+			"internal": params,
+		},
+	}
 }
 
 func (linter *Linter) Lint(ctx context.Context) (Report, error) {

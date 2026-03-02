@@ -30,16 +30,38 @@ grafanactl experimental linter lint PATH... [flags]
 
 	grafanactl experimental linter lint --rules ./custom-rules ./resources
 
+	# Disable all rules in a category:
+
+	grafanactl experimental linter lint --disable-category dashboard ./resources
+
+	# Disable specific rules:
+
+	grafanactl experimental linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
+
+	# Enable only some categories:
+
+	grafanactl experimental linter lint --disable-all --enable-category dashboard ./resources
+
+	# Enable only specific rules:
+
+	grafanactl experimental linter lint --disable-all --enable uneditable-dashboard ./resources
+
 ```
 
 ### Options
 
 ```
-      --debug                Enable debug mode
-  -h, --help                 help for lint
-      --max-concurrent int   Maximum number of concurrent operations (default 10)
-  -o, --output string        Output format. One of: compact, json, pretty, yaml (default "pretty")
-  -r, --rules stringArray    Path to custom rules.
+      --debug                          Enable debug mode
+      --disable stringArray            Disable a rule
+      --disable-all                    Disable all rules
+      --disable-category stringArray   Disable all rules in a category
+      --enable stringArray             Enable a rule
+      --enable-all                     Enable all rules
+      --enable-category stringArray    Enable all rules in a category
+  -h, --help                           help for lint
+      --max-concurrent int             Maximum number of concurrent operations (default 10)
+  -o, --output string                  Output format. One of: compact, json, pretty, yaml (default "pretty")
+  -r, --rules stringArray              Path to custom rules
 ```
 
 ### Options inherited from parent commands

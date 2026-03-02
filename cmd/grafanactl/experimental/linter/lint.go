@@ -19,6 +19,13 @@ type lintOpts struct {
 	debug         bool
 	rules         []string
 	maxConcurrent int
+
+	disableAll         bool
+	disabledCategories []string
+	disabledRules      []string
+	enableAll          bool
+	enabledCategories  []string
+	enabledRules       []string
 }
 
 func (opts *lintOpts) validate(args []string) error {
@@ -45,8 +52,16 @@ func (opts *lintOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.BindFlags(flags)
 
 	flags.BoolVar(&opts.debug, "debug", false, "Enable debug mode")
-	flags.StringArrayVarP(&opts.rules, "rules", "r", nil, "Path to custom rules.")
+	flags.StringArrayVarP(&opts.rules, "rules", "r", nil, "Path to custom rules")
 	flags.IntVar(&opts.maxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
+
+	flags.BoolVar(&opts.disableAll, "disable-all", false, "Disable all rules")
+	flags.StringArrayVar(&opts.disabledCategories, "disable-category", nil, "Disable all rules in a category")
+	flags.StringArrayVar(&opts.disabledRules, "disable", nil, "Disable a rule")
+
+	flags.BoolVar(&opts.enableAll, "enable-all", false, "Enable all rules")
+	flags.StringArrayVar(&opts.enabledCategories, "enable-category", nil, "Enable all rules in a category")
+	flags.StringArrayVar(&opts.enabledRules, "enable", nil, "Enable a rule")
 }
 
 func lintCmd() *cobra.Command {
@@ -73,6 +88,22 @@ func lintCmd() *cobra.Command {
 	# Use custom rules:
 
 	grafanactl experimental linter lint --rules ./custom-rules ./resources
+
+	# Disable all rules in a category:
+
+	grafanactl experimental linter lint --disable-category dashboard ./resources
+
+	# Disable specific rules:
+
+	grafanactl experimental linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
+
+	# Enable only some categories:
+
+	grafanactl experimental linter lint --disable-all --enable-category dashboard ./resources
+
+	# Enable only specific rules:
+
+	grafanactl experimental linter lint --disable-all --enable uneditable-dashboard ./resources
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.validate(args); err != nil {
@@ -96,6 +127,25 @@ func lint(cmd *cobra.Command, inputPaths []string, opts lintOpts) error {
 			MaxConcurrentReads: opts.maxConcurrent,
 			StopOnError:        false,
 		}),
+	}
+
+	if opts.disableAll {
+		linterOpts = append(linterOpts, linter.DisableAll())
+	}
+	if len(opts.disabledCategories) != 0 {
+		linterOpts = append(linterOpts, linter.DisabledCategories(opts.disabledCategories))
+	}
+	if len(opts.disabledRules) != 0 {
+		linterOpts = append(linterOpts, linter.DisabledRules(opts.disabledRules))
+	}
+	if opts.enableAll {
+		linterOpts = append(linterOpts, linter.EnableAll())
+	}
+	if len(opts.enabledCategories) != 0 {
+		linterOpts = append(linterOpts, linter.EnabledCategories(opts.enabledCategories))
+	}
+	if len(opts.enabledRules) != 0 {
+		linterOpts = append(linterOpts, linter.EnabledRules(opts.enabledRules))
 	}
 
 	if opts.debug {
