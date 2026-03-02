@@ -19,6 +19,7 @@ func Command() *cobra.Command {
 
 	cmd.AddCommand(listCmd(configOpts))
 	cmd.AddCommand(getCmd(configOpts))
+	cmd.AddCommand(prometheusCmd(configOpts))
 
 	return cmd
 }

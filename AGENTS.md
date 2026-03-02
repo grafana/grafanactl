@@ -105,12 +105,14 @@ grafanactl follows the Cobra command pattern with two main command groups:
 3. **datasources**: Manage Grafana datasources
    - `datasources list`: List all datasources (with optional `--type` filter)
    - `datasources get`: Get details of a specific datasource by UID
+   - `datasources prometheus labels`: List labels or get label values
+   - `datasources prometheus metadata`: Get metric metadata
+   - `datasources prometheus targets`: List scrape targets
 
 4. **query**: Execute queries against Grafana datasources
-   - `query prometheus`: Execute PromQL queries against Prometheus datasources
-   - `query prometheus labels`: List labels or get label values
-   - `query prometheus metadata`: Get metric metadata
-   - `query prometheus targets`: List scrape targets
+   - Supports `-d` (datasource UID), `-e` (query expression), `-t` (datasource type)
+   - Supports `--start`, `--end`, `--step` for range queries
+   - Uses the unified query API (query.grafana.app)
 
 5. **graph**: Render ASCII charts from query results
    - Reads Prometheus query JSON output and renders terminal charts
@@ -134,10 +136,10 @@ grafanactl datasources list
 Then use the UID in queries:
 ```bash
 # Correct: use UID
-grafanactl query prometheus -d abc123def -e 'up'
+grafanactl query -d abc123def -e 'up'
 
 # Wrong: using name won't work
-grafanactl query prometheus -d "My Prometheus" -e 'up'  # This will fail
+grafanactl query -d "My Prometheus" -e 'up'  # This will fail
 ```
 
 You can also set a default datasource UID in your context configuration:

@@ -1,11 +1,10 @@
-package query
+package datasources
 
 import (
 	"errors"
 	"fmt"
 	"io"
 	"text/tabwriter"
-	"time"
 
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
@@ -15,165 +14,24 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type prometheusOpts struct {
-	IO          cmdio.Options
-	Datasource  string
-	Query       string
-	Start       string
-	End         string
-	Step        string
-}
-
-func (opts *prometheusOpts) setup(flags *pflag.FlagSet) {
-	opts.IO.RegisterCustomCodec("table", &prometheusTableCodec{})
-	opts.IO.DefaultFormat("table")
-	opts.IO.BindFlags(flags)
-
-	flags.StringVarP(&opts.Datasource, "datasource", "d", "", "Datasource UID (required unless default-prometheus-datasource is configured)")
-	flags.StringVarP(&opts.Query, "expr", "e", "", "PromQL query expression (required)")
-	flags.StringVar(&opts.Start, "start", "", "Start time (RFC3339, Unix timestamp, or relative like 'now-1h')")
-	flags.StringVar(&opts.End, "end", "", "End time (RFC3339, Unix timestamp, or relative like 'now')")
-	flags.StringVar(&opts.Step, "step", "", "Query step (e.g., '15s', '1m')")
-}
-
-func (opts *prometheusOpts) Validate() error {
-	if err := opts.IO.Validate(); err != nil {
-		return err
-	}
-
-	if opts.Query == "" {
-		return errors.New("query expression is required (use -e or --expr)")
-	}
-
-	return nil
-}
-
 func prometheusCmd(configOpts *cmdconfig.Options) *cobra.Command {
-	opts := &prometheusOpts{}
-
 	cmd := &cobra.Command{
 		Use:   "prometheus",
-		Short: "Execute Prometheus queries",
-		Long:  "Execute PromQL queries against a Prometheus datasource via Grafana.",
-		Example: `
-	# First, find your datasource UID
-	grafanactl datasources list
-
-	# Instant query (use the UID from datasources list, not the name)
-	grafanactl query prometheus -d <datasource-uid> -e 'up{job="grafana"}'
-
-	# Range query
-	grafanactl query prometheus -d <datasource-uid> -e 'rate(http_requests_total[5m])' --start now-1h --end now
-
-	# Range query with step
-	grafanactl query prometheus -d <datasource-uid> -e 'rate(http_requests_total[5m])' --start now-1h --end now --step 1m
-
-	# Output as JSON
-	grafanactl query prometheus -d <datasource-uid> -e 'up' -o json`,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-
-			ctx := cmd.Context()
-
-			cfg, err := configOpts.LoadRESTConfig(ctx)
-			if err != nil {
-				return err
-			}
-
-			// Resolve datasource
-			datasourceUID := opts.Datasource
-			if datasourceUID == "" {
-				fullCfg, err := configOpts.LoadConfig(ctx)
-				if err != nil {
-					return err
-				}
-				datasourceUID = fullCfg.GetCurrentContext().DefaultPrometheusDatasource
-			}
-			if datasourceUID == "" {
-				return errors.New("datasource UID is required: use -d flag or set default-prometheus-datasource in config")
-			}
-
-			client, err := prometheus.NewClient(cfg)
-			if err != nil {
-				return fmt.Errorf("failed to create client: %w", err)
-			}
-
-			now := time.Now()
-			start, err := ParseTime(opts.Start, now)
-			if err != nil {
-				return fmt.Errorf("invalid start time: %w", err)
-			}
-
-			end, err := ParseTime(opts.End, now)
-			if err != nil {
-				return fmt.Errorf("invalid end time: %w", err)
-			}
-
-			step, err := ParseDuration(opts.Step)
-			if err != nil {
-				return fmt.Errorf("invalid step: %w", err)
-			}
-
-			req := prometheus.QueryRequest{
-				Query: opts.Query,
-				Start: start,
-				End:   end,
-				Step:  step,
-			}
-
-			resp, err := client.Query(ctx, datasourceUID, req)
-			if err != nil {
-				return fmt.Errorf("query failed: %w", err)
-			}
-
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
-			if opts.IO.OutputFormat == "table" {
-				return prometheus.FormatTable(cmd.OutOrStdout(), resp)
-			}
-
-			return codec.Encode(cmd.OutOrStdout(), resp)
-		},
+		Short: "Prometheus datasource operations",
+		Long:  "Operations specific to Prometheus datasources such as labels, metadata, and targets.",
 	}
 
-	opts.setup(cmd.Flags())
-
-	// Add subcommands
 	cmd.AddCommand(labelsCmd(configOpts))
+	cmd.AddCommand(metadataCmd(configOpts))
 	cmd.AddCommand(targetsCmd(configOpts))
 
 	return cmd
-}
-
-type prometheusTableCodec struct{}
-
-func (c *prometheusTableCodec) Format() format.Format {
-	return "table"
-}
-
-func (c *prometheusTableCodec) Encode(w io.Writer, data any) error {
-	resp, ok := data.(*prometheus.QueryResponse)
-	if !ok {
-		return fmt.Errorf("invalid data type for prometheus table codec")
-	}
-
-	return prometheus.FormatTable(w, resp)
-}
-
-func (c *prometheusTableCodec) Decode(io.Reader, any) error {
-	return errors.New("prometheus table codec does not support decoding")
 }
 
 type labelsOpts struct {
 	IO         cmdio.Options
 	Datasource string
 	Label      string
-	Metric     string
 }
 
 func (opts *labelsOpts) setup(flags *pflag.FlagSet) {
@@ -183,7 +41,6 @@ func (opts *labelsOpts) setup(flags *pflag.FlagSet) {
 
 	flags.StringVarP(&opts.Datasource, "datasource", "d", "", "Datasource UID (required unless default-prometheus-datasource is configured)")
 	flags.StringVarP(&opts.Label, "label", "l", "", "Get values for this label (omit to list all labels)")
-	flags.StringVarP(&opts.Metric, "metric", "m", "", "Get metadata for this metric (use with 'metadata' command)")
 }
 
 func (opts *labelsOpts) Validate() error {
@@ -199,13 +56,13 @@ func labelsCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Long:  "List all labels or get values for a specific label from a Prometheus datasource.",
 		Example: `
 	# List all labels (use datasource UID, not name)
-	grafanactl query prometheus labels -d <datasource-uid>
+	grafanactl datasources prometheus labels -d <datasource-uid>
 
 	# Get values for a specific label
-	grafanactl query prometheus labels -d <datasource-uid> --label job
+	grafanactl datasources prometheus labels -d <datasource-uid> --label job
 
 	# Output as JSON
-	grafanactl query prometheus labels -d <datasource-uid> -o json`,
+	grafanactl datasources prometheus labels -d <datasource-uid> -o json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
@@ -267,9 +124,6 @@ func labelsCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 	opts.setup(cmd.Flags())
 
-	// Add metadata subcommand
-	cmd.AddCommand(metadataCmd(configOpts))
-
 	return cmd
 }
 
@@ -320,13 +174,13 @@ func metadataCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Long:  "Get metadata (type, help text) for metrics from a Prometheus datasource.",
 		Example: `
 	# Get all metric metadata (use datasource UID, not name)
-	grafanactl query prometheus labels metadata -d <datasource-uid>
+	grafanactl datasources prometheus metadata -d <datasource-uid>
 
 	# Get metadata for a specific metric
-	grafanactl query prometheus labels metadata -d <datasource-uid> --metric http_requests_total
+	grafanactl datasources prometheus metadata -d <datasource-uid> --metric http_requests_total
 
 	# Output as JSON
-	grafanactl query prometheus labels metadata -d <datasource-uid> -o json`,
+	grafanactl datasources prometheus metadata -d <datasource-uid> -o json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
@@ -437,16 +291,16 @@ func targetsCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		Long:  "List scrape targets from a Prometheus datasource.",
 		Example: `
 	# List active targets (use datasource UID, not name)
-	grafanactl query prometheus targets -d <datasource-uid>
+	grafanactl datasources prometheus targets -d <datasource-uid>
 
 	# List dropped targets
-	grafanactl query prometheus targets -d <datasource-uid> --state dropped
+	grafanactl datasources prometheus targets -d <datasource-uid> --state dropped
 
 	# List all targets
-	grafanactl query prometheus targets -d <datasource-uid> --state any
+	grafanactl datasources prometheus targets -d <datasource-uid> --state any
 
 	# Output as JSON
-	grafanactl query prometheus targets -d <datasource-uid> -o json`,
+	grafanactl datasources prometheus targets -d <datasource-uid> -o json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
