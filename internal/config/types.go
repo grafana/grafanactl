@@ -53,6 +53,12 @@ type Context struct {
 	Name string `json:"-" yaml:"-"`
 
 	Grafana *GrafanaConfig `json:"grafana,omitempty" yaml:"grafana,omitempty"`
+
+	// DefaultPrometheusDatasource is the UID of the default Prometheus datasource to use for queries.
+	DefaultPrometheusDatasource string `json:"default-prometheus-datasource,omitempty" yaml:"default-prometheus-datasource,omitempty"`
+
+	// DefaultLokiDatasource is the UID of the default Loki datasource to use for queries.
+	DefaultLokiDatasource string `json:"default-loki-datasource,omitempty" yaml:"default-loki-datasource,omitempty"`
 }
 
 func (context *Context) Validate() error {

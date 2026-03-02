@@ -102,11 +102,57 @@ grafanactl follows the Cobra command pattern with two main command groups:
    - `resources validate`: Validate resource manifests
    - `resources serve`: Serve resources locally with live reload
 
+3. **datasources**: Manage Grafana datasources
+   - `datasources list`: List all datasources (with optional `--type` filter)
+   - `datasources get`: Get details of a specific datasource by UID
+
+4. **query**: Execute queries against Grafana datasources
+   - `query prometheus`: Execute PromQL queries against Prometheus datasources
+   - `query prometheus labels`: List labels or get label values
+   - `query prometheus metadata`: Get metric metadata
+   - `query prometheus targets`: List scrape targets
+
+5. **graph**: Render ASCII charts from query results
+   - Reads Prometheus query JSON output and renders terminal charts
+   - Default: line chart; use `--type bar` for horizontal bar chart
+
+### Datasource API Usage
+
+**Important**: When using the `query` commands or any datasource-related API endpoints (e.g., `prometheus.datasource.grafana.app`), you must use the **datasource UID**, not the datasource name.
+
+To find datasource UIDs:
+```bash
+# List all datasources with their UIDs
+grafanactl datasources list
+
+# The UID column shows the identifier to use
+# Example output:
+# UID          NAME              TYPE         URL                         DEFAULT
+# abc123def    My Prometheus     prometheus   http://prometheus:9090      *
+```
+
+Then use the UID in queries:
+```bash
+# Correct: use UID
+grafanactl query prometheus -d abc123def -e 'up'
+
+# Wrong: using name won't work
+grafanactl query prometheus -d "My Prometheus" -e 'up'  # This will fail
+```
+
+You can also set a default datasource UID in your context configuration:
+```bash
+grafanactl config set contexts.local.default-prometheus-datasource abc123def
+```
+
 ### Core Packages
 
 **cmd/grafanactl/** - CLI command implementations
 - `root/`: Root command setup with logging and flags
 - `config/`: Configuration management commands
+- `datasources/`: Datasource listing and details commands
+- `query/`: Query execution commands (Prometheus)
+- `graph/`: ASCII chart rendering command
 - `resources/`: Resource manipulation commands
 - `fail/`: Error handling and detailed error messages
 - `io/`: Output formatting and user messages
@@ -157,6 +203,18 @@ grafanactl follows the Cobra command pattern with two main command groups:
 **internal/grafana/** - Grafana API client
 - Wraps grafana-openapi-client-go
 - Client construction from context configuration
+
+**internal/query/prometheus/** - Prometheus query client
+- HTTP client for datasource proxy API (`prometheus.datasource.grafana.app`)
+- Query execution (instant and range queries)
+- Labels and metadata retrieval
+- Response formatting (table output)
+
+**internal/graph/** - ASCII chart rendering
+- Uses ntcharts library for braille-character line charts and horizontal bar charts
+- Converts Prometheus query responses to chart data
+- Grafana color palette for series
+- TTY detection with text fallback
 
 **internal/format/** - Format detection and conversion
 - JSON, YAML format support
