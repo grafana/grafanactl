@@ -105,11 +105,6 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				return err
 			}
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
 			output := res.Resources.ToUnstructuredList()
 			resources.SortUnstructured(output.Items)
 
@@ -118,7 +113,7 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 				// Avoid printing a list of results if a single resource is being pulled,
 				// and we are not using the table output format.
 				if res.IsSingleTarget && len(output.Items) == 1 {
-					encodeErr = codec.Encode(cmd.OutOrStdout(), output.Items[0].Object)
+					encodeErr = opts.IO.Encode(cmd.OutOrStdout(), output.Items[0].Object)
 				} else {
 					// For JSON / YAML output we don't want to have "object" keys in the output,
 					// so use the custom printItems type instead.
@@ -128,10 +123,10 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 					for i, item := range output.Items {
 						formatted.Items[i] = item.Object
 					}
-					encodeErr = codec.Encode(cmd.OutOrStdout(), formatted)
+					encodeErr = opts.IO.Encode(cmd.OutOrStdout(), formatted)
 				}
 			} else {
-				encodeErr = codec.Encode(cmd.OutOrStdout(), output)
+				encodeErr = opts.IO.Encode(cmd.OutOrStdout(), output)
 			}
 
 			if encodeErr != nil {

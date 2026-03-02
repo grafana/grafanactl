@@ -45,11 +45,6 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
 			if opts.IO.OutputFormat != "text" && opts.IO.OutputFormat != "wide" {
 				return fmt.Errorf("unsupported output format: %s", opts.IO.OutputFormat)
 			}
@@ -68,7 +63,7 @@ func listCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			// e.g. APIResourceList, or unstructured.UnstructuredList.
 			// That way we can use the same code for rendering as for `resources get`.
 			res := reg.SupportedResources().Sorted()
-			return codec.Encode(cmd.OutOrStdout(), res)
+			return opts.IO.Encode(cmd.OutOrStdout(), res)
 		},
 	}
 

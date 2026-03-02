@@ -78,11 +78,6 @@ This command validates its inputs against a remote Grafana instance.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -145,7 +140,7 @@ This command validates its inputs against a remote Grafana instance.
 			}
 
 			if opts.IO.OutputFormat == "text" {
-				if err := codec.Encode(cmd.OutOrStdout(), summary); err != nil {
+				if err := opts.IO.Encode(cmd.OutOrStdout(), summary); err != nil {
 					return err
 				}
 			} else {
@@ -166,7 +161,7 @@ This command validates its inputs against a remote Grafana instance.
 					})
 				}
 
-				if err := codec.Encode(cmd.OutOrStdout(), printableSummary); err != nil {
+				if err := opts.IO.Encode(cmd.OutOrStdout(), printableSummary); err != nil {
 					return err
 				}
 			}

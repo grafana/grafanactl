@@ -87,11 +87,6 @@ The edition will be cancelled if no changes are written to the file or if the fi
 				return err
 			}
 
-			codec, err := opts.IO.Codec()
-			if err != nil {
-				return err
-			}
-
 			// Will contain the initial state of the resource to edit
 			buffer := &bytes.Buffer{}
 
@@ -108,7 +103,7 @@ The edition will be cancelled if no changes are written to the file or if the fi
 			}
 
 			obj := list[0].ToUnstructured()
-			if err := codec.Encode(buffer, &obj); err != nil {
+			if err := opts.IO.Encode(buffer, &obj); err != nil {
 				return err
 			}
 
