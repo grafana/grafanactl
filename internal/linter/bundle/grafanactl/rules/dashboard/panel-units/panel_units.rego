@@ -10,6 +10,7 @@ package grafanactl.rules.dashboard["panel-units"]
 import data.grafanactl.result
 import data.grafanactl.utils
 
+# Dashboard v1
 report contains violation if {
 	utils.resource_is_dashboard_v1(input)
 
@@ -19,7 +20,20 @@ report contains violation if {
 	some i
 	invalid_panels[i]
 
-	violation := result.fail(rego.metadata.chain(), sprintf("panel %d uses invalid unit \"%s\"", [invalid_panels[i].id, invalid_panels[i].fieldConfig.defaults.unit]))
+	violation := result.fail(rego.metadata.chain(), sprintf("panel %d uses invalid unit '%s'", [invalid_panels[i].id, invalid_panels[i].fieldConfig.defaults.unit]))
+}
+
+# Dashboard v2
+report contains violation if {
+	utils.resource_is_dashboard_v2(input)
+
+    panels := utils.dashboard_v2_panels(input)
+	invalid_panels := [panels[i] | not valid_units[panels[i].object.spec.vizConfig.spec.fieldConfig.defaults.unit]]
+
+	some i
+	invalid_panels[i]
+
+	violation := result.fail(rego.metadata.chain(), sprintf("panel '%s' uses invalid unit '%s'", [panels[i].id, panels[i].object.spec.vizConfig.spec.fieldConfig.defaults.unit]))
 }
 
 # See https:#github.com/grafana/grafana/blob/d0d707895333ddbfbfe4208f8fc8bf65bf0e86e6/packages/grafana-data/src/valueFormats/categories.ts

@@ -10,8 +10,18 @@ package grafanactl.rules.dashboard["uneditable-dashboard"]
 import data.grafanactl.result
 import data.grafanactl.utils
 
+# Dashboard v1
 report contains violation if {
 	utils.resource_is_dashboard_v1(input)
+
+	input.spec.editable != false
+
+	violation := result.fail(rego.metadata.chain(), "dashboard is editable")
+}
+
+# Dashboard v2
+report contains violation if {
+	utils.resource_is_dashboard_v2(input)
 
 	input.spec.editable != false
 
