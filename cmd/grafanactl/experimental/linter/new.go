@@ -104,10 +104,20 @@ package custom.grafanactl.rules.{{.ResourceType}}["{{.Name}}"]
 import data.grafanactl.result
 import data.grafanactl.utils
 
+# Dashboard v1
 report contains violation if {
-	utils.resource_is_dashboard_v1alpha1(input)
+	utils.resource_is_dashboard_v1(input)
 
-	input.spec.editable != false
+	input.spec.timezone != "utc"
+
+	violation := result.fail(rego.metadata.chain(), "details")
+}
+
+# Dashboard v2
+report contains violation if {
+	utils.resource_is_dashboard_v2(input)
+
+	input.spec.timeSettings.timezone != "utc"
 
 	violation := result.fail(rego.metadata.chain(), "details")
 }
