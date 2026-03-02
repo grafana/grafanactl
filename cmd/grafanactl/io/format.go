@@ -64,7 +64,6 @@ func (opts *Options) Codec() (format.Codec, error) {
 }
 
 func (opts *Options) Encode(dst io.Writer, value any) error {
-	//nolint:ireturn
 	codec, err := opts.Codec()
 	if err != nil {
 		return err

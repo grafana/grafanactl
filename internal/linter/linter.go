@@ -15,6 +15,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/bundle"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"github.com/open-policy-agent/opa/v1/topdown"
+	"golang.org/x/sync/errgroup"
 )
 
 type Option func(l *Linter) error
@@ -79,7 +80,7 @@ func New(opts ...Option) (*Linter, error) {
 			Decoders:    format.Codecs(),
 			StopOnError: false,
 		},
-		maxConcurrency: 10,
+		maxConcurrency: 1,
 		ruleBundles: []*bundle.Bundle{
 			&builtinBundle,
 		},
@@ -221,24 +222,34 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 		return Report{}, err
 	}
 
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(linter.maxConcurrency)
+
+	reports := make([]Report, len(inputs.AsList()))
+	for i, input := range inputs.AsList() {
+		g.Go(func() error {
+			resultSet, err := preparedQuery.Eval(ctx, rego.EvalInput(input.ToUnstructured().Object))
+			if err != nil {
+				return fmt.Errorf("could not lint %s: %w", input.SourcePath(), err)
+			}
+
+			report, err := resultSetToReport(input.SourcePath(), resultSet)
+			if err != nil {
+				return err
+			}
+
+			reports[i] = report
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return Report{}, err
+	}
+
 	finalReport := Report{}
-
-	// TODO: parallel eval?
-	for _, input := range inputs.AsList() {
-		evalArgs := []rego.EvalOption{
-			rego.EvalInput(input.ToUnstructured().Object),
-		}
-
-		resultSet, err := preparedQuery.Eval(ctx, evalArgs...)
-		if err != nil {
-			return Report{}, fmt.Errorf("could not lint %s: %w", input.SourcePath(), err)
-		}
-
-		report, err := resultSetToReport(input.SourcePath(), resultSet)
-		if err != nil {
-			return Report{}, err
-		}
-
+	for _, report := range reports {
 		finalReport.Violations = append(finalReport.Violations, report.Violations...)
 	}
 
