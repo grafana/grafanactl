@@ -33,8 +33,19 @@ func rulesCmd() *cobra.Command {
 	opts := rulesOpts{}
 
 	cmd := &cobra.Command{
-		Use:  "rules",
-		Args: cobra.NoArgs,
+		Use:   "rules",
+		Args:  cobra.NoArgs,
+		Short: "List available linter rules",
+		Long:  "List available linter rules.",
+		Example: `
+	# List built-in rules:
+
+	grafanactl experimental linter rules
+
+	# List built-in and custom rules:
+
+	grafanactl experimental linter rules -v ./custom-rules
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.validate(); err != nil {
 				return err

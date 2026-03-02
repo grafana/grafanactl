@@ -2,11 +2,13 @@ package linter
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -17,31 +19,27 @@ var (
 )
 
 type newRuleOpts struct {
-	resourceType string
-	name         string
-	output       string
+	output string
 }
 
 func (opts *newRuleOpts) setup(flags *pflag.FlagSet) {
-	flags.StringVarP(&opts.resourceType, "resource-type", "t", "", "Resource type targeted by the rule.")
-	flags.StringVarP(&opts.name, "name", "n", "", "Rule name.")
 	flags.StringVarP(&opts.output, "output", "o", "", "Output directory")
 }
 
-func (opts *newRuleOpts) Validate() error {
-	if opts.resourceType == "" {
+func (opts *newRuleOpts) Validate(args []string) error {
+	if args[0] == "" {
 		return errors.New("resource-type is required for rule")
 	}
 
-	if !resourceTypeRegex.MatchString(opts.resourceType) {
+	if !resourceTypeRegex.MatchString(args[0]) {
 		return errors.New("resource-type must be a single word, using lowercase letters only")
 	}
 
-	if opts.name == "" {
+	if args[1] == "" {
 		return errors.New("name is required for rule")
 	}
 
-	if !nameRegex.MatchString(opts.name) {
+	if !nameRegex.MatchString(args[1]) {
 		return errors.New("name must consist only of lowercase letters, numbers, underscores and dashes")
 	}
 
@@ -52,20 +50,25 @@ func newCmd() *cobra.Command {
 	opts := newRuleOpts{}
 
 	cmd := &cobra.Command{
-		Use: "new [-t resource-type] [-n name]",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := opts.Validate(); err != nil {
+		Use:   "new resource-type name",
+		Short: "Creates a new resource linter",
+		Long:  "Creates a new resource linter.",
+		Args:  cobra.ExactArgs(2),
+		Example: `
+	# Creates a new dashboard linter in the current directory:
+
+	grafanactl experimental linter new dashboard test-linter
+
+	# Creates a new dashboard linter in another directory:
+
+	grafanactl experimental linter new dashboard test-linter -o custom-rules
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(args); err != nil {
 				return err
 			}
 
-			if opts.output == "" {
-				workingDir, err := os.Getwd()
-				if err != nil {
-					opts.output = workingDir
-				}
-			}
-
-			return scaffoldCustomRule(opts)
+			return scaffoldCustomRule(cmd.OutOrStdout(), opts, args[0], args[1])
 		},
 	}
 
@@ -74,23 +77,25 @@ func newCmd() *cobra.Command {
 	return cmd
 }
 
-func scaffoldCustomRule(opts newRuleOpts) error {
-	rulesDir := filepath.Join(
-		opts.output, "rules", "custom", "grafanactl", "rules", opts.resourceType, opts.name,
+func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string, name string) error {
+	ruleDir := filepath.Join(
+		opts.output, "rules", "custom", "grafanactl", "rules", resourceType, name,
 	)
 
-	if err := os.MkdirAll(rulesDir, 0o770); err != nil {
+	if err := os.MkdirAll(ruleDir, 0o770); err != nil {
 		return err
 	}
 
-	ruleFileContent := strings.ReplaceAll(customRuleTemplate, "{{.ResourceType}}", opts.resourceType)
-	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Name}}", opts.name)
+	ruleFileContent := strings.ReplaceAll(customRuleTemplate, "{{.ResourceType}}", resourceType)
+	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Name}}", name)
 
-	ruleFileName := strings.ToLower(strings.ReplaceAll(opts.name, "-", "_")) + ".rego"
+	ruleFileName := strings.ToLower(strings.ReplaceAll(name, "-", "_")) + ".rego"
 
-	if err := os.WriteFile(filepath.Join(rulesDir, ruleFileName), []byte(ruleFileContent), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(ruleDir, ruleFileName), []byte(ruleFileContent), 0o600); err != nil {
 		return err
 	}
+
+	cmdio.Success(stdout, "Rule written in %s", ruleDir)
 
 	return nil
 }

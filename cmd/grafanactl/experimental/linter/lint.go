@@ -53,8 +53,27 @@ func lintCmd() *cobra.Command {
 	opts := lintOpts{}
 
 	cmd := &cobra.Command{
-		Use:  "lint PATH...",
-		Args: cobra.MinimumNArgs(1),
+		Use:   "lint PATH...",
+		Short: "Lint Grafana resources",
+		Long:  "Lint Grafana resources.",
+		Args:  cobra.MinimumNArgs(1),
+		Example: `
+	# Lint Grafana resources using builtin rules:
+
+	grafanactl experimental linter lint ./resources
+
+	# Lint specific files:
+
+	grafanactl experimental linter lint ./resources/file.json ./resources/other.yaml
+
+	# Display compact results:
+
+	grafanactl experimental linter lint ./resources -o compact
+
+	# Use custom rules:
+
+	grafanactl experimental linter lint --rules ./custom-rules ./resources
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.validate(args); err != nil {
 				return err

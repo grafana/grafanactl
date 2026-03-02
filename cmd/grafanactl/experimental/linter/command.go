@@ -6,7 +6,9 @@ import (
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "linter",
+		Use:   "linter",
+		Short: "Lint Grafana resources",
+		Long:  "Lint Grafana resources.",
 	}
 
 	cmd.AddCommand(lintCmd())
