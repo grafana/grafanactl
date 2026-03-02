@@ -8,6 +8,7 @@ import (
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/linter"
+	"github.com/grafana/grafanactl/internal/resources/local"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -71,6 +72,11 @@ func lint(cmd *cobra.Command, inputPaths []string, opts lintOpts) error {
 		linter.InputPaths(inputPaths),
 		linter.WithCustomRules(opts.rules),
 		linter.MaxConcurrency(opts.maxConcurrent),
+		linter.ResourceReader(&local.FSReader{
+			Decoders:           format.Codecs(),
+			MaxConcurrentReads: opts.maxConcurrent,
+			StopOnError:        false,
+		}),
 	}
 
 	if opts.debug {
@@ -87,12 +93,7 @@ func lint(cmd *cobra.Command, inputPaths []string, opts lintOpts) error {
 		return err
 	}
 
-	codec, err := opts.IO.Codec()
-	if err != nil {
-		return err
-	}
-
-	return codec.Encode(cmd.OutOrStdout(), report)
+	return opts.IO.Encode(cmd.OutOrStdout(), report)
 }
 
 type reporterCodec struct {

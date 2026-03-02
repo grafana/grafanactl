@@ -53,8 +53,20 @@ func MaxConcurrency(maxConcurrency int) Option {
 	}
 }
 
+func ResourceReader(reader resourceReader) Option {
+	return func(l *Linter) error {
+		l.resourceReader = reader
+		return nil
+	}
+}
+
+type resourceReader interface {
+	Read(ctx context.Context, dst *resources.Resources, filters resources.Filters, paths []string) error
+}
+
 type Linter struct {
 	debugStream      io.Writer
+	resourceReader   resourceReader
 	inputPaths       []string
 	ruleBundles      []*bundle.Bundle
 	customRulesPaths []string
@@ -63,6 +75,10 @@ type Linter struct {
 
 func New(opts ...Option) (*Linter, error) {
 	linter := &Linter{
+		resourceReader: &local.FSReader{
+			Decoders:    format.Codecs(),
+			StopOnError: false,
+		},
 		maxConcurrency: 10,
 		ruleBundles: []*bundle.Bundle{
 			&builtinBundle,
@@ -78,68 +94,93 @@ func New(opts ...Option) (*Linter, error) {
 	return linter, nil
 }
 
-func (linter *Linter) Rules() ([]Rule, error) {
+func (linter *Linter) Rules(ctx context.Context) ([]Rule, error) {
 	var rules []Rule
 
-	for _, ruleBundle := range linter.ruleBundles {
-		builtin := false
-		if metadataName, ok := ruleBundle.Manifest.Metadata["name"].(string); ok {
-			builtin = metadataName == "grafanactl"
+	preparedQuery, err := linter.prepare(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	updateFromAnnotations := func(r *Rule, annotations []*ast.Annotations) {
+		if len(annotations) == 0 {
+			return
 		}
 
-		for _, module := range ruleBundle.Modules {
-			parts := unquotedPath(module.Parsed.Package.Path)
+		annotation := annotations[0]
+		r.Description = annotation.Description
 
-			// 0   1     2        3
-			// pkg.rules.category.rule
+		if severity, ok := annotation.Custom["severity"]; ok {
+			//nolint:forcetypeassert
+			r.Severity = severity.(string)
+		}
 
-			if len(parts) != 4 {
-				continue
-			}
-
-			if parts[1] != "rules" {
-				continue
-			}
-
-			rule := Rule{
-				Category: parts[2],
-				Name:     parts[3],
-				Builtin:  builtin,
-				Severity: "error",
-			}
-
-			if len(module.Parsed.Annotations) != 0 {
-				annotation := module.Parsed.Annotations[0]
-				rule.Description = annotation.Description
-
-				if severity, ok := annotation.Custom["severity"]; ok {
-					//nolint:forcetypeassert
-					rule.Severity = severity.(string)
-				}
-
-				for _, related := range annotation.RelatedResources {
-					rule.RelatedResources = append(rule.RelatedResources, RelatedResource{
-						Reference:   related.Ref.String(),
-						Description: related.Description,
-					})
-				}
-			}
-
-			rules = append(rules, rule)
+		for _, related := range annotation.RelatedResources {
+			r.RelatedResources = append(r.RelatedResources, RelatedResource{
+				Reference:   related.Ref.String(),
+				Description: related.Description,
+			})
 		}
 	}
 
-	// TODO: rules not loaded via bundles (custom rules are currently loaded from the filesystem)
+	// Builtin rules
+	for _, module := range preparedQuery.Modules() {
+		parts := unquotedPath(module.Package.Path)
+
+		// 0   1     2        3
+		// pkg.rules.category.rule
+
+		if len(parts) != 4 {
+			continue
+		}
+
+		if parts[0] != "grafanactl" || parts[1] != "rules" {
+			continue
+		}
+
+		rule := Rule{
+			Category: parts[2],
+			Name:     parts[3],
+			Builtin:  true,
+			Severity: "error",
+		}
+
+		updateFromAnnotations(&rule, module.Annotations)
+
+		rules = append(rules, rule)
+	}
+
+	// custom rules
+	for _, module := range preparedQuery.Modules() {
+		parts := unquotedPath(module.Package.Path)
+
+		// 0      1   2     3        4
+		// custom.pkg.rules.category.rule
+
+		if len(parts) != 5 {
+			continue
+		}
+
+		if parts[0] != "custom" || parts[2] != "rules" {
+			continue
+		}
+
+		rule := Rule{
+			Category: parts[3],
+			Name:     parts[4],
+			Builtin:  false,
+			Severity: "error",
+		}
+
+		updateFromAnnotations(&rule, module.Annotations)
+
+		rules = append(rules, rule)
+	}
 
 	return rules, nil
 }
 
-func (linter *Linter) Lint(ctx context.Context) (Report, error) {
-	inputs, err := linter.parseInputs(ctx)
-	if err != nil {
-		return Report{}, err
-	}
-
+func (linter *Linter) prepare(ctx context.Context) (rego.PreparedEvalQuery, error) {
 	regoOpts := []func(*rego.Rego){
 		// Matches the report-generation statement in `./bundle/grafanactl/main/main.rego`
 		rego.Query("lint := data.grafanactl.main.lint"),
@@ -166,7 +207,16 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 		regoOpts = append(regoOpts, rego.ParsedBundle(bundleName, ruleBundle))
 	}
 
-	preparedQuery, err := rego.New(regoOpts...).PrepareForEval(ctx)
+	return rego.New(regoOpts...).PrepareForEval(ctx)
+}
+
+func (linter *Linter) Lint(ctx context.Context) (Report, error) {
+	preparedQuery, err := linter.prepare(ctx)
+	if err != nil {
+		return Report{}, err
+	}
+
+	inputs, err := linter.parseInputs(ctx)
 	if err != nil {
 		return Report{}, err
 	}
@@ -205,14 +255,9 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 func (linter *Linter) parseInputs(ctx context.Context) (*resources.Resources, error) {
 	inputs := resources.NewResources()
 	filters := resources.Filters{}
-	reader := local.FSReader{
-		Decoders:           format.Codecs(),
-		MaxConcurrentReads: linter.maxConcurrency,
-		StopOnError:        false,
-	}
 
 	for _, inputPath := range linter.inputPaths {
-		if err := reader.Read(ctx, inputs, filters, []string{inputPath}); err != nil {
+		if err := linter.resourceReader.Read(ctx, inputs, filters, []string{inputPath}); err != nil {
 			return nil, err
 		}
 	}

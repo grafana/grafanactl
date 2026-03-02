@@ -62,15 +62,10 @@ func listRules(cmd *cobra.Command, inputPaths []string, opts rulesOpts) error {
 		return err
 	}
 
-	rules, err := engine.Rules()
+	rules, err := engine.Rules(cmd.Context())
 	if err != nil {
 		return err
 	}
 
-	codec, err := opts.IO.Codec()
-	if err != nil {
-		return err
-	}
-
-	return codec.Encode(cmd.OutOrStdout(), rules)
+	return opts.IO.Encode(cmd.OutOrStdout(), rules)
 }
