@@ -6,6 +6,7 @@
 /resources
 .idea
 .qodo
+.claude/settings.local.json
 
 # Integration testing artifacts
 test-dashboard.yaml

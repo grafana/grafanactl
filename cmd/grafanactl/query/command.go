@@ -9,6 +9,7 @@ import (
 	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	cmdio "github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/format"
+	"github.com/grafana/grafanactl/internal/query/loki"
 	"github.com/grafana/grafanactl/internal/query/prometheus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -62,14 +63,20 @@ func Command() *cobra.Command {
 	# First, find your datasource UID
 	grafanactl datasources list
 
-	# Instant query (use the UID from datasources list, not the name)
+	# Prometheus instant query (use the UID from datasources list, not the name)
 	grafanactl query -d <datasource-uid> -e 'up{job="grafana"}'
 
-	# Range query
-	grafanactl query -d <datasource-uid> -e 'rate(http_requests_total[5m])' --start now-1h --end now
-
-	# Range query with step
+	# Prometheus range query
 	grafanactl query -d <datasource-uid> -e 'rate(http_requests_total[5m])' --start now-1h --end now --step 1m
+
+	# Loki log query (instant)
+	grafanactl query -d <loki-uid> -t loki -e '{job="varlogs"}'
+
+	# Loki log query (range)
+	grafanactl query -d <loki-uid> -t loki -e '{name="private-datasource-connect"}' --start now-1h --end now
+
+	# Loki metric query (log rate)
+	grafanactl query -d <loki-uid> -t loki -e 'sum(rate({job="varlogs"}[5m]))' --start now-1h --end now --step 1m
 
 	# Output as JSON
 	grafanactl query -d <datasource-uid> -e 'up' -o json`,
@@ -93,19 +100,14 @@ func Command() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				datasourceUID = fullCfg.GetCurrentContext().DefaultPrometheusDatasource
+				if opts.Type == "loki" {
+					datasourceUID = fullCfg.GetCurrentContext().DefaultLokiDatasource
+				} else {
+					datasourceUID = fullCfg.GetCurrentContext().DefaultPrometheusDatasource
+				}
 			}
 			if datasourceUID == "" {
-				return errors.New("datasource UID is required: use -d flag or set default-prometheus-datasource in config")
-			}
-
-			if opts.Type != "prometheus" {
-				return fmt.Errorf("datasource type %q is not supported yet (only prometheus is currently supported)", opts.Type)
-			}
-
-			client, err := prometheus.NewClient(cfg)
-			if err != nil {
-				return fmt.Errorf("failed to create client: %w", err)
+				return fmt.Errorf("datasource UID is required: use -d flag or set default-%s-datasource in config", opts.Type)
 			}
 
 			now := time.Now()
@@ -124,28 +126,62 @@ func Command() *cobra.Command {
 				return fmt.Errorf("invalid step: %w", err)
 			}
 
-			req := prometheus.QueryRequest{
-				Query: opts.Query,
-				Start: start,
-				End:   end,
-				Step:  step,
-			}
-
-			resp, err := client.Query(ctx, datasourceUID, req)
-			if err != nil {
-				return fmt.Errorf("query failed: %w", err)
-			}
-
 			codec, err := opts.IO.Codec()
 			if err != nil {
 				return err
 			}
 
-			if opts.IO.OutputFormat == "table" {
-				return prometheus.FormatTable(cmd.OutOrStdout(), resp)
-			}
+			switch opts.Type {
+			case "prometheus":
+				client, err := prometheus.NewClient(cfg)
+				if err != nil {
+					return fmt.Errorf("failed to create client: %w", err)
+				}
 
-			return codec.Encode(cmd.OutOrStdout(), resp)
+				req := prometheus.QueryRequest{
+					Query: opts.Query,
+					Start: start,
+					End:   end,
+					Step:  step,
+				}
+
+				resp, err := client.Query(ctx, datasourceUID, req)
+				if err != nil {
+					return fmt.Errorf("query failed: %w", err)
+				}
+
+				if opts.IO.OutputFormat == "table" {
+					return prometheus.FormatTable(cmd.OutOrStdout(), resp)
+				}
+				return codec.Encode(cmd.OutOrStdout(), resp)
+
+			case "loki":
+				client, err := loki.NewClient(cfg)
+				if err != nil {
+					return fmt.Errorf("failed to create client: %w", err)
+				}
+
+				req := loki.QueryRequest{
+					Query: opts.Query,
+					Start: start,
+					End:   end,
+					Step:  step,
+					Limit: 1000, // Default limit
+				}
+
+				resp, err := client.Query(ctx, datasourceUID, req)
+				if err != nil {
+					return fmt.Errorf("query failed: %w", err)
+				}
+
+				if opts.IO.OutputFormat == "table" {
+					return loki.FormatQueryTable(cmd.OutOrStdout(), resp)
+				}
+				return codec.Encode(cmd.OutOrStdout(), resp)
+
+			default:
+				return fmt.Errorf("datasource type %q is not supported (supported: prometheus, loki)", opts.Type)
+			}
 		},
 	}
 

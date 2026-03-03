@@ -11,15 +11,15 @@ import (
 	"github.com/NimbleMarkets/ntcharts/canvas/runes"
 	"github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 )
 
 // ChartOptions configures chart rendering.
 type ChartOptions struct {
-	Width  int
-	Height int
-	Title  string
+	Width    int
+	Height   int
+	Title    string
+	TextOnly bool
 }
 
 // DefaultChartOptions returns default chart options.
@@ -48,7 +48,7 @@ func RenderBarChart(w io.Writer, data *ChartData, opts ChartOptions) error {
 		return nil
 	}
 
-	if f, ok := w.(*os.File); ok && !isatty.IsTerminal(f.Fd()) {
+	if opts.TextOnly {
 		return renderTextFallback(w, data)
 	}
 
@@ -104,8 +104,7 @@ func RenderLineChart(w io.Writer, data *ChartData, opts ChartOptions) error {
 		return nil
 	}
 
-	// Check if we're outputting to a TTY
-	if f, ok := w.(*os.File); ok && !isatty.IsTerminal(f.Fd()) {
+	if opts.TextOnly {
 		return renderTextFallback(w, data)
 	}
 

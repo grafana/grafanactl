@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grafana/grafanactl/internal/query/loki"
 	"github.com/grafana/grafanactl/internal/query/prometheus"
 )
 
@@ -112,4 +113,54 @@ func formatMetricName(labels map[string]string) string {
 	}
 
 	return "{" + strings.Join(otherLabels, ", ") + "}"
+}
+
+// FromLokiResponse converts a Loki query response to ChartData.
+func FromLokiResponse(resp *loki.QueryResponse) (*ChartData, error) {
+	if resp == nil || len(resp.Data.Result) == 0 {
+		return &ChartData{}, nil
+	}
+
+	data := &ChartData{
+		Series: make([]Series, 0, len(resp.Data.Result)),
+	}
+
+	for _, stream := range resp.Data.Result {
+		series := Series{
+			Name:   formatMetricName(stream.Stream),
+			Labels: stream.Stream,
+			Points: make([]Point, 0),
+		}
+
+		for _, vals := range stream.Values {
+			if len(vals) >= 2 {
+				t, v, err := parseLokiPoint(vals[0], vals[1])
+				if err != nil {
+					continue
+				}
+				series.Points = append(series.Points, Point{Time: t, Value: v})
+			}
+		}
+
+		if len(series.Points) > 0 {
+			data.Series = append(data.Series, series)
+		}
+	}
+
+	return data, nil
+}
+
+func parseLokiPoint(tsVal, valVal string) (time.Time, float64, error) {
+	nanos, err := strconv.ParseInt(tsVal, 10, 64)
+	if err != nil {
+		return time.Time{}, 0, fmt.Errorf("failed to parse timestamp: %w", err)
+	}
+	ts := time.Unix(0, nanos)
+
+	value, err := strconv.ParseFloat(valVal, 64)
+	if err != nil {
+		return time.Time{}, 0, fmt.Errorf("failed to parse value: %w", err)
+	}
+
+	return ts, value, nil
 }

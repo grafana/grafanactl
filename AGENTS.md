@@ -108,14 +108,19 @@ grafanactl follows the Cobra command pattern with two main command groups:
    - `datasources prometheus labels`: List labels or get label values
    - `datasources prometheus metadata`: Get metric metadata
    - `datasources prometheus targets`: List scrape targets
+   - `datasources loki labels`: List labels or get label values from Loki
+   - `datasources loki series`: List log streams using LogQL selectors
 
 4. **query**: Execute queries against Grafana datasources
    - Supports `-d` (datasource UID), `-e` (query expression), `-t` (datasource type)
+   - Datasource types: `prometheus` (default), `loki`
    - Supports `--start`, `--end`, `--step` for range queries
    - Uses the unified query API (query.grafana.app)
+   - PromQL for Prometheus datasources, LogQL for Loki datasources
 
 5. **graph**: Render ASCII charts from query results
-   - Reads Prometheus query JSON output and renders terminal charts
+   - Reads query JSON output and renders terminal charts
+   - Works with both Prometheus and Loki metric queries
    - Default: line chart; use `--type bar` for horizontal bar chart
 
 ### Datasource API Usage
@@ -135,16 +140,50 @@ grafanactl datasources list
 
 Then use the UID in queries:
 ```bash
-# Correct: use UID
+# Prometheus query - correct: use UID
 grafanactl query -d abc123def -e 'up'
+
+# Loki query - specify type and use UID
+grafanactl query -d xyz789ghi -t loki -e '{job="varlogs"}'
 
 # Wrong: using name won't work
 grafanactl query -d "My Prometheus" -e 'up'  # This will fail
 ```
 
-You can also set a default datasource UID in your context configuration:
+**Query Examples:**
+
+Prometheus (PromQL):
 ```bash
+# Instant query
+grafanactl query -d <prom-uid> -e 'up{job="grafana"}'
+
+# Range query with rate
+grafanactl query -d <prom-uid> -e 'rate(http_requests_total[5m])' --start now-1h --end now --step 1m
+```
+
+Loki (LogQL):
+```bash
+# Log stream query
+grafanactl query -d <loki-uid> -t loki -e '{name="my-app", cluster="prod"}'
+
+# Log rate (logs per second)
+grafanactl query -d <loki-uid> -t loki -e 'sum(rate({name="my-app"}[5m]))' --start now-1h --end now --step 1m
+
+# Count over time
+grafanactl query -d <loki-uid> -t loki -e 'count_over_time({job="varlogs"}[1m])' --start now-30m --end now --step 1m
+```
+
+You can also set default datasource UIDs in your context configuration:
+```bash
+# Set default Prometheus datasource
 grafanactl config set contexts.local.default-prometheus-datasource abc123def
+
+# Set default Loki datasource
+grafanactl config set contexts.local.default-loki-datasource xyz789ghi
+
+# Now you can omit the -d flag for the default datasource type
+grafanactl query -e 'up'  # Uses default Prometheus datasource
+grafanactl query -t loki -e '{job="varlogs"}'  # Uses default Loki datasource
 ```
 
 ### Core Packages
@@ -153,7 +192,7 @@ grafanactl config set contexts.local.default-prometheus-datasource abc123def
 - `root/`: Root command setup with logging and flags
 - `config/`: Configuration management commands
 - `datasources/`: Datasource listing and details commands
-- `query/`: Query execution commands (Prometheus)
+- `query/`: Query execution commands (Prometheus and Loki)
 - `graph/`: ASCII chart rendering command
 - `resources/`: Resource manipulation commands
 - `fail/`: Error handling and detailed error messages
@@ -212,9 +251,17 @@ grafanactl config set contexts.local.default-prometheus-datasource abc123def
 - Labels and metadata retrieval
 - Response formatting (table output)
 
+**internal/query/loki/** - Loki query client
+- HTTP client for datasource proxy API (`loki.datasource.grafana.app`)
+- Query execution (instant and range queries) with LogQL
+- Labels and label values retrieval
+- Log stream series discovery with LogQL selectors
+- Support for both log streams and metric queries (rate, count_over_time, etc.)
+- Response formatting (table output)
+
 **internal/graph/** - ASCII chart rendering
 - Uses ntcharts library for braille-character line charts and horizontal bar charts
-- Converts Prometheus query responses to chart data
+- Converts Prometheus and Loki metric query responses to chart data
 - Grafana color palette for series
 - TTY detection with text fallback
 
