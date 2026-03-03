@@ -49,7 +49,7 @@ func (c *Client) Query(ctx context.Context, datasourceUID string, req QueryReque
 		from = strconv.FormatInt(req.Start.UnixMilli(), 10)
 		to = strconv.FormatInt(req.End.UnixMilli(), 10)
 		if req.Step > 0 {
-			query["intervalMs"] = int64(req.Step.Milliseconds())
+			query["intervalMs"] = req.Step.Milliseconds()
 		}
 	} else {
 		from = "now-1m"
@@ -105,7 +105,7 @@ func (c *Client) Query(ctx context.Context, datasourceUID string, req QueryReque
 		}
 	}
 
-	return convertGrafanaResponse(&grafanaResp)
+	return convertGrafanaResponse(&grafanaResp), nil
 }
 
 func (c *Client) Labels(ctx context.Context, datasourceUID string) (*LabelsResponse, error) {
@@ -229,7 +229,7 @@ func (c *Client) buildSeriesPath(datasourceUID string) string {
 		c.restConfig.Namespace, datasourceUID)
 }
 
-func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, error) {
+func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) *QueryResponse {
 	result := &QueryResponse{
 		Status: "success",
 		Data: QueryResultData{
@@ -240,7 +240,7 @@ func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, 
 
 	grafanaResult, ok := grafanaResp.Results["A"]
 	if !ok {
-		return result, nil
+		return result
 	}
 
 	for _, frame := range grafanaResult.Frames {
@@ -248,16 +248,17 @@ func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, 
 			continue
 		}
 
-		var timeIdx, valueIdx int = -1, -1
+		var timeIdx, valueIdx = -1, -1
 		var labels map[string]string
 
 		for i, field := range frame.Schema.Fields {
-			if field.Type == "time" {
+			switch field.Type {
+			case "time":
 				timeIdx = i
-			} else if field.Type == "string" || field.Type == "number" {
+			case "string", "number":
 				valueIdx = i
 			}
-			if field.Labels != nil && len(field.Labels) > 0 {
+			if len(field.Labels) > 0 {
 				labels = field.Labels
 			}
 		}
@@ -287,7 +288,7 @@ func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, 
 		result.Data.Result = append(result.Data.Result, entry)
 	}
 
-	return result, nil
+	return result
 }
 
 func formatTimestamp(v any) string {

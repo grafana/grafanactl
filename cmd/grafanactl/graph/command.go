@@ -97,36 +97,9 @@ Input should be in Prometheus or Loki query response format (the JSON output fro
 				return fmt.Errorf("failed to parse JSON: %w", err)
 			}
 
-			var chartData *graph.ChartData
-			if dataMap, ok := intermediate["data"].(map[string]any); ok {
-				resultType, _ := dataMap["resultType"].(string)
-
-				switch resultType {
-				case "streams":
-					// Loki response
-					var resp loki.QueryResponse
-					if err := json.Unmarshal(data, &resp); err != nil {
-						return fmt.Errorf("failed to parse Loki response: %w", err)
-					}
-					chartData, err = graph.FromLokiResponse(&resp)
-					if err != nil {
-						return fmt.Errorf("failed to convert Loki data: %w", err)
-					}
-				case "matrix", "vector":
-					// Prometheus response
-					var resp prometheus.QueryResponse
-					if err := json.Unmarshal(data, &resp); err != nil {
-						return fmt.Errorf("failed to parse Prometheus response: %w", err)
-					}
-					chartData, err = graph.FromPrometheusResponse(&resp)
-					if err != nil {
-						return fmt.Errorf("failed to convert Prometheus data: %w", err)
-					}
-				default:
-					return fmt.Errorf("unsupported resultType: %s (expected 'streams', 'matrix', or 'vector')", resultType)
-				}
-			} else {
-				return fmt.Errorf("invalid query response format: missing data.resultType field")
+			chartData, err := parseQueryResponse(data, intermediate)
+			if err != nil {
+				return err
 			}
 
 			// Get chart options
@@ -152,4 +125,40 @@ Input should be in Prometheus or Loki query response format (the JSON output fro
 
 	opts.setup(cmd.Flags())
 	return cmd
+}
+
+func parseQueryResponse(data []byte, intermediate map[string]any) (*graph.ChartData, error) {
+	dataMap, ok := intermediate["data"].(map[string]any)
+	if !ok {
+		return nil, errors.New("invalid query response format: missing data.resultType field")
+	}
+
+	resultType, _ := dataMap["resultType"].(string)
+
+	switch resultType {
+	case "streams":
+		// Loki response
+		var resp loki.QueryResponse
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return nil, fmt.Errorf("failed to parse Loki response: %w", err)
+		}
+		chartData, err := graph.FromLokiResponse(&resp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert Loki data: %w", err)
+		}
+		return chartData, nil
+	case "matrix", "vector":
+		// Prometheus response
+		var resp prometheus.QueryResponse
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return nil, fmt.Errorf("failed to parse Prometheus response: %w", err)
+		}
+		chartData, err := graph.FromPrometheusResponse(&resp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert Prometheus data: %w", err)
+		}
+		return chartData, nil
+	default:
+		return nil, fmt.Errorf("unsupported resultType: %s (expected 'streams', 'matrix', or 'vector')", resultType)
+	}
 }

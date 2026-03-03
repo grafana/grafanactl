@@ -62,16 +62,16 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 
 			ds := resp.Payload
 			info := &datasourceDetail{
-				UID:        ds.UID,
-				Name:       ds.Name,
-				Type:       ds.Type,
-				URL:        ds.URL,
-				Default:    ds.IsDefault,
-				ReadOnly:   ds.ReadOnly,
-				Database:   ds.Database,
-				BasicAuth:  ds.BasicAuth,
-				WithCreds:  ds.WithCredentials,
-				JSONData:   ds.JSONData,
+				UID:       ds.UID,
+				Name:      ds.Name,
+				Type:      ds.Type,
+				URL:       ds.URL,
+				Default:   ds.IsDefault,
+				ReadOnly:  ds.ReadOnly,
+				Database:  ds.Database,
+				BasicAuth: ds.BasicAuth,
+				WithCreds: ds.WithCredentials,
+				JSONData:  ds.JSONData,
 			}
 
 			codec, err := opts.IO.Codec()

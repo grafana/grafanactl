@@ -15,8 +15,10 @@ import (
 )
 
 const (
+	// ResourceManagerKind is the manager kind used for grafanactl.
 	// TODO: change once we have a proper manager kind for grafanactl.
 	ResourceManagerKind = utils.ManagerKindKubectl
+	// AnnotationSavedFromUI is the annotation key for resources saved from the UI.
 	// TODO: move this to grafana/grafana.
 	AnnotationSavedFromUI = "grafana.app/saved-from-ui"
 )

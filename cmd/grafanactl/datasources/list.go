@@ -139,7 +139,7 @@ func (c *datasourceTableCodec) Format() format.Format {
 func (c *datasourceTableCodec) Encode(w io.Writer, data any) error {
 	datasources, ok := data.([]*datasourceInfo)
 	if !ok {
-		return fmt.Errorf("invalid data type for table codec")
+		return errors.New("invalid data type for table codec")
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)

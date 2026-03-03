@@ -47,6 +47,7 @@ func (opts *labelsOpts) Validate() error {
 	return opts.IO.Validate()
 }
 
+//nolint:dupl
 func labelsCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &labelsOpts{}
 
@@ -136,7 +137,7 @@ func (c *labelsTableCodec) Format() format.Format {
 func (c *labelsTableCodec) Encode(w io.Writer, data any) error {
 	resp, ok := data.(*prometheus.LabelsResponse)
 	if !ok {
-		return fmt.Errorf("invalid data type for labels table codec")
+		return errors.New("invalid data type for labels table codec")
 	}
 
 	return prometheus.FormatLabelsTable(w, resp)
@@ -165,6 +166,7 @@ func (opts *metadataOpts) Validate() error {
 	return opts.IO.Validate()
 }
 
+//nolint:dupl
 func metadataCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &metadataOpts{}
 
@@ -241,7 +243,7 @@ func (c *metadataTableCodec) Format() format.Format {
 func (c *metadataTableCodec) Encode(w io.Writer, data any) error {
 	resp, ok := data.(*prometheus.MetadataResponse)
 	if !ok {
-		return fmt.Errorf("invalid data type for metadata table codec")
+		return errors.New("invalid data type for metadata table codec")
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
@@ -282,6 +284,7 @@ func (opts *targetsOpts) Validate() error {
 	return opts.IO.Validate()
 }
 
+//nolint:dupl
 func targetsCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &targetsOpts{}
 
@@ -361,7 +364,7 @@ func (c *targetsTableCodec) Format() format.Format {
 func (c *targetsTableCodec) Encode(w io.Writer, data any) error {
 	resp, ok := data.(*prometheus.TargetsResponse)
 	if !ok {
-		return fmt.Errorf("invalid data type for targets table codec")
+		return errors.New("invalid data type for targets table codec")
 	}
 
 	return prometheus.FormatTargetsTable(w, resp)

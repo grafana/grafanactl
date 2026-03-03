@@ -26,6 +26,7 @@ func NewFoldersProxy(resources *resources.Resources) *FoldersProxy {
 	}
 }
 
+// ResourceType returns the resource descriptor for folders.
 // FIXME: resources stuff.
 func (c *FoldersProxy) ResourceType() resources.Descriptor {
 	return resources.Descriptor{

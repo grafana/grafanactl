@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/grafana/grafanactl/internal/config"
 	"k8s.io/client-go/rest"
@@ -55,7 +54,7 @@ func (c *Client) Query(ctx context.Context, datasourceUID string, req QueryReque
 		from = strconv.FormatInt(req.Start.UnixMilli(), 10)
 		to = strconv.FormatInt(req.End.UnixMilli(), 10)
 		if req.Step > 0 {
-			query["intervalMs"] = int64(req.Step.Milliseconds())
+			query["intervalMs"] = req.Step.Milliseconds()
 		}
 	} else {
 		// For instant queries, use a small time window
@@ -112,7 +111,7 @@ func (c *Client) Query(ctx context.Context, datasourceUID string, req QueryReque
 	}
 
 	// Convert to Prometheus-style response
-	return convertGrafanaResponse(&grafanaResp)
+	return convertGrafanaResponse(&grafanaResp), nil
 }
 
 // Labels returns all label names.
@@ -180,6 +179,8 @@ func (c *Client) LabelValues(ctx context.Context, datasourceUID, labelName strin
 }
 
 // Metadata returns metric metadata.
+//
+//nolint:dupl
 func (c *Client) Metadata(ctx context.Context, datasourceUID string, metric string) (*MetadataResponse, error) {
 	apiPath := c.buildMetadataPath(datasourceUID)
 
@@ -218,6 +219,8 @@ func (c *Client) Metadata(ctx context.Context, datasourceUID string, metric stri
 }
 
 // Targets returns scrape targets.
+//
+//nolint:dupl
 func (c *Client) Targets(ctx context.Context, datasourceUID string, state string) (*TargetsResponse, error) {
 	apiPath := c.buildTargetsPath(datasourceUID)
 
@@ -278,8 +281,4 @@ func (c *Client) buildMetadataPath(datasourceUID string) string {
 func (c *Client) buildTargetsPath(datasourceUID string) string {
 	return fmt.Sprintf("/apis/prometheus.datasource.grafana.app/v0alpha1/namespaces/%s/datasources/%s/resource/api/v1/targets",
 		c.restConfig.Namespace, datasourceUID)
-}
-
-func formatTime(t time.Time) string {
-	return strconv.FormatFloat(float64(t.Unix())+float64(t.Nanosecond())/1e9, 'f', 3, 64)
 }

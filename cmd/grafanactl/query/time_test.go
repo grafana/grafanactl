@@ -1,9 +1,10 @@
-package query
+package query_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/grafana/grafanactl/cmd/grafanactl/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +67,7 @@ func TestParseTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseTime(tt.input, now)
+			result, err := query.ParseTime(tt.input, now)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -118,7 +119,7 @@ func TestParseDuration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseDuration(tt.input)
+			result, err := query.ParseDuration(tt.input)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

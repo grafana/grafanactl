@@ -47,8 +47,8 @@ type LabelsResponse struct {
 
 // MetadataResponse represents the response from a metadata query.
 type MetadataResponse struct {
-	Status string                       `json:"status"`
-	Data   map[string][]MetadataEntry   `json:"data"`
+	Status string                     `json:"status"`
+	Data   map[string][]MetadataEntry `json:"data"`
 }
 
 // MetadataEntry represents metadata for a single metric.
@@ -98,8 +98,8 @@ type GrafanaResult struct {
 
 // DataFrame represents a Grafana data frame.
 type DataFrame struct {
-	Schema DataFrameSchema `json:"schema,omitempty"`
-	Data   DataFrameData   `json:"data,omitempty"`
+	Schema DataFrameSchema `json:"schema"`
+	Data   DataFrameData   `json:"data"`
 }
 
 // DataFrameSchema describes the structure of a data frame.
@@ -121,7 +121,7 @@ type DataFrameData struct {
 }
 
 // convertGrafanaResponse converts a Grafana query response to the Prometheus-style format.
-func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, error) {
+func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) *QueryResponse {
 	result := &QueryResponse{
 		Status: "success",
 		Data: ResultData{
@@ -133,7 +133,7 @@ func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, 
 	// Get the result for refId "A"
 	grafanaResult, ok := grafanaResp.Results["A"]
 	if !ok {
-		return result, nil
+		return result
 	}
 
 	// Process each frame
@@ -143,7 +143,7 @@ func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, 
 		}
 
 		// Find the time field and value field
-		var timeIdx, valueIdx int = -1, -1
+		var timeIdx, valueIdx = -1, -1
 		var labels map[string]string
 
 		for i, field := range frame.Schema.Fields {
@@ -189,7 +189,7 @@ func convertGrafanaResponse(grafanaResp *GrafanaQueryResponse) (*QueryResponse, 
 		result.Data.Result = append(result.Data.Result, sample)
 	}
 
-	return result, nil
+	return result
 }
 
 func toFloat64(v any) float64 {

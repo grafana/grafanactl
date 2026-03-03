@@ -20,10 +20,10 @@ func (r QueryRequest) IsRange() bool {
 
 // QueryResponse represents the response from a Loki query.
 type QueryResponse struct {
-	Status    string           `json:"status"`
-	Data      QueryResultData  `json:"data"`
-	ErrorType string           `json:"errorType,omitempty"`
-	Error     string           `json:"error,omitempty"`
+	Status    string          `json:"status"`
+	Data      QueryResultData `json:"data"`
+	ErrorType string          `json:"errorType,omitempty"`
+	Error     string          `json:"error,omitempty"`
 }
 
 // QueryResultData holds the query result data.
@@ -41,7 +41,7 @@ type StreamEntry struct {
 
 // QueryStats contains statistics about the query execution.
 type QueryStats struct {
-	Summary QuerySummary `json:"summary,omitempty"`
+	Summary QuerySummary `json:"summary"`
 }
 
 // QuerySummary contains summary statistics.
@@ -53,13 +53,13 @@ type QuerySummary struct {
 	ExecTime                float64 `json:"execTime,omitempty"`
 }
 
-// LabelsResponse represents the response from the Loki labels API
+// LabelsResponse represents the response from the Loki labels API.
 type LabelsResponse struct {
 	Status string   `json:"status"`
 	Data   []string `json:"data"`
 }
 
-// SeriesResponse represents the response from the Loki series API
+// SeriesResponse represents the response from the Loki series API.
 type SeriesResponse struct {
 	Status string              `json:"status"`
 	Data   []map[string]string `json:"data"`
@@ -80,8 +80,8 @@ type GrafanaResult struct {
 
 // DataFrame represents a Grafana data frame.
 type DataFrame struct {
-	Schema DataFrameSchema `json:"schema,omitempty"`
-	Data   DataFrameData   `json:"data,omitempty"`
+	Schema DataFrameSchema `json:"schema"`
+	Data   DataFrameData   `json:"data"`
 }
 
 // DataFrameSchema describes the structure of a data frame.

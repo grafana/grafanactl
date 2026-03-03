@@ -200,7 +200,7 @@ func (c *queryTableCodec) Format() format.Format {
 func (c *queryTableCodec) Encode(w io.Writer, data any) error {
 	resp, ok := data.(*prometheus.QueryResponse)
 	if !ok {
-		return fmt.Errorf("invalid data type for query table codec")
+		return errors.New("invalid data type for query table codec")
 	}
 
 	return prometheus.FormatTable(w, resp)

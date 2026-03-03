@@ -11,9 +11,9 @@ import (
 var relativeTimeRegex = regexp.MustCompile(`^now(?:([+-])(\d+)([smhdwMy]))?$`)
 
 // ParseTime parses a time string that can be either:
-// - RFC3339 format (e.g., "2024-01-15T10:30:00Z")
-// - Unix timestamp (e.g., "1705315800")
-// - Relative time (e.g., "now", "now-1h", "now-30m", "now-7d")
+// - RFC3339 format (e.g., "2024-01-15T10:30:00Z").
+// - Unix timestamp (e.g., "1705315800").
+// - Relative time (e.g., "now", "now-1h", "now-30m", "now-7d").
 func ParseTime(s string, now time.Time) (time.Time, error) {
 	if s == "" {
 		return time.Time{}, nil
@@ -89,8 +89,8 @@ func parseRelativeTime(s string, now time.Time) (time.Time, error) {
 }
 
 // ParseDuration parses a duration string that can be:
-// - Go duration (e.g., "1h30m", "5m")
-// - Prometheus-style duration (e.g., "1h", "30m", "5s")
+// - Go duration (e.g., "1h30m", "5m").
+// - Prometheus-style duration (e.g., "1h", "30m", "5s").
 func ParseDuration(s string) (time.Duration, error) {
 	if s == "" {
 		return 0, nil

@@ -45,6 +45,7 @@ func (opts *lokiLabelsOpts) Validate() error {
 	return opts.IO.Validate()
 }
 
+//nolint:dupl
 func lokiLabelsCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &lokiLabelsOpts{}
 
@@ -133,7 +134,7 @@ func (c *lokiLabelsTableCodec) Format() format.Format {
 func (c *lokiLabelsTableCodec) Encode(w io.Writer, data any) error {
 	resp, ok := data.(*loki.LabelsResponse)
 	if !ok {
-		return fmt.Errorf("invalid data type for loki labels table codec")
+		return errors.New("invalid data type for loki labels table codec")
 	}
 
 	return loki.FormatLabelsTable(w, resp)
@@ -168,6 +169,7 @@ func (opts *seriesOpts) Validate() error {
 	return nil
 }
 
+//nolint:dupl
 func seriesCmd(configOpts *cmdconfig.Options) *cobra.Command {
 	opts := &seriesOpts{}
 
@@ -247,7 +249,7 @@ func (c *seriesTableCodec) Format() format.Format {
 func (c *seriesTableCodec) Encode(w io.Writer, data any) error {
 	resp, ok := data.(*loki.SeriesResponse)
 	if !ok {
-		return fmt.Errorf("invalid data type for series table codec")
+		return errors.New("invalid data type for series table codec")
 	}
 
 	return loki.FormatSeriesTable(w, resp)

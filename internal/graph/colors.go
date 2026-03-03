@@ -2,7 +2,9 @@ package graph
 
 import "github.com/charmbracelet/lipgloss"
 
-// Grafana color palette
+// Grafana color palette for chart series.
+//
+//nolint:gochecknoglobals
 var grafanaColors = []lipgloss.Color{
 	lipgloss.Color("#7EB26D"), // Green
 	lipgloss.Color("#EAB839"), // Yellow

@@ -126,7 +126,7 @@ func RenderLineChart(w io.Writer, data *ChartData, opts ChartOptions) error {
 
 	// Time formatter
 	localTimeFormatter := func(_ int, fval float64) string {
-		t := time.Unix(int64(fval), 0).Local()
+		t := time.Unix(int64(fval), 0)
 		if isMultiDay {
 			return t.Format("01/02 15:04")
 		}
@@ -191,7 +191,7 @@ func RenderLineChart(w io.Writer, data *ChartData, opts ChartOptions) error {
 	sb.WriteString("\n")
 
 	// Legend
-	legend := renderLegend(data.Series, opts.Width)
+	legend := renderLegend(data.Series)
 	if legend != "" {
 		sb.WriteString("\n")
 		sb.WriteString(legend)
@@ -212,7 +212,10 @@ func convertToTimePoints(points []Point) []timeserieslinechart.TimePoint {
 	return result
 }
 
-func calculateBounds(data *ChartData) (minTime, maxTime time.Time, minY, maxY float64) {
+func calculateBounds(data *ChartData) (time.Time, time.Time, float64, float64) {
+	var minTime, maxTime time.Time
+	var minY, maxY float64
+
 	first := true
 	for _, series := range data.Series {
 		for _, pt := range series.Points {
@@ -249,10 +252,10 @@ func calculateBounds(data *ChartData) (minTime, maxTime time.Time, minY, maxY fl
 	minY -= padding
 	maxY += padding
 
-	return
+	return minTime, maxTime, minY, maxY
 }
 
-func renderLegend(series []Series, width int) string {
+func renderLegend(series []Series) string {
 	if len(series) == 0 {
 		return ""
 	}
@@ -287,14 +290,14 @@ func renderTextFallback(w io.Writer, data *ChartData) error {
 	return nil
 }
 
-func getTerminalSize() (width, height int) {
-	width = 80
-	height = 24
+func getTerminalSize() (int, int) {
+	width := 80
+	height := 24
 
 	if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
 		width = w
 		height = h
 	}
 
-	return
+	return width, height
 }
