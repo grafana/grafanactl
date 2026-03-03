@@ -195,8 +195,5 @@ func convertLinterErrors(err error) (*DetailedError, bool) {
 		return nil, true
 	}
 
-	return &DetailedError{
-		Parent:  err,
-		Summary: "Linter error",
-	}, true
+	return nil, false
 }
