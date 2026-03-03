@@ -14,11 +14,12 @@ _fail_annotated(metadata, details) := violation if {
     rule_meta := metadata[0]
     rule_annotations := metadata[1].annotations
 
-    some resource_type, rule
-    [_, "rules", resource_type, rule, "report"] = rule_meta.path
+    some resource_type, category, rule
+    [_, "rules", resource_type, category, rule, "report"] = rule_meta.path
 
 	violation := {
 	    "resource_type": resource_type,
+	    "category": category,
 	    "rule": rule,
 	    "description": rule_annotations.description,
         "severity": rule_level(rule_annotations),
@@ -33,11 +34,12 @@ _fail_annotated_custom(metadata, details) := violation if {
     rule_meta := metadata[0]
     rule_annotations := metadata[1].annotations
 
-    some resource_type, rule
-    ["custom", _, "rules", resource_type, rule, "report"] = rule_meta.path
+    some resource_type, category, rule
+    ["custom", _, "rules", resource_type, category, rule, "report"] = rule_meta.path
 
 	violation := {
 	    "resource_type": resource_type,
+	    "category": category,
 	    "rule": rule,
 	    "description": rule_annotations.description,
         "severity": rule_level(rule_annotations),

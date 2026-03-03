@@ -34,10 +34,16 @@ func (reporter CompactReporter) Publish(_ context.Context, out io.Writer, r Repo
 	table := tablewriter.NewTable(out)
 	defer func() { _ = table.Close() }()
 
-	table.Header([]string{"Location", "Severity", "Rule", "Details"})
+	table.Header([]string{"Resource type", "Location", "Severity", "Rule", "Details"})
 
 	for _, violation := range r.Violations {
-		err := table.Append([]string{violation.Location.String(), violation.Severity, violation.Rule, violation.Details})
+		err := table.Append([]string{
+			violation.ResourceType,
+			violation.Location.String(),
+			violation.Severity,
+			violation.Rule,
+			violation.Details,
+		})
 		if err != nil {
 			return err
 		}
@@ -163,6 +169,7 @@ func printPrettyViolationsTable(out io.Writer, violations []Violation) error {
 
 		_ = table.Append([]string{yellow("Description:"), description})
 		_ = table.Append([]string{yellow("Resource type:"), violation.ResourceType})
+		_ = table.Append([]string{yellow("Category:"), violation.Category})
 		_ = table.Append([]string{yellow("Location:"), cyan(violation.Location.String())})
 		_ = table.Append([]string{yellow("Details:"), violation.Details})
 

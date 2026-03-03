@@ -2,7 +2,7 @@
 # description: Alerts should have a runbook.
 # custom:
 #  severity: warning
-package grafanactl.rules.alert["alert-runbook-link"]
+package grafanactl.rules.alert.idiomatic["alert-runbook-link"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

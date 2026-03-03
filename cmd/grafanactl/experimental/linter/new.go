@@ -15,15 +15,18 @@ import (
 
 var (
 	resourceTypeRegex = regexp.MustCompile(`^[a-z]+$`)
+	categoryRegex     = regexp.MustCompile(`^[a-z]+$`)
 	nameRegex         = regexp.MustCompile(`^[a-z_]+[a-z0-9_\-]*$`)
 )
 
 type newRuleOpts struct {
-	output string
+	output   string
+	category string
 }
 
 func (opts *newRuleOpts) setup(flags *pflag.FlagSet) {
 	flags.StringVarP(&opts.output, "output", "o", "", "Output directory")
+	flags.StringVarP(&opts.category, "category", "c", "idiomatic", "Rule category")
 }
 
 func (opts *newRuleOpts) Validate(args []string) error {
@@ -41,6 +44,10 @@ func (opts *newRuleOpts) Validate(args []string) error {
 
 	if !nameRegex.MatchString(args[1]) {
 		return errors.New("name must consist only of lowercase letters, numbers, underscores and dashes")
+	}
+
+	if !categoryRegex.MatchString(opts.category) {
+		return errors.New("category must be a single word, using lowercase letters only")
 	}
 
 	return nil
@@ -79,7 +86,7 @@ func newCmd() *cobra.Command {
 
 func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string, name string) error {
 	ruleDir := filepath.Join(
-		opts.output, "rules", "custom", "grafanactl", "rules", resourceType, name,
+		opts.output, "rules", "custom", "grafanactl", "rules", resourceType, opts.category, name,
 	)
 
 	if err := os.MkdirAll(ruleDir, 0o770); err != nil {
@@ -87,6 +94,7 @@ func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string,
 	}
 
 	ruleFileContent := strings.ReplaceAll(customRuleTemplate, "{{.ResourceType}}", resourceType)
+	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Category}}", opts.category)
 	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Name}}", name)
 
 	ruleFileName := strings.ToLower(strings.ReplaceAll(name, "-", "_")) + ".rego"
@@ -104,7 +112,7 @@ const customRuleTemplate = `# METADATA
 # description: Describe the rule here.
 # custom:
 #  severity: warning
-package custom.grafanactl.rules.{{.ResourceType}}["{{.Name}}"]
+package custom.grafanactl.rules.{{.ResourceType}}.{{.Category}}["{{.Name}}"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

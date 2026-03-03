@@ -5,7 +5,7 @@
 #    description: documentation
 # custom:
 #  severity: warning
-package grafanactl.rules.dashboard["uneditable-dashboard"]
+package grafanactl.rules.dashboard.idiomatic["uneditable-dashboard"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

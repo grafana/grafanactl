@@ -2,7 +2,7 @@
 # description: Alerts must have a summary.
 # custom:
 #  severity: error
-package grafanactl.rules.alert["alert-summary"]
+package grafanactl.rules.alert.idiomatic["alert-summary"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

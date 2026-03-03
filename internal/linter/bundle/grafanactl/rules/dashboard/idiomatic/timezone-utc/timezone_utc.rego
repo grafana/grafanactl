@@ -1,6 +1,6 @@
 # METADATA
 # description: Timezone should be utc. For reasons.
-package grafanactl.rules.dashboard["timezone-utc"]
+package grafanactl.rules.dashboard.idiomatic["timezone-utc"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

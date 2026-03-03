@@ -62,6 +62,13 @@ func DisableAll() Option {
 	}
 }
 
+func DisabledResources(resources []string) Option {
+	return func(l *Linter) error {
+		l.disabledResources = resources
+		return nil
+	}
+}
+
 func DisabledCategories(categories []string) Option {
 	return func(l *Linter) error {
 		l.disabledCategories = categories
@@ -80,6 +87,13 @@ func EnableAll() Option {
 	return func(l *Linter) error {
 		l.disableAll = false
 		l.enableAll = true
+		return nil
+	}
+}
+
+func EnabledResources(resources []string) Option {
+	return func(l *Linter) error {
+		l.enabledResources = resources
 		return nil
 	}
 }
@@ -118,9 +132,11 @@ type Linter struct {
 	maxConcurrency   int
 
 	disableAll         bool
+	disabledResources  []string
 	disabledCategories []string
 	disabledRules      []string
 	enableAll          bool
+	enabledResources   []string
 	enabledCategories  []string
 	enabledRules       []string
 }
@@ -136,9 +152,11 @@ func New(opts ...Option) (*Linter, error) {
 			&BuiltinBundle,
 		},
 		disableAll:         false,
+		disabledResources:  []string{},
 		disabledCategories: []string{},
 		disabledRules:      []string{},
 		enableAll:          true,
+		enabledResources:   []string{},
 		enabledCategories:  []string{},
 		enabledRules:       []string{},
 	}
@@ -185,10 +203,10 @@ func (linter *Linter) Rules(ctx context.Context) ([]Rule, error) {
 	for _, module := range preparedQuery.Modules() {
 		parts := unquotedPath(module.Package.Path)
 
-		// 0   1     2        3
-		// pkg.rules.category.rule
+		// 0   1     2        3        4
+		// pkg.rules.resource.category.rule
 
-		if len(parts) != 4 {
+		if len(parts) != 5 {
 			continue
 		}
 
@@ -197,8 +215,9 @@ func (linter *Linter) Rules(ctx context.Context) ([]Rule, error) {
 		}
 
 		rule := Rule{
-			Category: parts[2],
-			Name:     parts[3],
+			Resource: parts[2],
+			Category: parts[3],
+			Name:     parts[4],
 			Builtin:  true,
 			Severity: "error",
 		}
@@ -212,10 +231,10 @@ func (linter *Linter) Rules(ctx context.Context) ([]Rule, error) {
 	for _, module := range preparedQuery.Modules() {
 		parts := unquotedPath(module.Package.Path)
 
-		// 0      1   2     3        4
-		// custom.pkg.rules.category.rule
+		// 0      1   2     3        4        5
+		// custom.pkg.rules.resource.category.rule
 
-		if len(parts) != 5 {
+		if len(parts) != 6 {
 			continue
 		}
 
@@ -224,8 +243,9 @@ func (linter *Linter) Rules(ctx context.Context) ([]Rule, error) {
 		}
 
 		rule := Rule{
-			Category: parts[3],
-			Name:     parts[4],
+			Resource: parts[3],
+			Category: parts[4],
+			Name:     parts[5],
 			Builtin:  false,
 			Severity: "error",
 		}
@@ -272,10 +292,12 @@ func (linter *Linter) prepare(ctx context.Context) (rego.PreparedEvalQuery, erro
 func (linter *Linter) createDataBundle() *bundle.Bundle {
 	params := map[string]any{
 		"disable_all":         linter.disableAll,
+		"disabled_resources":  linter.disabledResources,
 		"disabled_categories": linter.disabledCategories,
 		"disabled_rules":      linter.disabledRules,
 
 		"enable_all":         linter.enableAll,
+		"enabled_resources":  linter.enabledResources,
 		"enabled_categories": linter.enabledCategories,
 		"enabled_rules":      linter.enabledRules,
 	}

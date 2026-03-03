@@ -20,6 +20,7 @@ type Violation struct {
 	Rule             string            `json:"rule"`
 	Description      string            `json:"description"`
 	ResourceType     string            `json:"resource_type"`
+	Category         string            `json:"category"`
 	Severity         string            `json:"severity"`
 	Location         Location          `json:"location"`
 	Details          string            `json:"details,omitempty"`

@@ -5,7 +5,7 @@
 #    description: documentation
 # custom:
 #  severity: warning
-package grafanactl.rules.dashboard["panel-units"]
+package grafanactl.rules.dashboard.idiomatic["panel-units"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

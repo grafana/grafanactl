@@ -5,7 +5,7 @@
 #    description: documentation
 # custom:
 #  severity: error
-package grafanactl.rules.dashboard["target-valid-promql"]
+package grafanactl.rules.dashboard.bug["target-valid-promql"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

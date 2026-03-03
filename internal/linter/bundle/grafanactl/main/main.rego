@@ -15,33 +15,38 @@ report contains violation if {
 
 # Built-in rules
 report contains violation if {
-    some category, rule
+    some resource, category, rule
 
-    not _rule_disabled(data.internal, category, rule)
+    not _rule_disabled(data.internal, resource, category, rule)
 
-    some violation in data.grafanactl.rules[category][rule].report
+    some violation in data.grafanactl.rules[resource][category][rule].report
 }
 
 # Custom rules
 report contains violation if {
-    some category, rule
+    some resource, category, rule
 
-    not _rule_disabled(data.internal, category, rule)
+    not _rule_disabled(data.internal, resource, category, rule)
 
-    some violation in data.custom.grafanactl.rules[category][rule].report
+    some violation in data.custom.grafanactl.rules[resource][category][rule].report
 }
 
 # Enabled/disabled rules
-_rule_disabled(params, _, rule) if {
-    rule in params.disabled_rules
+_rule_disabled(params, resource, _, _) if {
+	resource in params.disabled_resources
 }
 
-_rule_disabled(params, category, _) if {
+_rule_disabled(params, _, category, _) if {
 	category in params.disabled_categories
 }
 
-_rule_disabled(params, category, rule) if {
+_rule_disabled(params, _, _, rule) if {
+    rule in params.disabled_rules
+}
+
+_rule_disabled(params, resource, category, rule) if {
 	params.disable_all == true
+	not resource in params.enabled_resources
 	not category in params.enabled_categories
 	not rule in params.enabled_rules
 }

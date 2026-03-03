@@ -5,7 +5,7 @@
 #    description: documentation
 # custom:
 #  severity: warning
-package grafanactl.rules.dashboard["panel-title-description"]
+package grafanactl.rules.dashboard.idiomatic["panel-title-description"]
 
 import data.grafanactl.result
 import data.grafanactl.utils

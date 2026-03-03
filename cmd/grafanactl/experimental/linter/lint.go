@@ -21,9 +21,11 @@ type lintOpts struct {
 	maxConcurrent int
 
 	disableAll         bool
+	disabledResources  []string
 	disabledCategories []string
 	disabledRules      []string
 	enableAll          bool
+	enabledResources   []string
 	enabledCategories  []string
 	enabledRules       []string
 }
@@ -56,10 +58,12 @@ func (opts *lintOpts) setup(flags *pflag.FlagSet) {
 	flags.IntVar(&opts.maxConcurrent, "max-concurrent", 10, "Maximum number of concurrent operations")
 
 	flags.BoolVar(&opts.disableAll, "disable-all", false, "Disable all rules")
+	flags.StringArrayVar(&opts.disabledResources, "disable-resource", nil, "Disable all rules for a resource type")
 	flags.StringArrayVar(&opts.disabledCategories, "disable-category", nil, "Disable all rules in a category")
 	flags.StringArrayVar(&opts.disabledRules, "disable", nil, "Disable a rule")
 
 	flags.BoolVar(&opts.enableAll, "enable-all", false, "Enable all rules")
+	flags.StringArrayVar(&opts.enabledResources, "enable-resource", nil, "Enable all rules for a resource type")
 	flags.StringArrayVar(&opts.enabledCategories, "enable-category", nil, "Enable all rules in a category")
 	flags.StringArrayVar(&opts.enabledRules, "enable", nil, "Enable a rule")
 }
@@ -89,17 +93,25 @@ func lintCmd() *cobra.Command {
 
 	grafanactl experimental linter lint --rules ./custom-rules ./resources
 
+	# Disable all rules for a resource type:
+
+	grafanactl experimental linter lint --disable-resource dashboard ./resources
+
 	# Disable all rules in a category:
 
-	grafanactl experimental linter lint --disable-category dashboard ./resources
+	grafanactl experimental linter lint --disable-category idiomatic ./resources
 
 	# Disable specific rules:
 
 	grafanactl experimental linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
 
+	# Enable rules for specific resource types:
+
+	grafanactl experimental linter lint --disable-all --enable-resource dashboard ./resources
+
 	# Enable only some categories:
 
-	grafanactl experimental linter lint --disable-all --enable-category dashboard ./resources
+	grafanactl experimental linter lint --disable-all --enable-category idiomatic ./resources
 
 	# Enable only specific rules:
 
@@ -132,6 +144,9 @@ func lint(cmd *cobra.Command, inputPaths []string, opts lintOpts) error {
 	if opts.disableAll {
 		linterOpts = append(linterOpts, linter.DisableAll())
 	}
+	if len(opts.disabledResources) != 0 {
+		linterOpts = append(linterOpts, linter.DisabledResources(opts.disabledResources))
+	}
 	if len(opts.disabledCategories) != 0 {
 		linterOpts = append(linterOpts, linter.DisabledCategories(opts.disabledCategories))
 	}
@@ -140,6 +155,9 @@ func lint(cmd *cobra.Command, inputPaths []string, opts lintOpts) error {
 	}
 	if opts.enableAll {
 		linterOpts = append(linterOpts, linter.EnableAll())
+	}
+	if len(opts.enabledResources) != 0 {
+		linterOpts = append(linterOpts, linter.EnabledResources(opts.enabledResources))
 	}
 	if len(opts.enabledCategories) != 0 {
 		linterOpts = append(linterOpts, linter.EnabledCategories(opts.enabledCategories))

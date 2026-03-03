@@ -5,7 +5,7 @@
 #    description: documentation
 # custom:
 #  severity: error
-package grafanactl.rules.dashboard["target-valid-logql"]
+package grafanactl.rules.dashboard.bug["target-valid-logql"]
 
 import data.grafanactl.result
 import data.grafanactl.utils
