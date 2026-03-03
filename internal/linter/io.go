@@ -12,11 +12,11 @@ import (
 	"github.com/open-policy-agent/opa/v1/loader/filter"
 )
 
-// builtinBundle contains a bundle with built-in rules and utilities as well as
+// BuiltinBundle contains a bundle with built-in rules and utilities as well as
 // the linter's main logic.
 //
 //nolint:gochecknoglobals
-var builtinBundle = MustLoadBundleFS(gbundle.BundleFS)
+var BuiltinBundle = MustLoadBundleFS(gbundle.BundleFS)
 
 // LoadBundleFS loads a bundle from the given filesystem.
 // Note: tests are excluded.

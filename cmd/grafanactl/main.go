@@ -29,10 +29,12 @@ func handleError(err error) {
 	exitCode := 1
 	detailedErr := fail.ErrorToDetailedError(err)
 
-	fmt.Fprintln(os.Stderr, detailedErr.Error())
+	if detailedErr != nil {
+		fmt.Fprintln(os.Stderr, detailedErr.Error())
 
-	if detailedErr.ExitCode != nil {
-		exitCode = *detailedErr.ExitCode
+		if detailedErr.ExitCode != nil {
+			exitCode = *detailedErr.ExitCode
+		}
 	}
 
 	os.Exit(exitCode)

@@ -37,6 +37,10 @@ lint: check-binaries ## Lints the code base.
 tests: check-binaries ## Runs the tests.
 	$(RUN_DEVBOX) go test -v ./...
 
+.PHONY: linter-tests
+linter-tests: check-binaries ## Runs the linter rules tests.
+	$(RUN_DEVBOX) go run ./cmd/grafanactl/ experimental linter test --debug ./internal/linter/bundle/grafanactl/
+
 GIT_REVISION  ?= $(shell git rev-parse --short HEAD)
 GIT_VERSION   ?= $(shell git describe --tags --exact-match 2>/dev/null || echo "")
 BUILD_DATE    ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")

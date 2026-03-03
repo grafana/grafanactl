@@ -133,7 +133,7 @@ func New(opts ...Option) (*Linter, error) {
 		},
 		maxConcurrency: 1,
 		ruleBundles: []*bundle.Bundle{
-			&builtinBundle,
+			&BuiltinBundle,
 		},
 		disableAll:         false,
 		disabledCategories: []string{},
@@ -243,10 +243,10 @@ func (linter *Linter) prepare(ctx context.Context) (rego.PreparedEvalQuery, erro
 		// Matches the report-generation statement in `./bundle/grafanactl/main/main.rego`
 		rego.Query("lint := data.grafanactl.main.lint"),
 		rego.ParsedBundle("internal", linter.createDataBundle()),
-		// Add a few built-ins
-		builtins.ValidateLogQL(),
-		builtins.ValidatePromql(),
 	}
+
+	// Add a few built-ins
+	regoOpts = append(regoOpts, builtins.All()...)
 
 	if linter.debugStream != nil {
 		regoOpts = append(regoOpts, rego.EnablePrintStatements(true))

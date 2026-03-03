@@ -97,21 +97,24 @@ func (raw *rawVariableOption) Get() (variableOption, error) {
 	return t, nil
 }
 
+//nolint:gochecknoglobals
+var validatePromqlMeta = &rego.Function{
+	Name: "validate_promql",
+	Decl: types.NewFunction(
+		types.Args(
+			// the PromQL expression
+			types.S,
+			// Dashboard variables
+			types.Any{},
+		),
+		// empty string for valid expression, en error message otherwise
+		types.S,
+	),
+}
+
 func ValidatePromql() func(*rego.Rego) {
 	return rego.Function2(
-		&rego.Function{
-			Name: "validate_promql",
-			Decl: types.NewFunction(
-				types.Args(
-					// the PromQL expression
-					types.S,
-					// Dashboard variables
-					types.Any{},
-				),
-				// empty string for valid expression, en error message otherwise
-				types.S,
-			),
-		},
+		validatePromqlMeta,
 		func(_ rego.BuiltinContext, exprTerm *ast.Term, dashboardVarsTerm *ast.Term) (*ast.Term, error) {
 			expr, ok := exprTerm.Value.(ast.String)
 			// The function is undefined for non-string inputs.

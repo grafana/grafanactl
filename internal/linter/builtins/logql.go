@@ -11,21 +11,24 @@ import (
 	"github.com/open-policy-agent/opa/v1/types"
 )
 
+//nolint:gochecknoglobals
+var validateLogQLMeta = &rego.Function{
+	Name: "validate_logql",
+	Decl: types.NewFunction(
+		types.Args(
+			// the PromQL expression
+			types.S,
+			// Dashboard variables
+			types.Any{},
+		),
+		// empty string for valid expression, en error message otherwise
+		types.S,
+	),
+}
+
 func ValidateLogQL() func(*rego.Rego) {
 	return rego.Function2(
-		&rego.Function{
-			Name: "validate_logql",
-			Decl: types.NewFunction(
-				types.Args(
-					// the PromQL expression
-					types.S,
-					// Dashboard variables
-					types.Any{},
-				),
-				// empty string for valid expression, en error message otherwise
-				types.S,
-			),
-		},
+		validateLogQLMeta,
 		func(_ rego.BuiltinContext, exprTerm *ast.Term, dashboardVarsTerm *ast.Term) (*ast.Term, error) {
 			// TODO: variables should be expanded (Grafana builtin ones + the ones defined by the dashboard)
 			expr, ok := exprTerm.Value.(ast.String)
