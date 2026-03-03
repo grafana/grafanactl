@@ -27,8 +27,9 @@ grafanactl experimental linter new resource-type name [flags]
 ### Options
 
 ```
-  -h, --help            help for new
-  -o, --output string   Output directory
+  -c, --category string   Rule category (default "idiomatic")
+  -h, --help              help for new
+  -o, --output string     Output directory
 ```
 
 ### Options inherited from parent commands

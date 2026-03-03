@@ -20,7 +20,7 @@ grafanactl experimental linter rules [flags]
 
 	# List built-in and custom rules:
 
-	grafanactl experimental linter rules -v ./custom-rules
+	grafanactl experimental linter rules -r ./custom-rules
 
 ```
 
