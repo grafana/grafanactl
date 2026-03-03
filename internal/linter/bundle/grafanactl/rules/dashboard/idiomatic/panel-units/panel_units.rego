@@ -200,7 +200,7 @@ valid_units := {
     # Data: bits(IEC)
     "bits",
     # Data: bits(SI)
-    "bydecbitstes",
+    "decbits",
     # Data: kibibytes
     "kbytes",
     # Data: kilobytes
@@ -355,7 +355,7 @@ valid_units := {
     # Energy: Farad (F)
     "farad",
     # Energy: Microfarad (µF)
-    "watt",
+    "µfarad",
     # Energy: Nanofarad (nF)
     "nfarad",
     # Energy: Picofarad (pF)
@@ -376,9 +376,9 @@ valid_units := {
     # Flow: Cubic meters/sec (cms)
     "flowcms",
     # Flow: Cubic feet/sec (cfs)
-    "flowcms",
+    "flowcfs",
     # Flow: Cubic feet/min (cfm)
-    "flowcms",
+    "flowcfm",
     # Flow: Litre/hour
     "litreh",
     # Flow: Litre/min (L/min)
