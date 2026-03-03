@@ -33,6 +33,7 @@ func WithRuleBundle(ruleBundle *bundle.Bundle) Option {
 		return nil
 	}
 }
+
 func WithCustomRules(paths []string) Option {
 	return func(l *Linter) error {
 		l.customRulesPaths = paths
