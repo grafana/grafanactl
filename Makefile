@@ -34,7 +34,10 @@ lint: check-binaries ## Lints the code base.
 	$(RUN_DEVBOX) golangci-lint run -c .golangci.yaml
 
 .PHONY: tests
-tests: check-binaries ## Runs the tests.
+tests: cli-tests linter-tests ## Runs the tests.
+
+.PHONY: cli-tests
+cli-tests: check-binaries ## Runs the CLI tests.
 	$(RUN_DEVBOX) go test -v ./...
 
 .PHONY: linter-tests

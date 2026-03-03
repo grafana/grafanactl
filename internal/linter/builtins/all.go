@@ -63,6 +63,7 @@ func assertReportsMatch() func(*rego.Rego) {
 			var actualList []map[string]any
 			var expectedList []map[string]any
 
+			//nolint:forcetypeassert
 			err := actual.Value.(ast.Set).Iter(func(term *ast.Term) error {
 				item := map[string]any{}
 				if err := json.Unmarshal([]byte(term.String()), &item); err != nil {
@@ -77,6 +78,7 @@ func assertReportsMatch() func(*rego.Rego) {
 				return nil, err
 			}
 
+			//nolint:forcetypeassert
 			err = expected.Value.(ast.Set).Iter(func(term *ast.Term) error {
 				item := map[string]any{}
 				if err := json.Unmarshal([]byte(term.String()), &item); err != nil {
