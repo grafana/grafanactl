@@ -13,7 +13,6 @@ import data.grafanactl.utils
 # Dashboard v1
 report contains violation if {
 	utils.resource_is_dashboard_v1(input)
-
     panels := utils.dashboard_v1_panels(input)
 	invalid_panels := [panels[i] | not valid_units[panels[i].fieldConfig.defaults.unit]]
 

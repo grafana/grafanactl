@@ -14,7 +14,7 @@ test_dashboard_v1_with_non_editable_is_accepted if {
 
 	report := rule.report with input as resource
 
-	report == set()
+	assert_reports_match(report, set())
 }
 
 test_dashboard_v1_with_editable_is_rejected if {
@@ -27,7 +27,7 @@ test_dashboard_v1_with_editable_is_rejected if {
 
 	r := rule.report with input as resource
 
-	r == {{
+	assert_reports_match(r, {{
 	    "category": "idiomatic",
 	    "description": "Dashboards should not be editable.",
 	    "details": "dashboard is editable",
@@ -35,7 +35,7 @@ test_dashboard_v1_with_editable_is_rejected if {
 	    "resource_type": "dashboard",
 	    "rule": "uneditable-dashboard",
 	    "severity": "warning",
-	}}
+	}})
 }
 
 test_dashboard_v2_with_non_editable_is_accepted if {
@@ -48,7 +48,7 @@ test_dashboard_v2_with_non_editable_is_accepted if {
 
 	report := rule.report with input as resource
 
-	report == set()
+	assert_reports_match(report, set())
 }
 
 test_dashboard_v2_with_editable_is_rejected if {
@@ -61,7 +61,7 @@ test_dashboard_v2_with_editable_is_rejected if {
 
 	r := rule.report with input as resource
 
-	r == {{
+	assert_reports_match(r, {{
 	    "category": "idiomatic",
 	    "description": "Dashboards should not be editable.",
 	    "details": "dashboard is editable",
@@ -69,5 +69,5 @@ test_dashboard_v2_with_editable_is_rejected if {
 	    "resource_type": "dashboard",
 	    "rule": "uneditable-dashboard",
 	    "severity": "warning",
-	}}
+	}})
 }

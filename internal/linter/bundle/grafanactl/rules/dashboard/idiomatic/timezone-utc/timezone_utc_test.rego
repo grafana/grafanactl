@@ -14,7 +14,7 @@ test_dashboard_v1_with_timezone_utc_is_accepted if {
 
 	report := rule.report with input as resource
 
-	report == set()
+	assert_reports_match(report, set())
 }
 
 test_dashboard_v1_with_timezone_browser_is_rejected if {
@@ -25,9 +25,9 @@ test_dashboard_v1_with_timezone_browser_is_rejected if {
 	    "spec": {"timezone": "browser"}
 	}
 
-	r := rule.report with input as resource
+	report := rule.report with input as resource
 
-	r == {{
+	assert_reports_match(report, {{
 	    "category": "idiomatic",
 	    "description": "Timezone should be utc. For reasons.",
 	    "details": "timezone is 'browser', expected 'utc'",
@@ -35,7 +35,7 @@ test_dashboard_v1_with_timezone_browser_is_rejected if {
 	    "resource_type": "dashboard",
 	    "rule": "timezone-utc",
 	    "severity": "error",
-	}}
+	}})
 }
 
 test_dashboard_v2_with_timezone_utc_is_accepted if {
@@ -52,7 +52,7 @@ test_dashboard_v2_with_timezone_utc_is_accepted if {
 
 	report := rule.report with input as resource
 
-	report == set()
+	assert_reports_match(report, set())
 }
 
 test_dashboard_v2_with_timezone_browser_is_rejected if {
@@ -67,9 +67,9 @@ test_dashboard_v2_with_timezone_browser_is_rejected if {
 	    }
 	}
 
-	r := rule.report with input as resource
+	report := rule.report with input as resource
 
-	r == {{
+	assert_reports_match(report, {{
 	    "category": "idiomatic",
 	    "description": "Timezone should be utc. For reasons.",
 	    "details": "timezone is 'browser', expected 'utc'",
@@ -77,5 +77,5 @@ test_dashboard_v2_with_timezone_browser_is_rejected if {
 	    "resource_type": "dashboard",
 	    "rule": "timezone-utc",
 	    "severity": "error",
-	}}
+	}})
 }
