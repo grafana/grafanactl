@@ -39,7 +39,7 @@ tests: check-binaries ## Runs the tests.
 
 .PHONY: linter-tests
 linter-tests: check-binaries ## Runs the linter rules tests.
-	$(RUN_DEVBOX) go run ./cmd/grafanactl/ experimental linter test --debug ./internal/linter/bundle/grafanactl/
+	$(RUN_DEVBOX) go run ./cmd/grafanactl/ experimental linter test ./internal/linter/bundle/grafanactl/
 
 GIT_REVISION  ?= $(shell git rev-parse --short HEAD)
 GIT_VERSION   ?= $(shell git describe --tags --exact-match 2>/dev/null || echo "")
