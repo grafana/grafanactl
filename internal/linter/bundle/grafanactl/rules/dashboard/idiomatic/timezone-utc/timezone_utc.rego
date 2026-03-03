@@ -11,7 +11,7 @@ report contains violation if {
 
 	input.spec.timezone != "utc"
 
-	violation := result.fail(rego.metadata.chain(), sprintf("timezone is '%s', expected 'utc'", [input.timezone]))
+	violation := result.fail(rego.metadata.chain(), sprintf("timezone is '%s', expected 'utc'", [input.spec.timezone]))
 }
 
 # Dashboard v2
