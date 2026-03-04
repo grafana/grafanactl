@@ -1,9 +1,23 @@
 ## grafanactl experimental linter test
 
+Run linter rules tests
 
+### Synopsis
+
+Run linter rules tests.
 
 ```
 grafanactl experimental linter test PATH... [flags]
+```
+
+### Examples
+
+```
+
+	# Run all tests in a directory:
+
+	grafanactl experimental linter test ./internal/linter/bundle/grafanactl/
+
 ```
 
 ### Options

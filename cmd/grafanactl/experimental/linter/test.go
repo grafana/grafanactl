@@ -44,7 +44,14 @@ func testCmd() *cobra.Command {
 	opts := testOpts{}
 
 	cmd := &cobra.Command{
-		Use:  "test PATH...",
+		Use:   "test PATH...",
+		Short: "Run linter rules tests",
+		Long:  "Run linter rules tests.",
+		Example: `
+	# Run all tests in a directory:
+
+	grafanactl experimental linter test ./internal/linter/bundle/grafanactl/
+`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			runner := linter.TestsRunner{}

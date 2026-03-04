@@ -25,5 +25,5 @@ Lint Grafana resources.
 * [grafanactl experimental linter lint](grafanactl_experimental_linter_lint.md)	 - Lint Grafana resources
 * [grafanactl experimental linter new](grafanactl_experimental_linter_new.md)	 - Creates a new resource linter
 * [grafanactl experimental linter rules](grafanactl_experimental_linter_rules.md)	 - List available linter rules
-* [grafanactl experimental linter test](grafanactl_experimental_linter_test.md)	 - 
+* [grafanactl experimental linter test](grafanactl_experimental_linter_test.md)	 - Run linter rules tests
 
