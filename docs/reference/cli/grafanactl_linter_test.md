@@ -1,4 +1,4 @@
-## grafanactl experimental linter test
+## grafanactl linter test
 
 Run linter rules tests
 
@@ -7,7 +7,7 @@ Run linter rules tests
 Run linter rules tests.
 
 ```
-grafanactl experimental linter test PATH... [flags]
+grafanactl linter test PATH... [flags]
 ```
 
 ### Examples
@@ -16,7 +16,7 @@ grafanactl experimental linter test PATH... [flags]
 
 	# Run all tests in a directory:
 
-	grafanactl experimental linter test ./internal/linter/bundle/grafanactl/
+	grafanactl linter test ./internal/linter/bundle/grafanactl/
 
 ```
 
@@ -42,5 +42,5 @@ grafanactl experimental linter test PATH... [flags]
 
 ### SEE ALSO
 
-* [grafanactl experimental linter](grafanactl_experimental_linter.md)	 - Lint Grafana resources
+* [grafanactl linter](grafanactl_linter.md)	 - Lint Grafana resources
 

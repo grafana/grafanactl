@@ -1,4 +1,4 @@
-## grafanactl experimental linter rules
+## grafanactl linter rules
 
 List available linter rules
 
@@ -7,7 +7,7 @@ List available linter rules
 List available linter rules.
 
 ```
-grafanactl experimental linter rules [flags]
+grafanactl linter rules [flags]
 ```
 
 ### Examples
@@ -16,11 +16,11 @@ grafanactl experimental linter rules [flags]
 
 	# List built-in rules:
 
-	grafanactl experimental linter rules
+	grafanactl linter rules
 
 	# List built-in and custom rules:
 
-	grafanactl experimental linter rules -r ./custom-rules
+	grafanactl linter rules -r ./custom-rules
 
 ```
 
@@ -41,5 +41,5 @@ grafanactl experimental linter rules [flags]
 
 ### SEE ALSO
 
-* [grafanactl experimental linter](grafanactl_experimental_linter.md)	 - Lint Grafana resources
+* [grafanactl linter](grafanactl_linter.md)	 - Lint Grafana resources
 

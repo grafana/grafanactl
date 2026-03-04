@@ -65,11 +65,11 @@ func newCmd() *cobra.Command {
 		Example: `
 	# Creates a new dashboard linter rule in the current directory:
 
-	grafanactl experimental linter new dashboard test-linter
+	grafanactl linter new dashboard test-linter
 
 	# Creates a new dashboard linter rule in another directory:
 
-	grafanactl experimental linter new dashboard test-linter -o custom-rules
+	grafanactl linter new dashboard test-linter -o custom-rules
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(args); err != nil {

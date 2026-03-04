@@ -1,4 +1,4 @@
-## grafanactl experimental linter lint
+## grafanactl linter lint
 
 Lint Grafana resources
 
@@ -7,7 +7,7 @@ Lint Grafana resources
 Lint Grafana resources.
 
 ```
-grafanactl experimental linter lint PATH... [flags]
+grafanactl linter lint PATH... [flags]
 ```
 
 ### Examples
@@ -16,43 +16,43 @@ grafanactl experimental linter lint PATH... [flags]
 
 	# Lint Grafana resources using builtin rules:
 
-	grafanactl experimental linter lint ./resources
+	grafanactl linter lint ./resources
 
 	# Lint specific files:
 
-	grafanactl experimental linter lint ./resources/file.json ./resources/other.yaml
+	grafanactl linter lint ./resources/file.json ./resources/other.yaml
 
 	# Display compact results:
 
-	grafanactl experimental linter lint ./resources -o compact
+	grafanactl linter lint ./resources -o compact
 
 	# Use custom rules:
 
-	grafanactl experimental linter lint --rules ./custom-rules ./resources
+	grafanactl linter lint --rules ./custom-rules ./resources
 
 	# Disable all rules for a resource type:
 
-	grafanactl experimental linter lint --disable-resource dashboard ./resources
+	grafanactl linter lint --disable-resource dashboard ./resources
 
 	# Disable all rules in a category:
 
-	grafanactl experimental linter lint --disable-category idiomatic ./resources
+	grafanactl linter lint --disable-category idiomatic ./resources
 
 	# Disable specific rules:
 
-	grafanactl experimental linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
+	grafanactl linter lint --disable uneditable-dashboard --disable panel-title-description ./resources
 
 	# Enable rules for specific resource types:
 
-	grafanactl experimental linter lint --disable-all --enable-resource dashboard ./resources
+	grafanactl linter lint --disable-all --enable-resource dashboard ./resources
 
 	# Enable only some categories:
 
-	grafanactl experimental linter lint --disable-all --enable-category idiomatic ./resources
+	grafanactl linter lint --disable-all --enable-category idiomatic ./resources
 
 	# Enable only specific rules:
 
-	grafanactl experimental linter lint --disable-all --enable uneditable-dashboard ./resources
+	grafanactl linter lint --disable-all --enable uneditable-dashboard ./resources
 
 ```
 
@@ -83,5 +83,5 @@ grafanactl experimental linter lint PATH... [flags]
 
 ### SEE ALSO
 
-* [grafanactl experimental linter](grafanactl_experimental_linter.md)	 - Lint Grafana resources
+* [grafanactl linter](grafanactl_linter.md)	 - Lint Grafana resources
 

@@ -10,6 +10,6 @@ title: Reference
 
 - :material-application-variable-outline:{ .lg .middle } __[Environment variables](./environment-variables/index.md)__
 
-- :material-shield-check-outline:{ .lg .middle } __[Linter rules](./linter-rules//index.md)__
+- :material-shield-check-outline:{ .lg .middle } __[Linter rules](./linter-rules/index.md)__
 
 </div>

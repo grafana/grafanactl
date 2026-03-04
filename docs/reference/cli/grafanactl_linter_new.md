@@ -1,4 +1,4 @@
-## grafanactl experimental linter new
+## grafanactl linter new
 
 Creates a new linter rule
 
@@ -7,7 +7,7 @@ Creates a new linter rule
 Creates a new linter rule.
 
 ```
-grafanactl experimental linter new RESOURCE_TYPE NAME [flags]
+grafanactl linter new RESOURCE_TYPE NAME [flags]
 ```
 
 ### Examples
@@ -16,11 +16,11 @@ grafanactl experimental linter new RESOURCE_TYPE NAME [flags]
 
 	# Creates a new dashboard linter rule in the current directory:
 
-	grafanactl experimental linter new dashboard test-linter
+	grafanactl linter new dashboard test-linter
 
 	# Creates a new dashboard linter rule in another directory:
 
-	grafanactl experimental linter new dashboard test-linter -o custom-rules
+	grafanactl linter new dashboard test-linter -o custom-rules
 
 ```
 
@@ -41,5 +41,5 @@ grafanactl experimental linter new RESOURCE_TYPE NAME [flags]
 
 ### SEE ALSO
 
-* [grafanactl experimental linter](grafanactl_experimental_linter.md)	 - Lint Grafana resources
+* [grafanactl linter](grafanactl_linter.md)	 - Lint Grafana resources
 
