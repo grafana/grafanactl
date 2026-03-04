@@ -83,7 +83,7 @@ jobs:
           devbox-version: ${{ env.DEVBOX_VERSION }}
 
       - name: Check for drift in the generated documentation references
-        run: make cli-reference
+        run: make reference-drift
         shell: bash
 
       - name: Build documentation
