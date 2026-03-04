@@ -10,7 +10,6 @@ import (
 type rulesOpts struct {
 	IO cmdio.Options
 
-	debug bool
 	rules []string
 }
 
@@ -23,9 +22,9 @@ func (opts *rulesOpts) validate() error {
 }
 
 func (opts *rulesOpts) setup(flags *pflag.FlagSet) {
+	opts.IO.DefaultFormat("yaml")
 	opts.IO.BindFlags(flags)
 
-	flags.BoolVar(&opts.debug, "debug", false, "Enable debug mode")
 	flags.StringArrayVarP(&opts.rules, "rules", "r", nil, "Path to custom rules.")
 }
 
@@ -46,29 +45,22 @@ func rulesCmd() *cobra.Command {
 
 	grafanactl experimental linter rules -r ./custom-rules
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := opts.validate(); err != nil {
 				return err
 			}
-			return listRules(cmd, args, opts)
+
+			return listRules(cmd, opts)
 		},
 	}
 
 	opts.setup(cmd.Flags())
+
 	return cmd
 }
 
-func listRules(cmd *cobra.Command, inputPaths []string, opts rulesOpts) error {
-	linterOpts := []linter.Option{
-		linter.InputPaths(inputPaths),
-		linter.WithCustomRules(opts.rules),
-	}
-
-	if opts.debug {
-		linterOpts = append(linterOpts, linter.Debug(cmd.ErrOrStderr()))
-	}
-
-	engine, err := linter.New(linterOpts...)
+func listRules(cmd *cobra.Command, opts rulesOpts) error {
+	engine, err := linter.New(linter.WithCustomRules(opts.rules))
 	if err != nil {
 		return err
 	}
