@@ -1,24 +1,24 @@
 ## grafanactl experimental linter new
 
-Creates a new resource linter
+Creates a new linter rule
 
 ### Synopsis
 
-Creates a new resource linter.
+Creates a new linter rule.
 
 ```
-grafanactl experimental linter new resource-type name [flags]
+grafanactl experimental linter new RESOURCE_TYPE NAME [flags]
 ```
 
 ### Examples
 
 ```
 
-	# Creates a new dashboard linter in the current directory:
+	# Creates a new dashboard linter rule in the current directory:
 
 	grafanactl experimental linter new dashboard test-linter
 
-	# Creates a new dashboard linter in another directory:
+	# Creates a new dashboard linter rule in another directory:
 
 	grafanactl experimental linter new dashboard test-linter -o custom-rules
 

@@ -61,5 +61,6 @@ func testCmd() *cobra.Command {
 	}
 
 	opts.setup(cmd.Flags())
+
 	return cmd
 }

@@ -2,6 +2,7 @@ package linter
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -57,16 +58,16 @@ func newCmd() *cobra.Command {
 	opts := newRuleOpts{}
 
 	cmd := &cobra.Command{
-		Use:   "new resource-type name",
-		Short: "Creates a new resource linter",
-		Long:  "Creates a new resource linter.",
+		Use:   "new RESOURCE_TYPE NAME",
+		Short: "Creates a new linter rule",
+		Long:  "Creates a new linter rule.",
 		Args:  cobra.ExactArgs(2),
 		Example: `
-	# Creates a new dashboard linter in the current directory:
+	# Creates a new dashboard linter rule in the current directory:
 
 	grafanactl experimental linter new dashboard test-linter
 
-	# Creates a new dashboard linter in another directory:
+	# Creates a new dashboard linter rule in another directory:
 
 	grafanactl experimental linter new dashboard test-linter -o custom-rules
 `,
@@ -89,7 +90,18 @@ func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string,
 		opts.output, "rules", "custom", "grafanactl", "rules", resourceType, opts.category, name,
 	)
 
-	if err := os.MkdirAll(ruleDir, 0o770); err != nil {
+	ruleFileName := strings.ToLower(strings.ReplaceAll(name, "-", "_")) + ".rego"
+	ruleFile := filepath.Join(ruleDir, ruleFileName)
+
+	exists, err := pathExists(ruleFile)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("%s already exists", ruleFile)
+	}
+
+	if err := os.MkdirAll(ruleDir, 0770); err != nil {
 		return err
 	}
 
@@ -97,13 +109,11 @@ func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string,
 	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Category}}", opts.category)
 	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Name}}", name)
 
-	ruleFileName := strings.ToLower(strings.ReplaceAll(name, "-", "_")) + ".rego"
-
-	if err := os.WriteFile(filepath.Join(ruleDir, ruleFileName), []byte(ruleFileContent), 0o600); err != nil {
+	if err := os.WriteFile(ruleFile, []byte(ruleFileContent), 0600); err != nil {
 		return err
 	}
 
-	cmdio.Success(stdout, "Rule written in %s", ruleDir)
+	cmdio.Success(stdout, "Rule written in %s", ruleFile)
 
 	return nil
 }
@@ -135,3 +145,16 @@ report contains violation if {
 	violation := result.fail(rego.metadata.chain(), "details")
 }
 `
+
+func pathExists(name string) (bool, error) {
+	_, err := os.Stat(name)
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+
+	return false, err
+}
