@@ -1,7 +1,7 @@
 # METADATA
 # description: Panels should have a title and description.
 # related_resources:
-#  - ref: https://github.com/grafana/dashboard-linter/blob/main/docs/rules/panel-title-description-rule.md
+#  - ref: https://github.com/grafana/grafanactl/blob/main/docs/reference/linter-rules/dashboard/panel-title-description.md
 #    description: documentation
 # custom:
 #  severity: warning

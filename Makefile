@@ -89,10 +89,10 @@ docs: check-binaries reference ## Generates the documentation.
 	$(RUN_DEVBOX) mkdocs build -f mkdocs.yml -d ./build/documentation
 
 .PHONY: reference
-reference: cli-reference env-var-reference config-reference ## Generates all references documentation pages.
+reference: cli-reference env-var-reference config-reference linter-rules-reference ## Generates all references documentation pages.
 
 .PHONY: reference-drift
-reference-drift: cli-reference-drift env-var-reference-drift config-reference-drift ## Checks for drift in all references documentation pages.
+reference-drift: cli-reference-drift env-var-reference-drift config-reference-drift linter-rules-reference-drift ## Checks for drift in all references documentation pages.
 
 .PHONY: cli-reference
 cli-reference: check-binaries ## Generates a reference for the CLI.
@@ -108,6 +108,11 @@ env-var-reference: check-binaries ## Generates an environment variables referenc
 config-reference: check-binaries ## Generates a reference for the configuration file.
 	@rm -rf ./docs/reference/configuration
 	@$(RUN_DEVBOX) go run scripts/config-reference/*.go "./docs/reference/configuration"
+
+.PHONY: linter-rules-reference
+linter-rules-reference: check-binaries ## Generates a reference for the built-in linter rules.
+	@rm ./docs/reference/linter-rules/index.md
+	@$(RUN_DEVBOX) go run scripts/linter-rules-reference/*.go "./docs/reference/linter-rules"
 
 .PHONY: cli-reference-drift
 cli-reference-drift: cli-reference ## Checks for drift in the generated CLI reference.
@@ -130,6 +135,14 @@ config-reference-drift: config-reference ## Checks for drift in the generated co
 	@if ! git diff --exit-code --quiet HEAD ./docs/reference/configuration/ ; then \
 		echo "Drift detected in the generated config reference."; \
 		echo 'Run `make config-reference` and commit the modified files.'; \
+		exit 1; \
+ 	fi
+
+.PHONY: linter-rules-reference-drift
+linter-rules-reference-drift: linter-rules-reference ## Checks for drift in the generated linter rules reference.
+	@if ! git diff --exit-code --quiet HEAD ./docs/reference/linter-rules/ ; then \
+		echo "Drift detected in the linter rules reference."; \
+		echo 'Run `make linter-rules-reference` and commit the modified files.'; \
 		exit 1; \
  	fi
 

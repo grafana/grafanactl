@@ -1,7 +1,7 @@
 # METADATA
 # description: Checks that Prometheus targets defined in dashboard panels use valid PromQL queries.
 # related_resources:
-#  - ref: https://github.com/grafana/dashboard-linter/blob/main/docs/rules/target-promql-rule.md
+#  - ref: https://github.com/grafana/grafanactl/blob/main/docs/reference/linter-rules/dashboard/target-valid-promql.md
 #    description: documentation
 # custom:
 #  severity: error

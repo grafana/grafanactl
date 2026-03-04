@@ -1,0 +1,20 @@
+# Linter rules reference
+
+## `alertrule`
+
+| Category | Severity | Name | Summary |
+| -------- | -------- | ---- | ------- |
+| `idiomatic` | `warning` | `alert-runbook-link` | Alerts should have a runbook. |
+| `idiomatic` | `error` | `alert-summary` | Alerts must have a summary. |
+
+## `dashboard`
+
+| Category | Severity | Name | Summary |
+| -------- | -------- | ---- | ------- |
+| `bug` | `error` | [`target-valid-logql`](./dashboard/target-valid-logql.md) | Checks that Loki targets defined in dashboard panels use valid LogQL queries. |
+| `bug` | `error` | [`target-valid-promql`](./dashboard/target-valid-promql.md) | Checks that Prometheus targets defined in dashboard panels use valid PromQL queries. |
+| `idiomatic` | `warning` | [`panel-title-description`](./dashboard/panel-title-description.md) | Panels should have a title and description. |
+| `idiomatic` | `warning` | [`panel-units`](./dashboard/panel-units.md) | Panels should use valid units. |
+| `idiomatic` | `warning` | [`uneditable-dashboard`](./dashboard/uneditable-dashboard.md) | Dashboards should not be editable. |
+
+

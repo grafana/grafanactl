@@ -1,7 +1,7 @@
 # METADATA
 # description: Checks that Loki targets defined in dashboard panels use valid LogQL queries.
 # related_resources:
-#  - ref: https://github.com/grafana/dashboard-linter/blob/main/docs/rules/target-logql-rule.md
+#  - ref: https://github.com/grafana/grafanactl/blob/main/docs/reference/linter-rules/dashboard/target-valid-logql.md
 #    description: documentation
 # custom:
 #  severity: error

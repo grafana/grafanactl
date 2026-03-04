@@ -1,7 +1,7 @@
 # METADATA
 # description: Panels should use valid units.
 # related_resources:
-#  - ref: https://github.com/grafana/dashboard-linter/blob/main/docs/rules/panel-units-rule.md
+#  - ref: https://github.com/grafana/grafanactl/blob/main/docs/reference/linter-rules/dashboard/panel-units.md
 #    description: documentation
 # custom:
 #  severity: warning
@@ -35,7 +35,7 @@ report contains violation if {
 	violation := result.fail(rego.metadata.chain(), sprintf("panel '%s' uses invalid unit '%s'", [panels[i].id, panels[i].object.spec.vizConfig.spec.fieldConfig.defaults.unit]))
 }
 
-# See https:#github.com/grafana/grafana/blob/d0d707895333ddbfbfe4208f8fc8bf65bf0e86e6/packages/grafana-data/src/valueFormats/categories.ts
+# See https://github.com/grafana/grafana/blob/d0d707895333ddbfbfe4208f8fc8bf65bf0e86e6/packages/grafana-data/src/valueFormats/categories.ts
 valid_units := {
     "none",
     "string",

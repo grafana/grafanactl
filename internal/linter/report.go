@@ -17,24 +17,18 @@ func (report Report) ViolationsFileCount() map[string]int {
 
 // Violation describes any violation found by the linter.
 type Violation struct {
-	Rule             string            `json:"rule"`
-	Description      string            `json:"description"`
-	ResourceType     string            `json:"resource_type"`
-	Category         string            `json:"category"`
-	Severity         string            `json:"severity"`
-	Location         Location          `json:"location"`
-	Details          string            `json:"details,omitempty"`
-	RelatedResources []RelatedResource `json:"related_resources"`
+	Rule             string           `json:"rule"`
+	Description      string           `json:"description"`
+	ResourceType     string           `json:"resource_type"`
+	Category         string           `json:"category"`
+	Severity         string           `json:"severity"`
+	Location         Location         `json:"location"`
+	Details          string           `json:"details,omitempty"`
+	RelatedResources RelatedResources `json:"related_resources"`
 }
 
 func (violation Violation) DocumentationURL() string {
-	for _, resource := range violation.RelatedResources {
-		if resource.Description == "documentation" {
-			return resource.Reference
-		}
-	}
-
-	return ""
+	return violation.RelatedResources.DocumentationURL()
 }
 
 type Location struct {
@@ -50,6 +44,18 @@ type Summary struct {
 	FilesFailed   int `json:"files_failed"`
 	RulesSkipped  int `json:"rules_skipped"`
 	NumViolations int `json:"num_violations"`
+}
+
+type RelatedResources []RelatedResource
+
+func (resources RelatedResources) DocumentationURL() string {
+	for _, resource := range resources {
+		if resource.Description == "documentation" {
+			return resource.Reference
+		}
+	}
+
+	return ""
 }
 
 type RelatedResource struct {

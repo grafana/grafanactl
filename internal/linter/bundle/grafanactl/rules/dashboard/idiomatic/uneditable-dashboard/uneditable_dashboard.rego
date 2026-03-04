@@ -1,7 +1,7 @@
 # METADATA
 # description: Dashboards should not be editable.
 # related_resources:
-#  - ref: https://github.com/grafana/dashboard-linter/blob/main/docs/rules/template-uneditable-rule.md
+#  - ref: https://github.com/grafana/grafanactl/blob/main/docs/reference/linter-rules/dashboard/uneditable-dashboard.md
 #    description: documentation
 # custom:
 #  severity: warning
