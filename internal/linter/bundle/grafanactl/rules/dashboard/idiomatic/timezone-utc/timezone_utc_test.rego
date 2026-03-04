@@ -29,7 +29,7 @@ test_dashboard_v1_with_timezone_browser_is_rejected if {
 
 	assert_reports_match(report, {{
 	    "category": "idiomatic",
-	    "description": "Timezone should be utc. For reasons.",
+	    "description": "Timezone should be utc.",
 	    "details": "timezone is 'browser', expected 'utc'",
 	    "related_resources": [],
 	    "resource_type": "dashboard",
@@ -71,7 +71,7 @@ test_dashboard_v2_with_timezone_browser_is_rejected if {
 
 	assert_reports_match(report, {{
 	    "category": "idiomatic",
-	    "description": "Timezone should be utc. For reasons.",
+	    "description": "Timezone should be utc.",
 	    "details": "timezone is 'browser', expected 'utc'",
 	    "related_resources": [],
 	    "resource_type": "dashboard",
