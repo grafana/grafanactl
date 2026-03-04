@@ -92,6 +92,8 @@ func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string,
 
 	ruleFileName := strings.ToLower(strings.ReplaceAll(name, "-", "_")) + ".rego"
 	ruleFile := filepath.Join(ruleDir, ruleFileName)
+	ruleTestFileName := strings.ToLower(strings.ReplaceAll(name, "-", "_")) + "_test.rego"
+	ruleTestFile := filepath.Join(ruleDir, ruleTestFileName)
 
 	exists, err := pathExists(ruleFile)
 	if err != nil {
@@ -105,11 +107,19 @@ func scaffoldCustomRule(stdout io.Writer, opts newRuleOpts, resourceType string,
 		return err
 	}
 
-	ruleFileContent := strings.ReplaceAll(customRuleTemplate, "{{.ResourceType}}", resourceType)
-	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Category}}", opts.category)
-	ruleFileContent = strings.ReplaceAll(ruleFileContent, "{{.Name}}", name)
+	render := func(content string) string {
+		rendered := strings.ReplaceAll(content, "{{.ResourceType}}", resourceType)
+		rendered = strings.ReplaceAll(rendered, "{{.Category}}", opts.category)
+		rendered = strings.ReplaceAll(rendered, "{{.Name}}", name)
 
-	if err := os.WriteFile(ruleFile, []byte(ruleFileContent), 0600); err != nil {
+		return rendered
+	}
+
+	if err := os.WriteFile(ruleFile, []byte(render(customRuleTemplate)), 0600); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(ruleTestFile, []byte(render(customRuleTestTemplate)), 0600); err != nil {
 		return err
 	}
 
@@ -143,6 +153,46 @@ report contains violation if {
 	input.spec.timeSettings.timezone != "utc"
 
 	violation := result.fail(rego.metadata.chain(), "details")
+}
+`
+
+const customRuleTestTemplate = `package custom.grafanactl.rules.{{.ResourceType}}.{{.Category}}["{{.Name}}_test"]
+
+import data.grafanactl.utils
+import data.custom.grafanactl.rules.{{.ResourceType}}.{{.Category}}["{{.Name}}"] as rule
+
+test_dashboard_v1_with_timezone_utc_is_accepted if {
+	resource := {
+	    "kind": "Dashboard",
+	    "apiVersion": "dashboard.grafana.app/v1beta1",
+	    "metadata": {"name": "test-dashboard"},
+	    "spec": {"timezone": "utc"}
+	}
+
+	report := rule.report with input as resource
+
+	assert_reports_match(report, set())
+}
+
+test_dashboard_v1_with_timezone_browser_is_rejected if {
+	resource := {
+	    "kind": "Dashboard",
+	    "apiVersion": "dashboard.grafana.app/v1beta1",
+	    "metadata": {"name": "test-dashboard"},
+	    "spec": {"timezone": "browser"}
+	}
+
+	report := rule.report with input as resource
+
+	assert_reports_match(report, {{
+	    "category": "{{.Category}}",
+	    "description": "Describe the rule here.",
+	    "details": "details",
+	    "related_resources": [],
+	    "resource_type": "{{.ResourceType}}",
+	    "rule": "{{.Name}}",
+	    "severity": "warning",
+	}})
 }
 `
 

@@ -104,7 +104,7 @@ func (runner *TestsRunner) Run(ctx context.Context, stdout io.Writer, inputPaths
 	)
 
 	if opts.BundleMode {
-		bundles, err = tester.LoadBundles(inputPaths, filter.Apply)
+		bundles, err = tester.LoadBundlesWithRegoVersion(inputPaths, filter.Apply, ast.RegoV1)
 		store = inmem.NewWithOpts(inmem.OptRoundTripOnWrite(false))
 	} else {
 		modules, store, err = tester.Load(inputPaths, filter.Apply)
@@ -120,7 +120,21 @@ func (runner *TestsRunner) Run(ctx context.Context, stdout io.Writer, inputPaths
 		coverTracer = cov
 	}
 
+	builtinFuncs := builtins.Tester()
+
+	capabilities := ast.CapabilitiesForThisVersion()
+	for _, f := range builtinFuncs {
+		capabilities.Builtins = append(capabilities.Builtins, f.Decl)
+	}
+
+	compiler := ast.NewCompiler().
+		WithCapabilities(capabilities).
+		WithEnablePrintStatements(true).
+		WithUseTypeCheckAnnotations(true).
+		WithModuleLoader(moduleLoader(&BuiltinBundle))
+
 	r := tester.NewRunner().
+		SetCompiler(compiler).
 		SetStore(store).
 		CapturePrintOutput(true).
 		EnableTracing(opts.Debug).
@@ -128,12 +142,37 @@ func (runner *TestsRunner) Run(ctx context.Context, stdout io.Writer, inputPaths
 		SetModules(modules).
 		SetBundles(bundles).
 		SetTimeout(opts.getTimeout()).
-		AddCustomBuiltins(builtins.Tester()).
+		AddCustomBuiltins(builtinFuncs).
 		Filter(opts.RunRegex)
 
 	reporter := opts.testReporter(stdout, cov, modules)
 
 	return runTests(ctx, store, r, reporter)
+}
+
+func moduleLoader(grafanactlRules *bundle.Bundle) ast.ModuleLoader {
+	// We use the package declarations to know which modules we still need, and return
+	// those from the embedded grafanactlRules bundle.
+	extra := map[string]struct{}{}
+	for _, mod := range grafanactlRules.Modules {
+		extra[mod.Parsed.Package.Path.String()] = struct{}{}
+	}
+
+	return func(present map[string]*ast.Module) (map[string]*ast.Module, error) {
+		for _, mod := range present {
+			delete(extra, mod.Package.Path.String())
+		}
+
+		extraMods := map[string]*ast.Module{}
+
+		for id, mod := range grafanactlRules.ParsedModules("bundle") {
+			if _, ok := extra[mod.Package.Path.String()]; ok {
+				extraMods[id] = mod
+			}
+		}
+
+		return extraMods, nil
+	}
 }
 
 func runTests(ctx context.Context, store storage.Store, runner *tester.Runner, reporter tester.Reporter) error {
