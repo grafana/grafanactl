@@ -1,0 +1,13 @@
+{
+    "kind": "AlertRule",
+    "apiVersion": "rules.alerting.grafana.app/v0alpha1",
+    "metadata": {
+        "name": "test-rule"
+    },
+    "spec": {
+        "annotations": {
+            "summary": "Clock not synchronising."
+        },
+        "...": true
+    }
+}

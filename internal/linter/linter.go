@@ -146,7 +146,7 @@ func New(opts ...Option) (*Linter, error) {
 	linter := &Linter{
 		resourceReader: &local.FSReader{
 			Decoders:    format.Codecs(),
-			StopOnError: false,
+			StopOnError: true,
 		},
 		maxConcurrency: 1,
 		ruleBundles: []*bundle.Bundle{
@@ -359,7 +359,6 @@ func (linter *Linter) Lint(ctx context.Context) (Report, error) {
 	finalReport.Summary = Summary{
 		FilesScanned:  inputs.Len(),
 		FilesFailed:   len(finalReport.ViolationsFileCount()),
-		RulesSkipped:  0,
 		NumViolations: len(finalReport.Violations),
 	}
 

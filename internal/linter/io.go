@@ -16,11 +16,22 @@ import (
 // the linter's main logic.
 //
 //nolint:gochecknoglobals
-var BuiltinBundle = MustLoadBundleFS(gbundle.BundleFS)
+var BuiltinBundle = mustLoadBundleFS(gbundle.BundleFS)
 
-// LoadBundleFS loads a bundle from the given filesystem.
+// mustLoadBundleFS implements the same functionality as LoadBundleFS, but logs
+// an error on failure and exits.
+func mustLoadBundleFS(fs fs.FS) opabundle.Bundle {
+	bundle, err := loadBundleFS(fs)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return bundle
+}
+
+// loadBundleFS loads a bundle from the given filesystem.
 // Note: tests are excluded.
-func LoadBundleFS(fs fs.FS) (opabundle.Bundle, error) {
+func loadBundleFS(fs fs.FS) (opabundle.Bundle, error) {
 	embedLoader, err := opabundle.NewFSLoader(fs)
 	if err != nil {
 		return opabundle.Bundle{}, fmt.Errorf("failed to load bundle from filesystem: %w", err)
@@ -31,17 +42,6 @@ func LoadBundleFS(fs fs.FS) (opabundle.Bundle, error) {
 		WithSkipBundleVerification(true).
 		WithProcessAnnotations(true).
 		Read()
-}
-
-// MustLoadBundleFS implements the same functionality as LoadBundleFS, but logs
-// an error on failure and exits.
-func MustLoadBundleFS(fs fs.FS) opabundle.Bundle {
-	bundle, err := LoadBundleFS(fs)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return bundle
 }
 
 // excludeTestFilter implements a filter.LoaderFilter that excludes test files.

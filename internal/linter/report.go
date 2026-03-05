@@ -42,7 +42,6 @@ func (l Location) String() string {
 type Summary struct {
 	FilesScanned  int `json:"files_scanned"`
 	FilesFailed   int `json:"files_failed"`
-	RulesSkipped  int `json:"rules_skipped"`
 	NumViolations int `json:"num_violations"`
 }
 

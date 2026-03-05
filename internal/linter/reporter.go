@@ -114,14 +114,6 @@ func (reporter PrettyReporter) Publish(_ context.Context, out io.Writer, r Repor
 		}
 	}
 
-	if r.Summary.RulesSkipped > 0 {
-		footer += fmt.Sprintf(
-			" %d %s skipped:\n",
-			r.Summary.RulesSkipped,
-			pluralize("rule", r.Summary.RulesSkipped),
-		)
-	}
-
 	_, err := fmt.Fprint(out, footer+"\n")
 
 	return err
