@@ -22,4 +22,10 @@ title: Usage
 
     Write, preview and deploy dashboards as code.
 
+-   :material-shield-check-outline:{ .lg .middle } __[Lint resources](./lint-resources.md)__
+
+    ---
+
+    Lint resources, with built-in or custom rules.
+
 </div>
