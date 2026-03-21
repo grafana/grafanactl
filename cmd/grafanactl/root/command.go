@@ -8,7 +8,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/go-logr/logr"
 	"github.com/grafana/grafana-app-sdk/logging"
-	"github.com/grafana/grafanactl/cmd/grafanactl/auth"
 	"github.com/grafana/grafanactl/cmd/grafanactl/config"
 	"github.com/grafana/grafanactl/cmd/grafanactl/resources"
 	"github.com/grafana/grafanactl/internal/logs"
@@ -58,7 +57,7 @@ func Command(version string) *cobra.Command {
 	rootCmd.SetErr(os.Stderr)
 	rootCmd.SetIn(os.Stdin)
 
-	rootCmd.AddCommand(auth.Command())
+	rootCmd.AddCommand(config.AuthCommand())
 	rootCmd.AddCommand(config.Command())
 	rootCmd.AddCommand(resources.Command())
 

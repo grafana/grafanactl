@@ -18,5 +18,8 @@ contexts:
       user: "admin"
       password: "admin"
 
+      # For testing with insecure connections (self-signed certs, etc.)
+      # insecure-skip-tls-verify: true
+
       # Default organization ID (Grafana on-prem uses org-id as namespace)
       org-id: 1

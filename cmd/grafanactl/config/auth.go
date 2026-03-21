@@ -1,18 +1,17 @@
-package auth
+package config
 
 import (
 	"fmt"
 
-	cmdconfig "github.com/grafana/grafanactl/cmd/grafanactl/config"
 	"github.com/grafana/grafanactl/cmd/grafanactl/io"
 	"github.com/grafana/grafanactl/internal/auth"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/spf13/cobra"
 )
 
-// Command returns the auth command group.
-func Command() *cobra.Command {
-	configOpts := &cmdconfig.Options{}
+// AuthCommand returns the top-level auth command group.
+func AuthCommand() *cobra.Command {
+	configOpts := &Options{}
 
 	cmd := &cobra.Command{
 		Use:   "auth",
@@ -28,7 +27,7 @@ func Command() *cobra.Command {
 	return cmd
 }
 
-func loginCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func loginCmd(configOpts *Options) *cobra.Command {
 	var callbackPort int
 
 	cmd := &cobra.Command{
@@ -46,7 +45,7 @@ Before running this command, configure OIDC settings for the context:
   grafanactl config set contexts.<name>.grafana.oidc.client-id your-client-id`,
 		Example: "\n\tgrafanactl auth login\n\tgrafanactl auth login --context production\n\tgrafanactl auth login --callback-port 8085",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -108,14 +107,14 @@ Before running this command, configure OIDC settings for the context:
 	return cmd
 }
 
-func statusCmd(configOpts *cmdconfig.Options) *cobra.Command {
+func statusCmd(configOpts *Options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "status",
 		Args:    cobra.NoArgs,
 		Short:   "Show OIDC authentication status",
 		Example: "\n\tgrafanactl auth status",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}

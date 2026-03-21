@@ -110,8 +110,7 @@ grafanactl follows the Cobra command pattern with three main command groups:
 
 **cmd/grafanactl/** - CLI command implementations
 - `root/`: Root command setup with logging and flags
-- `auth/`: OIDC authentication commands (login, status)
-- `config/`: Configuration management commands
+- `config/`: Configuration management commands and OIDC authentication commands (login, status)
 - `resources/`: Resource manipulation commands
 - `fail/`: Error handling and detailed error messages
 - `io/`: Output formatting and user messages
@@ -511,7 +510,7 @@ The codebase is designed for extension:
 2. **New Formats**: Add codec to `internal/format/codec.go`
 3. **New Processors**: Implement Processor interface
 4. **Custom Handlers**: Add to `internal/server/handlers/`
-5. **Authentication Methods**: Extend `internal/config/rest.go`
+5. **Authentication Methods**: OIDC tokens are resolved into `APIToken` during config loading (`cmd/grafanactl/config/command.go`), keeping auth call sites in `rest.go`, `client.go`, and `requests.go` unchanged
 
 ### Dependencies of Note
 
