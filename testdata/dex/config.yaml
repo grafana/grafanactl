@@ -1,0 +1,33 @@
+# Dex configuration for grafanactl OIDC integration tests.
+#
+# Static user credentials:
+#   Email:    admin@example.com
+#   Password: password
+
+issuer: http://localhost:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+oauth2:
+  skipApprovalScreen: true
+
+staticClients:
+  - id: grafanactl-test
+    name: grafanactl Test Client
+    redirectURIs:
+      - http://127.0.0.1:18085/callback
+      - http://127.0.0.1:8085/callback
+    public: true
+
+enablePasswordDB: true
+
+staticPasswords:
+  - email: admin@example.com
+    # bcrypt hash of "password"
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: admin
+    userID: 08a8684b-db88-4b73-90a9-3cd1661f5466

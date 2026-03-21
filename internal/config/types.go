@@ -101,6 +101,10 @@ type GrafanaConfig struct {
 
 	// TLS contains TLS-related configuration settings.
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
+
+	// OIDC contains OpenID Connect authentication settings.
+	// When configured with valid tokens, OIDC takes precedence over APIToken and basic auth.
+	OIDC *OIDCConfig `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 }
 
 func (grafana GrafanaConfig) validateNamespace(contextName string) error {
@@ -164,6 +168,58 @@ func (grafana GrafanaConfig) Validate(contextName string) error {
 
 func (grafana GrafanaConfig) IsEmpty() bool {
 	return grafana == GrafanaConfig{}
+}
+
+// OIDCConfig contains OpenID Connect provider settings.
+type OIDCConfig struct {
+	// IssuerURL is the OIDC provider's issuer URL (e.g., https://your-org.okta.com).
+	// Used to discover authorization and token endpoints via .well-known/openid-configuration.
+	IssuerURL string `env:"GRAFANA_OIDC_ISSUER" json:"issuer-url,omitempty" yaml:"issuer-url,omitempty"`
+
+	// ClientID is the OAuth2 client ID registered with the OIDC provider.
+	ClientID string `env:"GRAFANA_OIDC_CLIENT_ID" json:"client-id,omitempty" yaml:"client-id,omitempty"`
+
+	// ClientSecret is the OAuth2 client secret. Optional for public clients using PKCE.
+	ClientSecret string `datapolicy:"secret" env:"GRAFANA_OIDC_CLIENT_SECRET" json:"client-secret,omitempty" yaml:"client-secret,omitempty"`
+
+	// Scopes is a space-separated list of OAuth2 scopes to request.
+	// Defaults to "openid profile email" if not set.
+	Scopes string `env:"GRAFANA_OIDC_SCOPES" json:"scopes,omitempty" yaml:"scopes,omitempty"`
+}
+
+// IsConfigured returns true if OIDC provider settings are present.
+func (o *OIDCConfig) IsConfigured() bool {
+	return o != nil && o.IssuerURL != "" && o.ClientID != ""
+}
+
+// CachedToken holds cached OAuth2 tokens for a context.
+type CachedToken struct {
+	AccessToken  string `json:"access-token,omitempty" yaml:"access-token,omitempty"`
+	RefreshToken string `json:"refresh-token,omitempty" yaml:"refresh-token,omitempty"`
+	TokenExpiry  string `json:"token-expiry,omitempty" yaml:"token-expiry,omitempty"`
+}
+
+// TokenCache maps context names to their cached tokens.
+type TokenCache struct {
+	Contexts map[string]*CachedToken `json:"contexts,omitempty" yaml:"contexts,omitempty"`
+}
+
+// Get returns the cached token for a context, or nil if none exists.
+func (tc *TokenCache) Get(contextName string) *CachedToken {
+	if tc == nil || tc.Contexts == nil {
+		return nil
+	}
+
+	return tc.Contexts[contextName]
+}
+
+// Set stores a cached token for a context.
+func (tc *TokenCache) Set(contextName string, token *CachedToken) {
+	if tc.Contexts == nil {
+		tc.Contexts = make(map[string]*CachedToken)
+	}
+
+	tc.Contexts[contextName] = token
 }
 
 // TLS contains settings to enable transport layer security.

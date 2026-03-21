@@ -9,6 +9,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
 	"github.com/grafana/grafanactl/cmd/grafanactl/io"
+	"github.com/grafana/grafanactl/internal/auth"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/grafana"
@@ -30,11 +31,11 @@ func (opts *Options) BindFlags(flags *pflag.FlagSet) {
 	_ = cobra.MarkFlagFilename(flags, "config", "yaml", "yml")
 }
 
-// loadConfigTolerant loads the configuration file (default, or explicitly set via flags)
+// LoadConfigTolerant loads the configuration file (default, or explicitly set via flags)
 // and returns it without validation.
 // This function should only be used by config-related commands, to allow the
 // user to iterate on the configuration until it becomes valid.
-func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...config.Override) (config.Config, error) {
+func (opts *Options) LoadConfigTolerant(ctx context.Context, extraOverrides ...config.Override) (config.Config, error) {
 	overrides := append([]config.Override{
 		// If Grafana-related env variables are set, use them to configure the
 		// current context and Grafana config.
@@ -73,10 +74,11 @@ func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...c
 		})
 	}
 
-	return config.Load(ctx, opts.configSource(), overrides...)
+	return config.Load(ctx, opts.ConfigSource(), overrides...)
 }
 
 // LoadConfig loads the configuration file (default, or explicitly set via flags) and validates it.
+// If OIDC is configured, the cached token is resolved into APIToken so downstream code is unaware of OIDC.
 func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 	validator := func(cfg *config.Config) error {
 		// Ensure that the current context actually exists.
@@ -87,7 +89,31 @@ func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 		return cfg.GetCurrentContext().Validate()
 	}
 
-	return opts.loadConfigTolerant(ctx, validator)
+	cfg, err := opts.LoadConfigTolerant(ctx, validator)
+	if err != nil {
+		return cfg, err
+	}
+
+	// If OIDC is configured, resolve the cached token into APIToken.
+	// This makes OIDC transparent to all downstream auth call sites.
+	if gCtx := cfg.GetCurrentContext(); gCtx != nil && gCtx.Grafana != nil && gCtx.Grafana.OIDC.IsConfigured() {
+		cache, _ := config.LoadTokenCache(ctx)
+		cached := cache.Get(cfg.CurrentContext)
+
+		token, refreshed, err := auth.EnsureValidToken(ctx, gCtx.Grafana.OIDC, cached)
+		if err != nil {
+			return cfg, err
+		}
+
+		gCtx.Grafana.APIToken = token
+
+		if refreshed {
+			cache.Set(cfg.CurrentContext, cached)
+			_ = config.WriteTokenCache(ctx, cache)
+		}
+	}
+
+	return cfg, nil
 }
 
 // LoadRESTConfig loads the configuration file and constructs a REST config from it.
@@ -100,7 +126,8 @@ func (opts *Options) LoadRESTConfig(ctx context.Context) (config.NamespacedRESTC
 	return cfg.GetCurrentContext().ToRESTConfig(ctx), nil
 }
 
-func (opts *Options) configSource() config.Source {
+// ConfigSource returns the config source based on the options.
+func (opts *Options) ConfigSource() config.Source {
 	if opts.ConfigFile != "" {
 		return config.ExplicitConfigFile(opts.ConfigFile)
 	}
@@ -183,7 +210,7 @@ func viewCmd(configOpts *Options) *cobra.Command {
 				return err
 			}
 
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -223,7 +250,7 @@ func currentContextCmd(configOpts *Options) *cobra.Command {
 		Long:    "Display the current context name.",
 		Example: "\n\tgrafanactl config current-context",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -245,7 +272,7 @@ func listContextsCmd(configOpts *Options) *cobra.Command {
 		Long:    "List the contexts defined in the configuration.",
 		Example: "\n\tgrafanactl config list-contexts",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -282,7 +309,7 @@ func checkCmd(configOpts *Options) *cobra.Command {
 		Long:    "Check the current configuration for issues.",
 		Example: "\n\tgrafanactl config check",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -382,7 +409,7 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 		Long:    "Set the current context and updates the configuration file.",
 		Example: "\n\tgrafanactl config use-context dev-instance",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -393,7 +420,7 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 
 			cfg.CurrentContext = args[0]
 
-			if err := config.Write(cmd.Context(), configOpts.configSource(), cfg); err != nil {
+			if err := config.Write(cmd.Context(), configOpts.ConfigSource(), cfg); err != nil {
 				return err
 			}
 
@@ -422,7 +449,7 @@ PROPERTY_VALUE is the new value to set.`,
 	# Disable the validation of the server's SSL certificate in the "dev-instance" context
 	grafanactl config set contexts.dev-instance.grafana.insecure-skip-tls-verify true`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -431,7 +458,7 @@ PROPERTY_VALUE is the new value to set.`,
 				return err
 			}
 
-			return config.Write(cmd.Context(), configOpts.configSource(), cfg)
+			return config.Write(cmd.Context(), configOpts.ConfigSource(), cfg)
 		},
 	}
 
@@ -453,7 +480,7 @@ PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either 
 	# Unset the "insecure-skip-tls-verify" flag in the "dev-instance" context
 	grafanactl config unset contexts.dev-instance.grafana.insecure-skip-tls-verify`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := configOpts.loadConfigTolerant(cmd.Context())
+			cfg, err := configOpts.LoadConfigTolerant(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -462,7 +489,7 @@ PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either 
 				return err
 			}
 
-			return config.Write(cmd.Context(), configOpts.configSource(), cfg)
+			return config.Write(cmd.Context(), configOpts.ConfigSource(), cfg)
 		},
 	}
 

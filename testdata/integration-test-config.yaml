@@ -1,25 +1,13 @@
-# Integration test configuration for grafanactl
-# This config is used for testing grafanactl against a local Grafana instance
-# running via docker-compose.yml
-#
-# Usage:
-#   grafanactl --config testdata/integration-test-config.yaml config view
-
-current-context: "local"
-
 contexts:
   local:
     grafana:
-      # Local Grafana instance running in Docker
-      server: "http://localhost:3000"
-
-      # Basic authentication with default admin credentials
-      # Username: admin, Password: admin
-      user: "admin"
-      password: "admin"
-
-      # For testing with insecure connections (self-signed certs, etc.)
-      # insecure-skip-tls-verify: true
-
-      # Default organization ID (Grafana on-prem uses org-id as namespace)
+      server: http://localhost:3000
+      user: admin
+      password: admin
       org-id: 1
+      oidc:
+        issuer-url: https://localhost:5556/dex
+        client-id: grafanactl-test
+        access-token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImExMzE5NTk1YzEzNTcyMzQ5NGUzYmMwYzM5MzE3ZjMyNWFiYzRlMDAifQ.eyJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo1NTU2L2RleCIsInN1YiI6IkNpUXdPR0U0TmpnMFlpMWtZamc0TFRSaU56TXRPVEJoT1MwelkyUXhOall4WmpVME5qWVNCV3h2WTJGcyIsImF1ZCI6ImdyYWZhbmFjdGwtdGVzdCIsImV4cCI6MTc3NDIwMDMxMiwiaWF0IjoxNzc0MTEzOTEyLCJhdF9oYXNoIjoiRmgzZnpkVkhSNlhkVWNuejdLdXdVUSIsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6ImFkbWluIn0.kfv-DUCIrcbPT6NGWA2fO8kKzvCRvPnfU5ZtKLptLrz5xcao3XjKMJFvcpOmtbmLKyjphOq2AV004D4jZiOXjW2ARy7mmveUi0xbDRv_A17gOkHn40Z2cK7rVDCh3S2sGCgfKWdTuJf8i1PlnpRNdEc4u3hCQ-xyH0M4wkW0WkgZgLme7Fb55L2GXglpicCbmanyDewbb2blEtVrvuGqWB747NG9_qyYxK7WvO_tE2dA1dEHkisaHKIgexw2D7B_ugRbZ7bWAszquXhPsHRHtCKfc88a6yuUTmTEHwSfKs1hUXOOZuSeLXAn9YkYa2UueujwGxpQRKtQzw2S_mgvfg
+        token-expiry: "2026-03-22T17:25:11Z"
+current-context: local
