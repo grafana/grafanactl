@@ -102,8 +102,7 @@ type GrafanaConfig struct {
 	// TLS contains TLS-related configuration settings.
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 
-	// OIDC contains OpenID Connect authentication settings.
-	// When configured with valid tokens, OIDC takes precedence over APIToken and basic auth.
+	// OIDC contains OpenID Connect provider settings.
 	OIDC *OIDCConfig `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 }
 

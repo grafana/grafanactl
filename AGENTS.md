@@ -81,9 +81,13 @@ make clean
 
 ### Command Structure
 
-grafanactl follows the Cobra command pattern with two main command groups:
+grafanactl follows the Cobra command pattern with three main command groups:
 
-1. **config**: Manage configuration contexts for connecting to Grafana instances
+1. **auth**: Authenticate with Grafana via OpenID Connect (OIDC)
+   - `auth login`: Log in using OIDC (Authorization Code + PKCE flow)
+   - `auth status`: Show current OIDC authentication status
+
+2. **config**: Manage configuration contexts for connecting to Grafana instances
    - `config set`: Set configuration values
    - `config unset`: Unset configuration values
    - `config use-context`: Switch between configured contexts
@@ -92,7 +96,7 @@ grafanactl follows the Cobra command pattern with two main command groups:
    - `config view`: View the current configuration
    - `config check`: Validate the configuration
 
-2. **resources**: Manipulate Grafana resources (dashboards, folders, etc.)
+3. **resources**: Manipulate Grafana resources (dashboards, folders, etc.)
    - `resources get`: Get resources from Grafana
    - `resources list`: List resources
    - `resources pull`: Pull resources from Grafana to local files
@@ -106,15 +110,23 @@ grafanactl follows the Cobra command pattern with two main command groups:
 
 **cmd/grafanactl/** - CLI command implementations
 - `root/`: Root command setup with logging and flags
+- `auth/`: OIDC authentication commands (login, status)
 - `config/`: Configuration management commands
 - `resources/`: Resource manipulation commands
 - `fail/`: Error handling and detailed error messages
 - `io/`: Output formatting and user messages
 
+**internal/auth/** - OIDC authentication
+- Authorization Code + PKCE flow with local callback server
+- OIDC discovery via `.well-known/openid-configuration`
+- Token refresh using `golang.org/x/oauth2`
+- Token expiry checking and cache management
+
 **internal/config/** - Configuration management
 - Context-based configuration (similar to kubectl contexts)
 - Support for multiple Grafana instances (contexts)
-- Authentication: basic auth, API tokens
+- Authentication: OIDC, basic auth, API tokens
+- OIDC token cache stored separately at `$XDG_CACHE_HOME/grafanactl/tokens.yaml`
 - Environment variable overrides (GRAFANA_SERVER, GRAFANA_TOKEN, etc.)
 - Automatic Stack ID discovery for Grafana Cloud
 - TLS configuration support
@@ -198,6 +210,10 @@ Environment variables can override configuration values:
 - `GRAFANA_PASSWORD`: Password for basic auth
 - `GRAFANA_ORG_ID`: Organization ID (on-prem)
 - `GRAFANA_STACK_ID`: Stack ID (Grafana Cloud)
+- `GRAFANA_OIDC_ISSUER`: OIDC provider issuer URL
+- `GRAFANA_OIDC_CLIENT_ID`: OIDC client ID
+- `GRAFANA_OIDC_CLIENT_SECRET`: OIDC client secret (optional for PKCE)
+- `GRAFANA_OIDC_SCOPES`: OIDC scopes (space-separated)
 
 ## Testing Patterns
 
@@ -206,6 +222,10 @@ Environment variables can override configuration values:
 - Resource filtering/selector tests in `internal/resources/*_test.go`
 - Test data in `testdata/` directories
 - Use `make tests` to run all tests with race detection
+- OIDC integration tests require Dex (`docker compose up -d dex`) and use a build tag:
+  ```bash
+  go test -tags=integration ./internal/auth/
+  ```
 
 ## Code Generation
 
@@ -508,6 +528,7 @@ The codebase is designed for extension:
 - `github.com/grafana/grafana-app-sdk/logging`: Structured logging
 
 **Utilities**:
+- `golang.org/x/oauth2` v0.30.0: OIDC token exchange and refresh
 - `golang.org/x/sync` v0.17.0: errgroup for concurrency
 - `github.com/goccy/go-yaml` v1.18.0: YAML codec
 - `github.com/fsnotify/fsnotify` v1.9.0: File watching
@@ -516,7 +537,9 @@ The codebase is designed for extension:
 
 **Credential Management**:
 - API tokens stored in config file with 0600 permissions
-- Password fields tagged with `datapolicy:"secret"` for redaction
+- OIDC tokens cached separately at `$XDG_CACHE_HOME/grafanactl/tokens.yaml` with 0600 permissions
+- OIDC provider config (issuer, client ID) stored in main config; tokens never in config
+- Password and secret fields tagged with `datapolicy:"secret"` for redaction
 - TLS certificate data base64-encoded in config
 - Environment variables supported for CI/CD (avoid config files)
 
