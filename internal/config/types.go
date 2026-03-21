@@ -184,6 +184,11 @@ type OIDCConfig struct {
 	// Scopes is a space-separated list of OAuth2 scopes to request.
 	// Defaults to "openid profile email" if not set.
 	Scopes string `env:"GRAFANA_OIDC_SCOPES" json:"scopes,omitempty" yaml:"scopes,omitempty"`
+
+	// CallbackPort is a fixed port for the local OIDC callback server during login.
+	// If 0 or unset, a random available port is used.
+	// Set this when the IdP requires exact redirect URI matching.
+	CallbackPort int64 `env:"GRAFANA_OIDC_CALLBACK_PORT" json:"callback-port,omitempty" yaml:"callback-port,omitempty"`
 }
 
 // IsConfigured returns true if OIDC provider settings are present.

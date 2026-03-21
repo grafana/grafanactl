@@ -71,8 +71,13 @@ Before running this command, configure OIDC settings for the context:
 			stdout := cmd.OutOrStdout()
 			io.Info(stdout, "Opening browser for OIDC login to %s...", gCtx.Grafana.OIDC.IssuerURL)
 
+			port := callbackPort
+			if port == 0 {
+				port = int(gCtx.Grafana.OIDC.CallbackPort)
+			}
+
 			token, err := auth.Login(cmd.Context(), gCtx.Grafana.OIDC, auth.LoginOptions{
-				CallbackPort: callbackPort,
+				CallbackPort: port,
 			})
 			if err != nil {
 				return fmt.Errorf("OIDC login failed: %w", err)

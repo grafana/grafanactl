@@ -74,7 +74,7 @@ func (opts *Options) LoadConfigTolerant(ctx context.Context, extraOverrides ...c
 		})
 	}
 
-	return config.Load(ctx, opts.ConfigSource(), overrides...)
+	return config.Load(ctx, opts.configSource(), overrides...)
 }
 
 // LoadConfig loads the configuration file (default, or explicitly set via flags) and validates it.
@@ -126,8 +126,7 @@ func (opts *Options) LoadRESTConfig(ctx context.Context) (config.NamespacedRESTC
 	return cfg.GetCurrentContext().ToRESTConfig(ctx), nil
 }
 
-// ConfigSource returns the config source based on the options.
-func (opts *Options) ConfigSource() config.Source {
+func (opts *Options) configSource() config.Source {
 	if opts.ConfigFile != "" {
 		return config.ExplicitConfigFile(opts.ConfigFile)
 	}
@@ -420,7 +419,7 @@ func useContextCmd(configOpts *Options) *cobra.Command {
 
 			cfg.CurrentContext = args[0]
 
-			if err := config.Write(cmd.Context(), configOpts.ConfigSource(), cfg); err != nil {
+			if err := config.Write(cmd.Context(), configOpts.configSource(), cfg); err != nil {
 				return err
 			}
 
@@ -458,7 +457,7 @@ PROPERTY_VALUE is the new value to set.`,
 				return err
 			}
 
-			return config.Write(cmd.Context(), configOpts.ConfigSource(), cfg)
+			return config.Write(cmd.Context(), configOpts.configSource(), cfg)
 		},
 	}
 
@@ -489,7 +488,7 @@ PROPERTY_NAME is a dot-delimited reference to the value to unset. It can either 
 				return err
 			}
 
-			return config.Write(cmd.Context(), configOpts.ConfigSource(), cfg)
+			return config.Write(cmd.Context(), configOpts.configSource(), cfg)
 		},
 	}
 
