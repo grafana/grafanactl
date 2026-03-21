@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
@@ -69,12 +68,10 @@ func TestOIDCLoginAndRefresh(t *testing.T) {
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
 
-	// Programmatically log in to Dex (no browser needed).
 	code, returnedState := programmaticDexLogin(t, authURL, dexEmail, dexPassword)
 	require.Equal(t, state, returnedState, "state mismatch")
 	require.NotEmpty(t, code)
 
-	// Exchange the code for tokens.
 	token, err := oauthCfg.Exchange(ctx, code,
 		oauth2.SetAuthURLParam("code_verifier", verifier),
 	)
@@ -83,7 +80,6 @@ func TestOIDCLoginAndRefresh(t *testing.T) {
 	assert.NotEmpty(t, token.RefreshToken, "missing refresh token (offline_access scope)")
 	assert.False(t, token.Expiry.IsZero())
 
-	// Store and verify round-trip through CachedToken.
 	oidcCfg := &config.OIDCConfig{
 		IssuerURL: dexIssuerURL,
 		ClientID:  dexClientID,
@@ -94,7 +90,6 @@ func TestOIDCLoginAndRefresh(t *testing.T) {
 	assert.Equal(t, token.RefreshToken, cached.RefreshToken)
 	assert.False(t, auth.TokenNeedsRefresh(cached))
 
-	// EnsureValidToken should return the token without refreshing.
 	accessToken, refreshed, err := auth.EnsureValidToken(ctx, oidcCfg, cached)
 	require.NoError(t, err)
 	assert.False(t, refreshed)
@@ -130,8 +125,15 @@ func TestTokenNeedsRefresh(t *testing.T) {
 	}
 }
 
-// programmaticDexLogin walks through Dex's login form via HTTP requests,
-// returning the authorization code and state from the callback redirect.
+// programmaticDexLogin walks through the exact Dex password-connector login flow:
+//
+//  1. GET  /dex/auth?...                → 302 → /dex/auth/local?...
+//  2. GET  /dex/auth/local?...          → 302 → /dex/auth/local/login?state=...
+//  3. GET  /dex/auth/local/login?...    → 200   (login form)
+//  4. POST /dex/auth/local/login?...    → 303 → callback?code=...&state=...
+//
+// it's a bit nicer than just following re-directs blindly, so if Dex ever has an issue
+// we should be able to pinpoint it fast.
 func programmaticDexLogin(t *testing.T, authURL, email, password string) (code, state string) {
 	t.Helper()
 
@@ -145,55 +147,50 @@ func programmaticDexLogin(t *testing.T, authURL, email, password string) (code, 
 		},
 	}
 
-	// Follow redirects from auth URL until we reach the login form (200).
-	loginURL := authURL
-	for range 10 {
-		resp, err := client.Get(loginURL)
-		require.NoError(t, err)
-		resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			break
-		}
-		require.True(t, resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusSeeOther,
-			"unexpected status %d at %s", resp.StatusCode, loginURL)
-		loginURL = resolveRedirect(t, resp).String()
-	}
+	// Step 1: GET auth URL → 302 to connector selection.
+	resp, err := client.Get(authURL)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusFound, resp.StatusCode)
 
-	// POST credentials.
-	resp, err := client.PostForm(loginURL, url.Values{
+	// Step 2: GET connector URL → 302 to login form.
+	resp, err = client.Get(locationURL(t, resp))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusFound, resp.StatusCode)
+
+	// Step 3: GET login form → 200.
+	loginFormURL := locationURL(t, resp)
+	resp, err = client.Get(loginFormURL)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Step 4: POST credentials → 303 to callback with code.
+	resp, err = client.PostForm(loginFormURL, url.Values{
 		"login":    {email},
 		"password": {password},
 	})
 	require.NoError(t, err)
 	resp.Body.Close()
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
 
-	// Follow redirects until we hit the callback URL.
-	for range 10 {
-		require.True(t, resp.StatusCode == http.StatusFound || resp.StatusCode == http.StatusSeeOther,
-			"expected redirect, got %d", resp.StatusCode)
-		target := resolveRedirect(t, resp)
-		if strings.HasPrefix(target.String(), callbackBase) {
-			return target.Query().Get("code"), target.Query().Get("state")
-		}
-		resp, err = client.Get(target.String())
-		require.NoError(t, err)
-		resp.Body.Close()
-	}
+	callback, err := url.Parse(resp.Header.Get("Location"))
+	require.NoError(t, err)
 
-	t.Fatal("did not reach callback URL")
-	return "", ""
+	return callback.Query().Get("code"), callback.Query().Get("state")
 }
 
-func resolveRedirect(t *testing.T, resp *http.Response) *url.URL {
+func locationURL(t *testing.T, resp *http.Response) string {
 	t.Helper()
-	location := resp.Header.Get("Location")
-	require.NotEmpty(t, location)
-	u, err := url.Parse(location)
+	loc := resp.Header.Get("Location")
+	require.NotEmpty(t, loc)
+	u, err := url.Parse(loc)
 	require.NoError(t, err)
 	if !u.IsAbs() {
 		u = resp.Request.URL.ResolveReference(u)
 	}
-	return u
+	return u.String()
 }
 
 func generateTestVerifier(t *testing.T) string {
