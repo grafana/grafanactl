@@ -20,6 +20,7 @@ func Command() *cobra.Command {
 	cmd.AddCommand(editCmd(configOpts))
 	cmd.AddCommand(getCmd(configOpts))
 	cmd.AddCommand(listCmd(configOpts))
+	cmd.AddCommand(getMetaCmd(configOpts))
 	cmd.AddCommand(pullCmd(configOpts))
 	cmd.AddCommand(pushCmd(configOpts))
 	cmd.AddCommand(serveCmd(configOpts))
