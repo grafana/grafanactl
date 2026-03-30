@@ -15,6 +15,7 @@ type fetchRequest struct {
 	StopOnError        bool
 	ExcludeManaged     bool
 	ExpectSingleTarget bool
+	LabelSelector      string
 	Processors         []remote.Processor
 }
 
@@ -48,6 +49,12 @@ func fetchResources(ctx context.Context, opts fetchRequest, args []string) (*fet
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.LabelSelector != "" {
+		for i := range filters {
+			filters[i].LabelSelector = opts.LabelSelector
+		}
 	}
 
 	pull, err := remote.NewDefaultPuller(ctx, opts.Config)

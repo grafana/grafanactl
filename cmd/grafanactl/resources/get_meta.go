@@ -23,13 +23,16 @@ import (
 )
 
 type getMetaOpts struct {
-	IO cmdio.Options
+	IO            cmdio.Options
+	LabelSelector string
 }
 
 func (opts *getMetaOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.RegisterCustomCodec("text", &partialMetaTableCodec{wide: false})
 	opts.IO.RegisterCustomCodec("wide", &partialMetaTableCodec{wide: true})
 	opts.IO.DefaultFormat("text")
+
+	flags.StringVarP(&opts.LabelSelector, "selector", "l", "", "Filter resources by label selector (e.g. -l key=value,other=value)")
 
 	opts.IO.BindFlags(flags)
 }

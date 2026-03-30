@@ -111,7 +111,7 @@ func (p *Puller) Pull(ctx context.Context, req PullRequest) (*OperationSummary, 
 		errg.Go(func() error {
 			switch filt.Type {
 			case resources.FilterTypeAll:
-				res, err := p.client.List(ctx, filt.Descriptor, metav1.ListOptions{})
+				res, err := p.client.List(ctx, filt.Descriptor, metav1.ListOptions{LabelSelector: filt.LabelSelector})
 				if err != nil {
 					if req.StopOnError {
 						return err

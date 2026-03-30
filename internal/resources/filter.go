@@ -41,9 +41,10 @@ func (t FilterType) String() string {
 // Unlike Selector, filters use the Descriptor to identify the resource type,
 // which fully defines the target API resource.
 type Filter struct {
-	Type         FilterType
-	Descriptor   Descriptor
-	ResourceUIDs []string
+	Type          FilterType
+	Descriptor    Descriptor
+	ResourceUIDs  []string
+	LabelSelector string
 }
 
 func (f Filter) String() string {
