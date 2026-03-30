@@ -62,6 +62,7 @@ grafanactl resources get [RESOURCE_SELECTOR]... [flags]
                             fail   — continue processing all resources and exit 1 if any failed (default)
                             abort  — stop on the first error and exit 1 (default "fail")
   -o, --output string     Output format. One of: json, text, wide, yaml (default "text")
+  -l, --selector string   Filter resources by label selector (e.g. -l key=value,other=value)
 ```
 
 ### Options inherited from parent commands

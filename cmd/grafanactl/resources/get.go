@@ -20,8 +20,9 @@ import (
 )
 
 type getOpts struct {
-	IO      cmdio.Options
-	OnError OnErrorMode
+	IO            cmdio.Options
+	OnError       OnErrorMode
+	LabelSelector string
 }
 
 func (opts *getOpts) setup(flags *pflag.FlagSet) {
@@ -30,6 +31,8 @@ func (opts *getOpts) setup(flags *pflag.FlagSet) {
 	opts.IO.RegisterCustomCodec("text", &tableCodec{wide: false})
 	opts.IO.RegisterCustomCodec("wide", &tableCodec{wide: true})
 	opts.IO.DefaultFormat("text")
+
+	flags.StringVarP(&opts.LabelSelector, "selector", "l", "", "Filter resources by label selector (e.g. -l key=value,other=value)")
 
 	// Bind all the flags
 	opts.IO.BindFlags(flags)
@@ -98,8 +101,9 @@ func getCmd(configOpts *cmdconfig.Options) *cobra.Command {
 			}
 
 			res, err := fetchResources(ctx, fetchRequest{
-				Config:      cfg,
-				StopOnError: opts.OnError.StopOnError(),
+				Config:        cfg,
+				StopOnError:   opts.OnError.StopOnError(),
+				LabelSelector: opts.LabelSelector,
 			}, args)
 			if err != nil {
 				return err
