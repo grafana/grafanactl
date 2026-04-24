@@ -1,0 +1,7 @@
+contexts:
+  test:
+    grafana:
+      server: https://grafana.example.com
+      token: glc_real_runtime_secret
+      org-id: 1
+current-context: test

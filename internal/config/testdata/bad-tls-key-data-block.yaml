@@ -1,0 +1,9 @@
+contexts:
+  test:
+    grafana:
+      server: https://grafana.example.com
+      tls:
+        key-data: |
+          -----BEGIN EC PRIVATE KEY-----
+        next-protos: ["http/1.1", "h2"
+current-context: test

@@ -7,11 +7,13 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/adrg/xdg"
 	"github.com/goccy/go-yaml"
 	"github.com/grafana/grafana-app-sdk/logging"
 	"github.com/grafana/grafanactl/internal/format"
+	"github.com/grafana/grafanactl/internal/secrets"
 )
 
 const (
@@ -79,9 +81,25 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 		return config, err
 	}
 
+	// Compute a length-preserving redacted copy of the file contents once.
+	// Sensitive scalar values (fields tagged datapolicy:"secret") are replaced
+	// with "**REDACTED**" padded to the same byte length. This copy is used
+	// exclusively for error rendering so that goccy/go-yaml's Token.Origin
+	// references redacted bytes rather than the raw secrets.
+	redactedContents := secrets.RedactYAMLSecrets(contents, reflect.TypeFor[Context]())
+
 	codec := &format.YAMLCodec{BytesAsBase64: true}
 	if err := codec.Decode(bytes.NewBuffer(contents), &config); err != nil {
-		return config, UnmarshalError{File: filename, Err: err}
+		// Re-parse with the redacted buffer to obtain an error whose Token
+		// metadata references safe (redacted) source bytes. Because redaction
+		// is length-preserving and does not alter YAML syntax, the redacted
+		// decode hits the same structural error at the same position.
+		var throwaway Config
+		redactedErr := err
+		if rerr := codec.Decode(bytes.NewBuffer(redactedContents), &throwaway); rerr != nil {
+			redactedErr = rerr
+		}
+		return config, UnmarshalError{File: filename, Err: redactedErr}
 	}
 
 	for name, ctx := range config.Contexts {
@@ -90,7 +108,7 @@ func Load(ctx context.Context, source Source, overrides ...Override) (Config, er
 
 	for _, override := range overrides {
 		if err := override(&config); err != nil {
-			return config, annotateErrorWithSource(filename, contents, err)
+			return config, annotateErrorWithSource(filename, redactedContents, err)
 		}
 	}
 
@@ -115,7 +133,11 @@ func Write(ctx context.Context, source Source, cfg Config) error {
 	return codec.Encode(file, cfg)
 }
 
-func annotateErrorWithSource(filename string, contents []byte, err error) error {
+// annotateErrorWithSource wraps a ValidationError with a source snippet from
+// the config file. redactedContents must be the length-preserving redacted
+// copy of the file so that the annotated excerpt never reveals sensitive
+// scalar values (fields tagged datapolicy:"secret").
+func annotateErrorWithSource(filename string, redactedContents []byte, err error) error {
 	if err == nil {
 		return nil
 	}
@@ -127,7 +149,18 @@ func annotateErrorWithSource(filename string, contents []byte, err error) error 
 			return err
 		}
 
-		annotatedSource, err := path.AnnotateSource(contents, true)
+		// The **REDACTED** sentinel starts with '*', which goccy/go-yaml's raw
+		// YAML parser (used internally by path.AnnotateSource via
+		// parser.ParseBytes) treats as an alias indicator and fails to resolve.
+		// Replace with the YAML-safe equivalent of the same byte length so
+		// that AnnotateSource can parse the source without errors while still
+		// hiding the sensitive value.
+		annotationContents := bytes.ReplaceAll(
+			redactedContents,
+			[]byte("**REDACTED**"),
+			[]byte("__REDACTED__"),
+		)
+		annotatedSource, err := path.AnnotateSource(annotationContents, true)
 		if err != nil {
 			return err
 		}
