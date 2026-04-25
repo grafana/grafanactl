@@ -1,7 +1,9 @@
 # Grafana CLI
 
-> [!NOTE]
-> **Grafana CLI only supports *Grafana 12 and above*, older Grafana versions are not supported!**
+> [!WARNING]
+> **`grafanactl` is being deprecated.** We're bringing all our learnings and experience into the new, improved CLI tool [gcx](https://github.com/grafana/gcx).
+>
+> To migrate from `grafanactl` to `gcx`, search-and-replace `grafanactl` with `gcx`. For `grafanactl resources serve`, use `gcx dev serve` instead.
 
 Grafana CLI (_grafanactl_) is a command-line tool designed to simplify interaction with Grafana instances.
 
