@@ -9,6 +9,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/grafana/grafanactl/cmd/grafanactl/fail"
 	"github.com/grafana/grafanactl/cmd/grafanactl/io"
+	"github.com/grafana/grafanactl/internal/auth"
 	"github.com/grafana/grafanactl/internal/config"
 	"github.com/grafana/grafanactl/internal/format"
 	"github.com/grafana/grafanactl/internal/grafana"
@@ -77,6 +78,7 @@ func (opts *Options) loadConfigTolerant(ctx context.Context, extraOverrides ...c
 }
 
 // LoadConfig loads the configuration file (default, or explicitly set via flags) and validates it.
+// If OIDC is configured, the cached token is resolved into APIToken so downstream code is unaware of OIDC.
 func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 	validator := func(cfg *config.Config) error {
 		// Ensure that the current context actually exists.
@@ -87,7 +89,31 @@ func (opts *Options) LoadConfig(ctx context.Context) (config.Config, error) {
 		return cfg.GetCurrentContext().Validate()
 	}
 
-	return opts.loadConfigTolerant(ctx, validator)
+	cfg, err := opts.loadConfigTolerant(ctx, validator)
+	if err != nil {
+		return cfg, err
+	}
+
+	// If OIDC is configured, resolve the cached token into APIToken.
+	// This makes OIDC transparent to all downstream auth call sites.
+	if gCtx := cfg.GetCurrentContext(); gCtx != nil && gCtx.Grafana != nil && gCtx.Grafana.OIDC.IsConfigured() {
+		cache, _ := config.LoadTokenCache(ctx)
+		cached := cache.Get(cfg.CurrentContext)
+
+		token, refreshed, err := auth.EnsureValidToken(ctx, gCtx.Grafana.OIDC, cached)
+		if err != nil {
+			return cfg, err
+		}
+
+		gCtx.Grafana.APIToken = token
+
+		if refreshed {
+			cache.Set(cfg.CurrentContext, cached)
+			_ = config.WriteTokenCache(ctx, cache)
+		}
+	}
+
+	return cfg, nil
 }
 
 // LoadRESTConfig loads the configuration file and constructs a REST config from it.

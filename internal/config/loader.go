@@ -18,6 +18,7 @@ const (
 	configFilePermissions  = 0o600
 	StandardConfigFolder   = "grafanactl"
 	StandardConfigFileName = "config.yaml"
+	tokenCacheFileName     = "tokens.yaml"
 	ConfigFileEnvVar       = "GRAFANACTL_CONFIG"
 
 	defaultEmptyConfigFile = `
@@ -113,6 +114,57 @@ func Write(ctx context.Context, source Source, cfg Config) error {
 
 	codec := &format.YAMLCodec{BytesAsBase64: true}
 	return codec.Encode(file, cfg)
+}
+
+func tokenCachePath() (string, error) {
+	return xdg.CacheFile(filepath.Join(StandardConfigFolder, tokenCacheFileName))
+}
+
+// LoadTokenCache loads the token cache from $XDG_CACHE_HOME/grafanactl/tokens.yaml.
+// Returns an empty cache if the file doesn't exist.
+func LoadTokenCache(ctx context.Context) (TokenCache, error) {
+	cache := TokenCache{}
+
+	cachePath, err := tokenCachePath()
+	if err != nil {
+		return cache, err
+	}
+
+	logging.FromContext(ctx).Debug("Loading token cache", slog.String("filename", cachePath))
+
+	contents, err := os.ReadFile(cachePath)
+	if os.IsNotExist(err) {
+		return cache, nil
+	}
+	if err != nil {
+		return cache, err
+	}
+
+	codec := &format.YAMLCodec{}
+	if err := codec.Decode(bytes.NewBuffer(contents), &cache); err != nil {
+		return cache, err
+	}
+
+	return cache, nil
+}
+
+// WriteTokenCache writes the token cache to $XDG_CACHE_HOME/grafanactl/tokens.yaml.
+func WriteTokenCache(ctx context.Context, cache TokenCache) error {
+	cachePath, err := tokenCachePath()
+	if err != nil {
+		return err
+	}
+
+	logging.FromContext(ctx).Debug("Writing token cache", slog.String("filename", cachePath))
+
+	file, err := os.OpenFile(cachePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, configFilePermissions)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	codec := &format.YAMLCodec{}
+	return codec.Encode(file, cache)
 }
 
 func annotateErrorWithSource(filename string, contents []byte, err error) error {

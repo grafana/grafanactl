@@ -57,6 +57,7 @@ func Command(version string) *cobra.Command {
 	rootCmd.SetErr(os.Stderr)
 	rootCmd.SetIn(os.Stdin)
 
+	rootCmd.AddCommand(config.AuthCommand())
 	rootCmd.AddCommand(config.Command())
 	rootCmd.AddCommand(resources.Command())
 
