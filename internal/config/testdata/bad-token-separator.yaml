@@ -1,0 +1,7 @@
+contexts:
+  test:
+    grafana:
+      server: https://grafana.example.com
+      user: alice@example.com
+      token; glc_fixture_secret_value
+current-context: test
