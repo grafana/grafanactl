@@ -1,7 +1,7 @@
 # Grafana CLI
 
 > [!WARNING]
-> **`grafanactl` is being deprecated.** We're bringing all our learnings and experience into the new, improved CLI tool [gcx](https://github.com/grafana/gcx).
+> **`grafanactl` is being deprecated.** We're bringing all our learnings and experience into the new, improved CLI tool [gcx](https://github.com/grafana/gcx). This repository will be archived on June 1st, 2026.
 >
 > To migrate from `grafanactl` to `gcx`, search-and-replace `grafanactl` with `gcx`. For `grafanactl resources serve`, use `gcx dev serve` instead.
 
