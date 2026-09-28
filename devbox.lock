@@ -5,51 +5,41 @@
       "last_modified": "2025-04-17T05:47:26Z",
       "resolved": "github:NixOS/nixpkgs/ebe4301cbd8f81c4f8d3244b3632338bbeb6d49c?lastModified=1744868846&narHash=sha256-5RJTdUHDmj12Qsv7XOhuospjAjATNiTMElplWnJE9Hs%3D"
     },
-    "go@1.26": {
-      "last_modified": "2026-02-11T12:16:34Z",
-      "resolved": "github:NixOS/nixpkgs/8482c7ded03bae7550f3d69884f1e611e3bd19e8#go_1_26",
+    "go@1.27": {
+      "last_modified": "2026-09-27T03:42:02Z",
+      "resolved": "github:NixOS/nixpkgs/8d5d270900d3fc75655ea2d9d248b234f6631439#go_1_27",
       "source": "devbox-search",
-      "version": "1.26.0",
+      "version": "1.27.1",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/sz1ry9vf187bzdvsalla73ycxwfjv3pq-go-1.26.0",
+              "path": "/nix/store/9w6fm5c9v3lx0vxd4pqy7i8qmdfsmq7g-go-1.27.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/sz1ry9vf187bzdvsalla73ycxwfjv3pq-go-1.26.0"
+          "store_path": "/nix/store/9w6fm5c9v3lx0vxd4pqy7i8qmdfsmq7g-go-1.27.1"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/1wl6q7df9z3p8gambi2ndp5s5igr4h61-go-1.26.0",
+              "path": "/nix/store/40wlcfzp30vzja0qnrr2in1y24fvysz8-go-1.27.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/1wl6q7df9z3p8gambi2ndp5s5igr4h61-go-1.26.0"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/r5bwcb31acswg4nirdblmz1zzkci6bj3-go-1.26.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/r5bwcb31acswg4nirdblmz1zzkci6bj3-go-1.26.0"
+          "store_path": "/nix/store/40wlcfzp30vzja0qnrr2in1y24fvysz8-go-1.27.1"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/kgwkx0l54snkkgzbmg8cw89i1g8v1dqw-go-1.26.0",
+              "path": "/nix/store/wzf7v2cm02izb6c7j0y7zqxv8iw50hz4-go-1.27.1",
               "default": true
             }
           ],
-          "store_path": "/nix/store/kgwkx0l54snkkgzbmg8cw89i1g8v1dqw-go-1.26.0"
+          "store_path": "/nix/store/wzf7v2cm02izb6c7j0y7zqxv8iw50hz4-go-1.27.1"
         }
       }
     },
@@ -151,7 +141,7 @@
     },
     "python312@3.12.12": {
       "last_modified": "2026-01-23T17:20:52Z",
-      "plugin_version": "0.0.4",
+      "plugin_version": "0.0.5",
       "resolved": "github:NixOS/nixpkgs/a1bab9e494f5f4939442a57a58d0449a109593fe#python312",
       "source": "devbox-search",
       "version": "3.12.12",
