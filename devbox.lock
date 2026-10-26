@@ -101,57 +101,57 @@
         }
       }
     },
-    "goreleaser@2.13.3": {
-      "last_modified": "2026-01-23T17:20:52Z",
-      "resolved": "github:NixOS/nixpkgs/a1bab9e494f5f4939442a57a58d0449a109593fe#goreleaser",
+    "goreleaser@2.17.0": {
+      "last_modified": "2026-07-23T05:10:05Z",
+      "resolved": "github:NixOS/nixpkgs/7525d999cd850b9a488817abc89c75dc733acf17#goreleaser",
       "source": "devbox-search",
-      "version": "2.13.3",
+      "version": "2.17.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/04l59s6yaxfn4mx6m0wcvkk4skzawd9y-goreleaser-2.13.3",
+              "path": "/nix/store/mp5a00p77m4hc8m7pvikdbcvqbs3zp59-goreleaser-2.17.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/04l59s6yaxfn4mx6m0wcvkk4skzawd9y-goreleaser-2.13.3"
+          "store_path": "/nix/store/mp5a00p77m4hc8m7pvikdbcvqbs3zp59-goreleaser-2.17.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/4b8y96z5wsn04glwhqy9nl4jj2x12ic0-goreleaser-2.13.3",
+              "path": "/nix/store/48yy70v30a14vr9gl0b0nvn2875fcwvj-goreleaser-2.17.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/4b8y96z5wsn04glwhqy9nl4jj2x12ic0-goreleaser-2.13.3"
+          "store_path": "/nix/store/48yy70v30a14vr9gl0b0nvn2875fcwvj-goreleaser-2.17.0"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/f0x8i0j9bqmif4jx79z28kxqz8ak694h-goreleaser-2.13.3",
+              "path": "/nix/store/l88l5jq35pw70jgd5q5vl73cs1p2iq9s-goreleaser-2.17.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/f0x8i0j9bqmif4jx79z28kxqz8ak694h-goreleaser-2.13.3"
+          "store_path": "/nix/store/l88l5jq35pw70jgd5q5vl73cs1p2iq9s-goreleaser-2.17.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/i4ilqzqm4qagpc0wvhi99byx714cm5bb-goreleaser-2.13.3",
+              "path": "/nix/store/giyclsx2bvfl7amf9w2jf8icljs7dq5i-goreleaser-2.17.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/i4ilqzqm4qagpc0wvhi99byx714cm5bb-goreleaser-2.13.3"
+          "store_path": "/nix/store/giyclsx2bvfl7amf9w2jf8icljs7dq5i-goreleaser-2.17.0"
         }
       }
     },
     "python312@3.12.12": {
       "last_modified": "2026-01-23T17:20:52Z",
-      "plugin_version": "0.0.4",
+      "plugin_version": "0.0.5",
       "resolved": "github:NixOS/nixpkgs/a1bab9e494f5f4939442a57a58d0449a109593fe#python312",
       "source": "devbox-search",
       "version": "3.12.12",
